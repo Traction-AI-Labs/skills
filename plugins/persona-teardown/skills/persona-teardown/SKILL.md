@@ -48,6 +48,21 @@ format example; same protocol, different persona; no reconciliation round betwee
 screen inventory and ledger structure are shared because they describe what exists, not what was
 noticed. Discard and re-run any report that echoes another's wording.
 
+## Dispatching by engine
+
+Persona agents run shell commands and write files, so they need a writable role, and each starts cold.
+
+- **Claude Code:** one `general-purpose` agent per persona with an explicit `model`, all in one message.
+  Never a fork.
+- **Codex:** one `spawn_agent` per persona with `agent_type: "worker"` and `fork_turns: "none"` (an
+  omitted `fork_turns` copies the orchestrator's whole history into the persona), all spawned before any
+  `wait_agent`. `task_name` takes lowercase letters, digits and underscores only, so `busy_shopper` for
+  persona `busy-shopper`; the `--session` and directory keep the hyphenated name. Wait in minutes, not
+  seconds, until every persona returns; `interrupt_agent` any you give up on and record it as not reached. Codex's macOS sandbox cannot launch Chromium in `workspace-write`, even
+  with network access and `~/.agent-browser` writable, so run the session with
+  `--sandbox danger-full-access` (`sandbox_mode = "danger-full-access"` in config); spawned agents
+  inherit it.
+
 ## Persona template
 
 If a field does not make any design choice easier, cut it. Demographics almost never qualify.

@@ -330,6 +330,9 @@ rather than requested.
   and it is also what makes the reports mergeable.
 - Dispatch all agents concurrently. Sequential dispatch invites passing the earlier report along as
   context.
+- Each agent starts with fresh context, never a fork of the orchestrator's conversation. Engine
+  specifics (Claude Code agent type, Codex `fork_turns: "none"` and sandbox) are in SKILL.md,
+  "Dispatching by engine".
 - No reconciliation round between agents, ever. Collaborative merging measurably deflates the problem
   count and inflates severity, because evaluators give way under persuasion. The merge is the
   orchestrator's job alone.
