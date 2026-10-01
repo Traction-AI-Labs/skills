@@ -183,6 +183,13 @@ PATH="$TMP/bin:$PATH" REAL_TIMEOUT="$REAL_TIMEOUT" FAKE_CLAUDE_TIMEOUT="$TMP/cla
 wait_for_leg "$TMP/cli-run" claude
 wait_for_leg "$TMP/cli-run" codex
 grep -Fq -- 'model_reasoning_effort=low -m gpt-6.1-sol' "$TMP/codex.args"
+# The Codex default is gpt-6.1-sol in every profile, and --codex-model still overrides it.
+for profile in fast balanced deep; do
+  GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$TMP/model-$profile" bash "$RUNNER" prepare --authorize-provider --base main --profile "$profile" --identity "model-$profile" > /dev/null
+  python3 -c 'import json, sys; m = json.load(open(sys.argv[1]))["codex"]["model"]; assert m == "gpt-6.1-sol", (sys.argv[1], m)' "$TMP/model-$profile/rows.json"
+done
+GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$TMP/model-override" bash "$RUNNER" prepare --authorize-provider --base main --profile balanced --identity model-override --codex-model override-model > /dev/null
+python3 -c 'import json, sys; m = json.load(open(sys.argv[1]))["codex"]["model"]; assert m == "override-model", m' "$TMP/model-override/rows.json"
 grep -Fq -- '--safe-mode' "$TMP/claude.args"
 grep -Fq -- '--mcp-config' "$TMP/claude.args"
 grep -Fq -- '--strict-mcp-config' "$TMP/claude.args"
