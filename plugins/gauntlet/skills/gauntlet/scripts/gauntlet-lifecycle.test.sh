@@ -68,7 +68,7 @@ prepare_run() {
   sha="$(sed -n 's/^Scope SHA: //p' "$prompt")"
   digest="$(sed -n 's/^Scope digest: //p' "$prompt")"
   native="$run/codex-native.txt"
-  printf '{"engine":"codex","model":"gpt-5.6-terra","transport":"codex-native","scope_sha":"%s","scope_digest":"%s","verdict":"APPROVE","findings":[]}\n' "$sha" "$digest" > "$native"
+  printf '{"engine":"codex","model":"gpt-6.1-sol","transport":"codex-native","scope_sha":"%s","scope_digest":"%s","verdict":"APPROVE","findings":[]}\n' "$sha" "$digest" > "$native"
   GAUNTLET_DIR="$run" bash "$RUNNER" ingest --engine codex --text "$native"
 }
 
