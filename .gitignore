@@ -1,0 +1,8 @@
+# Built upload zips (regenerate with scripts/build-zip*.sh)
+plugins/*/dist/
+
+# Local noise
+.DS_Store
+__pycache__/
+.worktrees/
+node_modules/

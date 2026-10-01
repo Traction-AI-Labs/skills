@@ -1,0 +1,12 @@
+{
+  "name": "ruling-page",
+  "version": "0.1.0",
+  "description": "Turns a complicated decision into a clickable one-file HTML ruling page: a recommendation pre-selected on every card, alternatives as buttons, and one button that copies the answers back into chat.",
+  "author": {
+    "name": "Traction Studio",
+    "url": "https://github.com/Traction-AI-Labs"
+  },
+  "homepage": "https://github.com/Traction-AI-Labs/skills",
+  "repository": "https://github.com/Traction-AI-Labs/skills",
+  "license": "MIT"
+}

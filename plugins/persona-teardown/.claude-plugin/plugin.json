@@ -1,0 +1,12 @@
+{
+  "name": "persona-teardown",
+  "version": "0.1.2",
+  "description": "Tears down a prototype, UI kit or live screen with a panel of cold persona agents driving a browser, then consolidates the findings into one design-tool amendment prompt.",
+  "author": {
+    "name": "Traction Studio",
+    "url": "https://github.com/Traction-AI-Labs"
+  },
+  "homepage": "https://github.com/Traction-AI-Labs/skills",
+  "repository": "https://github.com/Traction-AI-Labs/skills",
+  "license": "MIT"
+}

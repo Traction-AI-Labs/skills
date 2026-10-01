@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!-- Ruling-page THREADS template (question, answer, owed, Got it, then branch decisions). Replace only the T array and the h1. Branch ids stable (Q1a). Open it in a browser (or show it as an HTML artifact). Thread fields: id, group (optional), title, asked, when, answer, owed (empty string hides it), ev, branches. Branch fields: id, q, opts [[label, one-line effect], ...], pick (index of your recommendation), why. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open questions</title>
+<style>
+  :root { --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --bg:#f1f5f9; --card:#ffffff; --pick:#4f46e5; --pickbg:#eef2ff; --ok:#059669; --warn:#b45309; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.55 "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; color:var(--ink);
+         background:radial-gradient(1200px 600px at 10% -10%, #e0e7ff 0%, transparent 60%), radial-gradient(900px 500px at 110% 0%, #dcfce7 0%, transparent 55%), var(--bg); min-height:100vh; }
+  header { position:sticky; top:0; z-index:5; backdrop-filter:saturate(180%) blur(12px); background:rgba(255,255,255,.82); border-bottom:1px solid var(--line); }
+  /* Header: row one is the title with both buttons on the right; row two is status plus the instruction. */
+  .bar { max-width:900px; margin:0 auto; padding:16px 20px 14px; display:flex; gap:10px 16px; align-items:center; flex-wrap:wrap; }
+  header h1 { font-size:20px; letter-spacing:-.01em; margin:0; flex:1 1 280px; }
+  header .actions { display:flex; gap:10px; flex:none; flex-wrap:wrap; }
+  header .sub { width:100%; display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; color:var(--muted); font-size:14px; }
+  @media (max-width:640px) { header { position:static; } }
+  .count { font-size:13px; font-weight:600; color:var(--pick); background:var(--pickbg); border-radius:999px; padding:4px 10px; }
+  .count.changed { color:var(--warn); background:#fef3c7; }
+  button { font:inherit; cursor:pointer; border-radius:999px; border:1px solid var(--line); background:#fff; padding:9px 16px; transition:all .15s ease; }
+  button:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(15,23,42,.08); }
+  button.primary { background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; border:0; font-weight:600; box-shadow:0 6px 16px rgba(79,70,229,.28); }
+  main { max-width:900px; margin:28px auto 90px; padding:0 20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:22px 24px; margin:0 0 18px; box-shadow:0 1px 2px rgba(15,23,42,.04), 0 8px 24px rgba(15,23,42,.05); }
+  .card h2 { font-size:18px; letter-spacing:-.01em; margin:0 0 8px; display:flex; align-items:center; gap:10px; }
+  .tag { font-size:12px; font-weight:700; color:#fff; background:linear-gradient(135deg,#4f46e5,#7c3aed); border-radius:8px; padding:3px 8px; }
+  .q { margin:0 0 14px; font-size:16px; }
+  /* Options: a grid of equal-height cards, content pinned to the top. Every inner element has its own
+     class; never style ".opt span", which also matches the MY PICK badge and wrecks the layout. */
+  .opts { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin:14px 0 16px; align-items:stretch; }
+  .opt { position:relative; display:flex; flex-direction:column; justify-content:flex-start; gap:6px; text-align:left; color:var(--ink);
+         padding:16px 16px 14px; border-radius:14px; border:1.5px solid var(--line); background:#fff; }
+  .opt:hover { transform:none; border-color:#c7d2fe; box-shadow:0 4px 14px rgba(15,23,42,.06); }
+  .opt .head { display:flex; align-items:flex-start; gap:10px; }
+  .opt .radio { flex:none; width:18px; height:18px; margin-top:2px; border-radius:999px; border:1.5px solid #cbd5e1; background:#fff;
+                display:inline-flex; align-items:center; justify-content:center; color:#fff; font-size:11px; font-weight:700; line-height:1; }
+  .opt .lbl { flex:1 1 auto; min-width:0; font-size:15px; font-weight:650; line-height:1.35; }
+  .opt .desc { display:block; padding-left:28px; color:var(--muted); font-size:13.5px; line-height:1.45; }
+  .opt.sel { border-color:var(--pick); background:var(--pickbg); box-shadow:0 0 0 3px rgba(79,70,229,.12); }
+  .opt.sel .radio { background:var(--pick); border-color:var(--pick); }
+  .opt.sel .radio::before { content:"✓"; }
+  .rec { position:absolute; top:-10px; right:12px; white-space:nowrap; font-size:10.5px; font-weight:700; letter-spacing:.06em; line-height:1;
+         color:#fff; background:linear-gradient(135deg,#4f46e5,#7c3aed); border-radius:999px; padding:5px 9px; box-shadow:0 2px 6px rgba(79,70,229,.3); }
+  .why { font-size:14px; background:#f8fafc; border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin:0 0 8px; }
+  .ev { font-size:12.5px; color:var(--muted); margin:0 0 12px; }
+  textarea { width:100%; min-height:42px; font:inherit; font-size:14px; border:1px solid var(--line); border-radius:12px; padding:10px 12px; resize:vertical; background:#fcfdfe; }
+  textarea:focus, button:focus { outline:3px solid rgba(79,70,229,.25); outline-offset:1px; }
+  .toast { position:fixed; left:50%; bottom:28px; transform:translateX(-50%); background:var(--ok); color:#fff; padding:12px 18px; border-radius:999px; display:none; font-weight:600; box-shadow:0 8px 24px rgba(5,150,105,.35); }
+  .savedflag { font-size:12px; color:var(--ok); }
+  .savedflag.unsaved { color:var(--warn); font-weight:600; }
+  h3.group { font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:28px 4px 12px; }
+  pre#out { white-space:pre-wrap; background:#0f172a; color:#e2e8f0; border-radius:14px; padding:14px 16px; font-size:13px; display:none; }
+
+  .thread h2 { margin-bottom:12px; }
+  .asked { border-left:4px solid #c7d2fe; background:#f8fafc; border-radius:10px; padding:10px 14px; margin:0 0 12px; font-size:14.5px; }
+  .asked .who { display:block; font-size:12px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+  .answer { font-size:15px; margin:0 0 10px; }
+  .answer .who { font-size:12px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--pick); margin-right:6px; }
+  .owed { font-size:13.5px; background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:8px 12px; margin:0 0 10px; }
+  .ackrow { display:flex; align-items:center; gap:10px; margin:6px 0 4px; flex-wrap:wrap; }
+  .ackbtn { border-radius:999px; padding:7px 14px; font-weight:600; font-size:14px; }
+  .ackbtn.on { background:#ecfdf5; border-color:var(--ok); color:var(--ok); }
+  .branch { border-top:1px dashed var(--line); margin-top:16px; padding-top:14px; }
+  .branch .bq { font-weight:650; margin:0 0 4px; font-size:15px; }
+  .branch .bq .tag { margin-right:8px; }
+  .thread.done { opacity:.72; }
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <h1>Your open questions · N answers, M follow-up decisions</h1>
+  <div class="actions"><button id="acceptAll">Accept all picks</button><button class="primary" id="copy">Copy my answers</button></div>
+  <div class="sub"><span class="count" id="count"></span><span class="count" id="acks"></span><span class="savedflag" id="saved">Answers save as you go</span><span>Each card is a question you asked that hasn't been closed yet: what you asked, the answer, what's still owed, and the decisions that branch off it. Tick <b>Got it</b> when you've read an answer, change any pick you disagree with, then press <b>Copy my answers</b> and paste it into the chat.</span></div>
+</div></header>
+<main id="cards"></main>
+<main style="margin-top:-60px"><pre id="out"></pre></main>
+<div class="toast" id="toast">Copied. Paste it into the chat.</div>
+<script>
+const T = [{"id": "Q1", "group": "Example group", "title": "Short title of the question", "asked": "The person's question, verbatim.", "when": "29 Sep 11:01 · Daily window", "answer": "The answer in two to four plain sentences, with the numbers that matter.", "owed": "What is still owed, and by whom (empty string to hide).", "ev": "Evidence in plain words; a path may follow as reference.", "branches": [{"id": "Q1a", "q": "A follow-up decision, answerable in seconds?", "opts": [["Yes", "What this does in practice."], ["No", "What this does in practice."]], "pick": 0, "why": "One or two sentences."}]}];
+const RULING_KEY = "ruling-page:" + location.pathname;
+let saved = {};
+try { saved = JSON.parse(localStorage.getItem(RULING_KEY) || "{}"); } catch (e) { saved = {}; }
+const state = {};
+const B = [];
+T.forEach(t => t.branches.forEach(b => B.push(b)));
+let storageOK = true;
+try { localStorage.setItem("__ruling_probe", "1"); localStorage.removeItem("__ruling_probe"); } catch (e) { storageOK = false; }
+// Where storage is blocked (a sandboxed artifact, some file:// setups) the page must not claim answers are saved.
+function markUnsaved(){ const el=document.getElementById("saved"); if (el) { el.textContent="Not saved in this window: copy your answers before you close it"; el.classList.add("unsaved"); } }
+function persist(){ if (!storageOK) { markUnsaved(); return; } try { localStorage.setItem(RULING_KEY, JSON.stringify(state)); const el=document.getElementById("saved"); if (el) { el.textContent="Saved"; clearTimeout(persist.t); persist.t=setTimeout(()=>el.textContent="Answers save as you go", 1200); } } catch (e) { storageOK = false; markUnsaved(); } }
+if (!storageOK) markUnsaved();
+function initState(){
+  T.forEach(t => {
+    const k = t.id+":ack"; const sv = saved[k];
+    if (!(k in state)) state[k] = { ack: !!(sv && sv.ack), other: (sv && typeof sv.other==="string") ? sv.other : "" };
+    t.branches.forEach(b => {
+      if (b.id in state) return;
+      const s = saved[b.id];
+      state[b.id] = (s && Number.isInteger(s.choice) && s.choice >= 0 && s.choice < b.opts.length)
+        ? { choice: s.choice, other: typeof s.other === "string" ? s.other : "" }
+        : { choice: b.pick, other: (s && typeof s.other === "string") ? s.other : "" };
+    });
+  });
+}
+const cards = document.getElementById("cards");
+function el(tag, cls, text){ const e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e; }
+function render(){
+  initState();
+  cards.innerHTML = "";
+  let lastGroup = null;
+  T.forEach(t => {
+    if (t.group && t.group !== lastGroup) { const h = el("h3","group",t.group); cards.appendChild(h); lastGroup = t.group; }
+    const ackS = state[t.id+":ack"];
+    const c = el("section","card thread"+(ackS.ack?" done":""));
+    const h2 = el("h2"); const tag = el("span","tag",t.id); h2.appendChild(tag); h2.appendChild(document.createTextNode(t.title)); c.appendChild(h2);
+    const a = el("div","asked"); a.appendChild(el("span","who","You asked · "+t.when)); a.appendChild(document.createTextNode("\u201c"+t.asked+"\u201d")); c.appendChild(a);
+    const ans = el("p","answer"); ans.appendChild(el("span","who","Answer")); ans.appendChild(document.createTextNode(t.answer)); c.appendChild(ans);
+    if (t.owed) { const o = el("div","owed"); const b=el("b",null,"Still owed: "); o.appendChild(b); o.appendChild(document.createTextNode(t.owed)); c.appendChild(o); }
+    if (t.ev) { c.appendChild(el("div","ev","Evidence: "+t.ev)); }
+    const row = el("div","ackrow");
+    const ab = el("button","ackbtn"+(ackS.ack?" on":""), ackS.ack ? "\u2713 Got it" : "Got it");
+    ab.onclick = () => { ackS.ack = !ackS.ack; persist(); render(); };
+    row.appendChild(ab); c.appendChild(row);
+    const at = el("textarea"); at.placeholder = "Anything about this answer? (optional)"; at.value = ackS.other;
+    at.oninput = e => { ackS.other = e.target.value; persist(); }; c.appendChild(at);
+    t.branches.forEach(bd => {
+      const s = state[bd.id];
+      const br = el("div","branch");
+      const bq = el("p","bq"); bq.appendChild(el("span","tag",bd.id)); bq.appendChild(document.createTextNode(bd.q)); br.appendChild(bq);
+      const opts = el("div","opts");
+      bd.opts.forEach((o,i) => {
+        const b = document.createElement("button"); b.className = "opt"+(s.choice===i?" sel":"");
+        if (i===bd.pick) b.appendChild(el("span","rec","MY PICK"));
+        const hd = el("span","head"); hd.appendChild(el("span","radio")); hd.appendChild(el("span","lbl",o[0])); b.appendChild(hd);
+        b.appendChild(el("span","desc",o[1]));
+        b.onclick = () => { s.choice = i; persist(); render(); };
+        opts.appendChild(b);
+      });
+      br.appendChild(opts);
+      const why = el("div","why"); const wb = el("b",null,"Why my pick: "); why.appendChild(wb); why.appendChild(document.createTextNode(bd.why)); br.appendChild(why);
+      const tx = el("textarea"); tx.placeholder = "Anything else? Type it here (optional)"; tx.value = s.other;
+      tx.oninput = e => { s.other = e.target.value; persist(); }; br.appendChild(tx);
+      c.appendChild(br);
+    });
+    cards.appendChild(c);
+  });
+  count();
+}
+function count(){
+  const kept = B.filter(b => state[b.id].choice===b.pick).length;
+  const e1 = document.getElementById("count"); e1.textContent = kept===B.length ? "All "+B.length+" decisions on my pick" : (B.length-kept)+" of "+B.length+" decisions changed"; e1.className = "count"+(kept===B.length?"":" changed");
+  const acked = T.filter(t => state[t.id+":ack"].ack).length;
+  const e2 = document.getElementById("acks"); e2.textContent = acked+" of "+T.length+" answers read"; e2.className = "count"+(acked===T.length?"":" changed");
+}
+render();
+document.getElementById("acceptAll").onclick = () => { B.forEach(b => { state[b.id].choice = b.pick; }); persist(); render(); };
+document.getElementById("copy").onclick = async () => {
+  const lines = ["Open questions:"];
+  T.forEach(t => {
+    const a = state[t.id+":ack"];
+    let line = t.id+" "+t.title+": "+(a.ack ? "got it" : "not read yet");
+    if (a.other.trim()) line += " | note: "+a.other.trim();
+    lines.push(line);
+    t.branches.forEach(b => {
+      const s = state[b.id]; const o = b.opts[s.choice][0];
+      let l = "  "+b.id+" "+b.q+" -> "+o+(s.choice===b.pick ? " (your pick)" : " (NOT your pick)");
+      if (s.other.trim()) l += " | note: "+s.other.trim();
+      lines.push(l);
+    });
+  });
+  const text = lines.join("\n");
+  const out = document.getElementById("out"); out.textContent = text; out.style.display = "block";
+  // Clipboard access is blocked in some hosts (sandboxed artifacts, file:// in some browsers).
+  // Only claim "Copied" when it worked; otherwise leave the text selected on the page to copy by hand.
+  let ok = false;
+  try { await navigator.clipboard.writeText(text); ok = true; } catch(e) {
+    try { const r = document.createRange(); r.selectNodeContents(out); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); ok = document.execCommand("copy"); } catch(e2) { ok = false; }
+  }
+  const t = document.getElementById("toast"); t.textContent = ok ? "Copied. Paste it into the chat." : "Could not copy automatically. The answers are selected below: copy them by hand."; t.style.display = "block"; if (!ok) out.scrollIntoView({block:"center"}); setTimeout(()=>t.style.display="none", ok ? 2500 : 6000);
+};
+</script>
+</body>
+</html>

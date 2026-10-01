@@ -1,0 +1,12 @@
+{
+  "name": "gauntlet",
+  "version": "0.4.0",
+  "description": "Reviews a committed code diff with two independent engines.",
+  "author": {
+    "name": "Traction Studio",
+    "url": "https://github.com/Traction-AI-Labs"
+  },
+  "homepage": "https://github.com/Traction-AI-Labs/skills",
+  "repository": "https://github.com/Traction-AI-Labs/skills",
+  "license": "MIT"
+}

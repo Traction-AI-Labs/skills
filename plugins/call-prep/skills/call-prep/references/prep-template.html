@@ -1,0 +1,161 @@
+<!doctype html>
+<!--
+  Call-prep template. Copy this file, replace every {{…}}, delete the sections the call does not need.
+
+  What makes it readable live, keep all of it:
+  - Sticky header: title line with day, date, 24-hour local time with its zone label (and the counterpart's zone if different), the guard line in red, the key legend.
+    Never screen-share this window; g hides the guard line as a fallback.
+  - Left nav with one link per beat, the current one highlighted as you scroll.
+  - Keyboard: every <section> with data-key="x" is jumped to by pressing x (in a part 2 prep, give the digit
+    keys to tonight's beats, not part 1's); j / k step to the next / previous
+    section. List the keys in the header legend. Digits 1-8 for beats, letters for the rest (d decide, a answers).
+  - Quoted lines in .say (large serif, easy to find mid-sentence); stage directions in .dir (italic, muted).
+  - .ctx: one line on what the beat is for. .g / .b: good-sounds-like / bad-sounds-like pair under a probing beat.
+  - .mustpill on a must-land or must-pass beat, plus class="must" on its section.
+  - Status pills for multi-part calls or a re-run: <span class="st done">DONE</span>, <span class="st now">NOW</span>,
+    <span class="st part">PARTLY</span>; a .note under the heading says what the earlier part covered.
+  - Checkboxes (.tick) for a decision rule or must-pass tally; they persist across reloads where the browser allows storage (localStorage per file; not in sandboxed artifacts;
+    keyed by each checkbox's label text, so adding or reordering boxes in a part 2 does not shift ticks).
+  - Collapses to one column under 900px, dark mode follows the system.
+-->
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{Counterpart}} · {{Ddd DD Mon HH:MM}} {{zone}}</title>
+<style>
+:root{--paper:#FAFAF7;--surface:#fff;--surface-2:#F2F2EE;--ink:#1A1D21;--ink-2:#3D4348;--muted:#6E7479;--rule:#DEDED8;--good:#2F6B4F;--good-bg:rgba(47,107,79,.09);--bad:#A0342A;--bad-bg:rgba(160,52,42,.075);--accent:#1F5F86;--warn-bg:rgba(232,197,71,.28);--must:#8A5A00}
+@media (prefers-color-scheme:dark){:root{--paper:#15171A;--surface:#1B1E22;--surface-2:#22262B;--ink:#E6E7E4;--ink-2:#BFC3C4;--muted:#8B9196;--rule:#2B3036;--good:#63B48C;--good-bg:rgba(99,180,140,.10);--bad:#E07B6D;--bad-bg:rgba(224,123,109,.10);--accent:#6FB4DC;--warn-bg:rgba(232,197,71,.14);--must:#E8C547}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:70px}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--rule);padding:8px 16px;font-size:13.5px;display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+header b{font-size:14.5px}
+header .guard{color:var(--bad)}
+.wrap{display:grid;grid-template-columns:210px 1fr;max-width:1240px;margin:0 auto}
+nav{position:sticky;top:48px;align-self:start;height:calc(100vh - 48px);overflow:auto;padding:14px 10px 14px 16px;border-right:1px solid var(--rule);font-size:14px}
+nav a{display:block;color:var(--ink-2);text-decoration:none;padding:5px 8px;border-radius:6px;margin:1px 0}
+nav a small{color:var(--muted);display:block;font-size:12px}
+nav a.on{background:var(--warn-bg);color:var(--ink);font-weight:600}
+nav a.sub{padding-left:20px;font-size:13px}
+nav hr{border:0;border-top:1px solid var(--rule);margin:10px 0}
+main{padding:18px 26px 120px;min-width:0}
+section{background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px 20px;margin:0 0 18px}
+section h2{margin:0 0 4px;font-size:21px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.cue{font-size:14px;font-weight:400;font-style:italic;color:var(--muted)}
+.min{font-size:13px;font-weight:600;color:var(--muted);background:var(--surface-2);padding:2px 8px;border-radius:99px}
+.mustpill{font-size:12px;font-weight:700;color:var(--must);border:1px solid var(--must);padding:1px 8px;border-radius:99px}
+h3{font-size:16px;margin:18px 0 6px;color:var(--accent)}
+.say{font-family:Georgia,"Source Serif 4",serif;font-size:19px;line-height:1.5;margin:8px 0;padding:10px 14px;border-left:4px solid var(--accent);background:var(--surface-2);border-radius:0 8px 8px 0}
+.dir{font-style:italic;color:var(--muted);font-size:14.5px;margin:6px 0}
+.gb{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 4px}
+@media (max-width:900px){.gb{grid-template-columns:1fr}.wrap{grid-template-columns:1fr}nav{display:none}}
+.g,.b{padding:9px 12px;border-radius:8px;font-size:14.5px}
+.g{background:var(--good-bg)}.b{background:var(--bad-bg)}
+.g::before{content:"GOOD SOUNDS LIKE";display:block;font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--good);margin-bottom:3px}
+.b::before{content:"BAD SOUNDS LIKE";display:block;font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--bad);margin-bottom:3px}
+.must{border:2px solid var(--must)}
+.decide{background:var(--warn-bg);border-color:transparent}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border:1px solid var(--rule);padding:6px 9px;text-align:left;vertical-align:top}
+th{background:var(--surface-2)}
+.q{font-weight:700;margin:14px 0 2px}
+.ctx{background:var(--warn-bg);border-radius:8px;padding:8px 12px;font-size:14.5px;margin:6px 0}
+.ctx::before{content:"WHAT THIS IS ABOUT  ";font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--must)}
+code{font:13px ui-monospace,Menlo,monospace;background:var(--surface-2);padding:1px 5px;border-radius:4px}
+.tick{margin:4px 0;font-size:14.5px}
+.tick input{margin-right:8px;transform:scale(1.2)}
+.st{font-size:12px;font-weight:700;padding:1px 8px;border-radius:99px;letter-spacing:.03em}
+.st.done{color:var(--good);border:1px solid var(--good)}
+.st.now{color:#fff;background:var(--bad)}
+.st.part{color:var(--must);border:1px solid var(--must)}
+.note{font-size:14px;color:var(--ink-2);background:var(--surface-2);border-radius:8px;padding:6px 10px;margin:4px 0 8px}
+</style>
+</head>
+<body>
+<header>
+<b>{{Title}} · {{Ddd DD Mon}} {{HH:MM}} {{zone}} ({{their zone}}) · {{medium}} · {{who drives}}</b>
+<span>{{One sentence: the job of the call.}}</span>
+<span class="guard"><b>Don't:</b> {{everything the caller must not say, named once}}</span>
+<span>Keys: <code>1</code>–<code>3</code> beats · <code>d</code> decide · <code>a</code> answers · <code>j</code>/<code>k</code> next/prev · <code>g</code> hide guard</span>
+</header>
+<div class="wrap">
+<nav id="nav">
+<a href="#b1">1. {{Beat}}<small>{{cue}}</small></a>
+<a href="#b2">2. {{Beat}}<small>{{must land}}</small></a>
+<a class="sub" href="#b2a">2a. {{Sub-item}}</a>
+<a class="sub" href="#b2b">2b. {{Sub-item}}</a>
+<a href="#b3">3. Close</a>
+<hr>
+<a href="#decide"><b>Decide</b><small>{{rule}}</small></a>
+<a href="#answers">Answer if asked</a>
+<a href="#ifthey">If they…</a>
+<a href="#bg">Where things stand</a>
+<a href="#after">After the call</a>
+</nav>
+<main>
+
+<!-- Per-person lines (more than one counterpart): a section before b1 with one line each. -->
+
+<section id="b1" data-key="1"><h2>1. {{Beat}} <span class="cue">({{why, who to look at}})</span></h2>
+<div class="ctx">{{What this beat is for, one line.}}</div>
+<p class="say">"{{Exact line, spoken English, the caller's register.}}"</p>
+<p class="dir">{{Stage direction.}}</p>
+</section>
+
+<section id="b2" data-key="2" class="must"><h2>2. {{Beat}} <span class="mustpill">MUST LAND</span></h2>
+<p class="dir">2a {{…}} · 2b {{…}}</p>
+<h3 id="b2a">2a. {{Sub-item}}</h3>
+<p class="say">"{{Line.}}"</p>
+<p class="dir">If pushed: "{{fallback}}"</p>
+<h3 id="b2b">2b. {{Sub-item}}</h3>
+<p class="say">"{{Line.}}"</p>
+<div class="gb"><div class="g">{{A good answer sounds like…}}</div><div class="b">{{A bad answer sounds like…}}</div></div>
+</section>
+
+<section id="b3" data-key="3"><h2>3. Close</h2>
+<p class="say">"{{What I'll do, what I need from you, dated. Anything I've missed?}}"</p>
+</section>
+
+<section id="decide" data-key="d" class="decide"><h2>Decide</h2>
+<div class="tick"><label><input type="checkbox">{{Must-pass or criterion}}</label></div>
+<p class="dir">{{The rule: what combination means yes.}}</p>
+</section>
+
+<section id="answers" data-key="a"><h2>Answer if asked</h2>
+<p class="q">"{{Hardest phrasing of the question}}"</p>
+<p class="say">"{{Answer}}"</p>
+</section>
+
+<section id="ifthey"><h2>If they…</h2>
+<table><tr><th>If they</th><th>Say</th></tr><tr><td>{{reaction}}</td><td>"{{line}}"</td></tr></table>
+</section>
+
+<section id="bg"><h2>Where things stand</h2>
+<p>{{State going in, state table, open questions with a recommended reading.}}</p>
+</section>
+
+<section id="after"><h2>After the call</h2>
+<ul><li>{{What the caller does after, dated.}}</li></ul>
+<p class="dir">Sources: {{paths, message ids}}. Review: {{what ran, or why none}}.</p>
+</section>
+</main>
+</div>
+<script>
+const links=[...document.querySelectorAll('nav a[href^="#"]')];
+const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting)links.forEach(l=>l.classList.toggle('on',l.getAttribute('href')==='#'+e.target.id));})},{rootMargin:'-60px 0px -70% 0px'});
+links.forEach(a=>{const s=document.querySelector(a.getAttribute('href'));if(s)io.observe(s);});
+const secs=[...document.querySelectorAll('main section')];
+const cur=()=>{let i=0;secs.forEach((s,j)=>{if(s.getBoundingClientRect().top<=90)i=j;});return i;};
+document.addEventListener('keydown',e=>{
+  if(e.metaKey||e.ctrlKey||e.altKey||/INPUT|TEXTAREA/.test(e.target.tagName))return;
+  if(e.key==='g'){document.querySelectorAll('.guard').forEach(g=>g.hidden=!g.hidden);return;}
+  if(e.key==='j'||e.key==='k'){const i=cur()+(e.key==='j'?1:-1);if(secs[i])secs[i].scrollIntoView();return;}
+  const s=document.querySelector(`section[data-key="${e.key}"]`);if(s)s.scrollIntoView();
+});
+const KEY='prep:'+location.pathname;let saved={};try{saved=JSON.parse(localStorage.getItem(KEY)||'{}');}catch(e){saved={};}
+const boxes=[...document.querySelectorAll('.tick input')];const label=b=>b.closest('label').textContent.trim();
+boxes.forEach(b=>{b.checked=!!saved[label(b)];b.addEventListener('change',()=>{const m={};boxes.forEach(x=>m[label(x)]=x.checked);try{localStorage.setItem(KEY,JSON.stringify(m));}catch(e){}});});
+</script>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!-- Ruling-page template (skill: ruling-page). Copy this file, replace only the D array (and the h1), open it in a browser (or show it as an HTML artifact). Fields: id, group (optional, shown as a section heading), title, q, opts [[label, one-line effect], ...], pick (index of your recommendation), why, ev. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decisions for today</title>
+<style>
+  :root { --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --bg:#f1f5f9; --card:#ffffff; --pick:#4f46e5; --pickbg:#eef2ff; --ok:#059669; --warn:#b45309; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.55 "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; color:var(--ink);
+         background:radial-gradient(1200px 600px at 10% -10%, #e0e7ff 0%, transparent 60%), radial-gradient(900px 500px at 110% 0%, #dcfce7 0%, transparent 55%), var(--bg); min-height:100vh; }
+  header { position:sticky; top:0; z-index:5; backdrop-filter:saturate(180%) blur(12px); background:rgba(255,255,255,.82); border-bottom:1px solid var(--line); }
+  /* Header: row one is the title with both buttons on the right; row two is status plus the instruction. */
+  .bar { max-width:900px; margin:0 auto; padding:16px 20px 14px; display:flex; gap:10px 16px; align-items:center; flex-wrap:wrap; }
+  header h1 { font-size:20px; letter-spacing:-.01em; margin:0; flex:1 1 280px; }
+  header .actions { display:flex; gap:10px; flex:none; flex-wrap:wrap; }
+  header .sub { width:100%; display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; color:var(--muted); font-size:14px; }
+  @media (max-width:640px) { header { position:static; } }
+  .count { font-size:13px; font-weight:600; color:var(--pick); background:var(--pickbg); border-radius:999px; padding:4px 10px; }
+  .count.changed { color:var(--warn); background:#fef3c7; }
+  button { font:inherit; cursor:pointer; border-radius:999px; border:1px solid var(--line); background:#fff; padding:9px 16px; transition:all .15s ease; }
+  button:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(15,23,42,.08); }
+  button.primary { background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; border:0; font-weight:600; box-shadow:0 6px 16px rgba(79,70,229,.28); }
+  main { max-width:900px; margin:28px auto 90px; padding:0 20px; }
+  .card { overflow-wrap:anywhere; background:var(--card); border:1px solid var(--line); border-radius:18px; padding:22px 24px; margin:0 0 18px; box-shadow:0 1px 2px rgba(15,23,42,.04), 0 8px 24px rgba(15,23,42,.05); }
+  .card h2 { font-size:18px; letter-spacing:-.01em; margin:0 0 8px; display:flex; align-items:center; gap:10px; }
+  .tag { font-size:12px; font-weight:700; color:#fff; background:linear-gradient(135deg,#4f46e5,#7c3aed); border-radius:8px; padding:3px 8px; }
+  .q { margin:0 0 14px; font-size:16px; }
+  /* Options: a grid of equal-height cards, content pinned to the top. Every inner element has its own
+     class; never style ".opt span", which also matches the MY PICK badge and wrecks the layout. */
+  .opts { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin:14px 0 16px; align-items:stretch; }
+  .opt { min-width:0; position:relative; display:flex; flex-direction:column; justify-content:flex-start; gap:6px; text-align:left; color:var(--ink);
+         padding:16px 16px 14px; border-radius:14px; border:1.5px solid var(--line); background:#fff; }
+  .opt:hover { transform:none; border-color:#c7d2fe; box-shadow:0 4px 14px rgba(15,23,42,.06); }
+  .opt .head { display:flex; align-items:flex-start; gap:10px; }
+  .opt .radio { flex:none; width:18px; height:18px; margin-top:2px; border-radius:999px; border:1.5px solid #cbd5e1; background:#fff;
+                display:inline-flex; align-items:center; justify-content:center; color:#fff; font-size:11px; font-weight:700; line-height:1; }
+  .opt .lbl { flex:1 1 auto; min-width:0; font-size:15px; font-weight:650; line-height:1.35; }
+  .opt .desc { display:block; padding-left:28px; color:var(--muted); font-size:13.5px; line-height:1.45; }
+  .opt.sel { border-color:var(--pick); background:var(--pickbg); box-shadow:0 0 0 3px rgba(79,70,229,.12); }
+  .opt.sel .radio { background:var(--pick); border-color:var(--pick); }
+  .opt.sel .radio::before { content:"✓"; }
+  .rec { position:absolute; top:-10px; right:12px; white-space:nowrap; font-size:10.5px; font-weight:700; letter-spacing:.06em; line-height:1;
+         color:#fff; background:linear-gradient(135deg,#4f46e5,#7c3aed); border-radius:999px; padding:5px 9px; box-shadow:0 2px 6px rgba(79,70,229,.3); }
+  .why { font-size:14px; background:#f8fafc; border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin:0 0 8px; }
+  .ev { font-size:12.5px; color:var(--muted); margin:0 0 12px; }
+  textarea { width:100%; min-height:42px; font:inherit; font-size:14px; border:1px solid var(--line); border-radius:12px; padding:10px 12px; resize:vertical; background:#fcfdfe; }
+  textarea:focus, button:focus { outline:3px solid rgba(79,70,229,.25); outline-offset:1px; }
+  .toast { position:fixed; left:50%; bottom:28px; transform:translateX(-50%); background:var(--ok); color:#fff; padding:12px 18px; border-radius:999px; display:none; font-weight:600; box-shadow:0 8px 24px rgba(5,150,105,.35); }
+  .savedflag { font-size:12px; color:var(--ok); }
+  .savedflag.unsaved { color:var(--warn); font-weight:600; }
+  h3.group { font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:28px 4px 12px; }
+  pre#out { white-space:pre-wrap; background:#0f172a; color:#e2e8f0; border-radius:14px; padding:14px 16px; font-size:13px; display:none; }
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <h1>Decisions for today · 6 cards</h1>
+  <div class="actions"><button id="acceptAll">Accept all picks</button><button class="primary" id="copy">Copy my answers</button></div>
+  <div class="sub"><span class="count" id="count"></span><span class="savedflag" id="saved">Answers save as you go</span><span>My pick is already selected on every card. Change any you disagree with, then press <b>Copy my answers</b> and paste it into the chat.</span></div>
+</div></header>
+<main id="cards"></main>
+<main style="margin-top:-60px"><pre id="out"></pre></main>
+<div class="toast" id="toast">Copied. Paste it into the chat.</div>
+<script>
+const D = [
+ { id:"R1", group:"Release (Platform)", title:"When the new billing service goes live",
+   q:"Which day should the new billing service take over from the old one?",
+   opts:[["Thursday","Two quiet weekdays in production before the month-end peak."],["Next Monday","Waits for one more full load test. Four days later."]],
+   pick:0, why:"The extra load test was a planning agent's suggestion, not a requirement. Thursday gives two live weekdays before the peak, with an instant rollback on any wrong charge.",
+   ev:"Load test at 3x peak passed; plan doc section 1." },
+ { id:"R2", group:"Release (Platform)", title:"Instant rollback on a defined trigger",
+   q:"If any of these happen, can the on-call agent switch the old service back at once and tell you in the same minute: a wrong charge, a duplicate charge, the service down for 10 minutes?",
+   opts:[["Yes","Rollback in minutes, without waiting for you."],["No","It stops and waits for your go."]],
+   pick:0, why:"Each trigger costs money or trust every minute it runs.", ev:"Rollback rehearsed twice in staging." },
+ { id:"R3", group:"Release (Platform)", title:"Strongest model on the money path",
+   q:"Should the strongest model build the four pieces that move money from the first review round, not only from the second?",
+   opts:[["Yes","Money-path pieces get the strongest model from the start."],["No","They start on the cheaper builder like everything else."]],
+   pick:0, why:"They run one after another on the critical path, and a wrong line there is a wrong charge.", ev:"Critical-path list in the plan." },
+ { id:"R4", group:"Release (Platform)", title:"Cloud budget alarm",
+   q:"Raise the cloud budget alarm from USD 500 to USD 700 a month?",
+   opts:[["Yes","The alarm fires only above the approved spend."],["No","Keep USD 500; it keeps firing."]],
+   pick:0, why:"Actual spend is USD 604 with a USD 675 forecast, inside the approved increase, so the current alarm is always on and means nothing.", ev:"Budget dashboard." },
+ { id:"R5", group:"Current system (Support)", title:"Legacy fix",
+   q:"Should we keep working on the fix for the old service, which is being replaced this week?",
+   opts:[["Park it until the switch","Keep today's behaviour; the new service doesn't have the bug."],["Keep fixing","More review rounds on code that retires this week."]],
+   pick:0, why:"Three review rounds; each fix traded one risk for another.", ev:"The fix's pull request." },
+ { id:"R6", group:"Current system (Support)", title:"Send the customer the analysis",
+   q:"Should the updated analysis go to the customer now, as promised on Friday?",
+   opts:[["Yes, after the two-reviewer check","The agent drafts it; you send it."],["Not yet","It stays a draft."],["Ask me again tomorrow","Nothing goes out today."]],
+   pick:0, why:"It was promised three days ago and answers the question they asked.", ev:"Draft in the customer folder, marked draft." }
+];
+const RULING_KEY = "ruling-page:" + location.pathname;
+let saved = {};
+try { saved = JSON.parse(localStorage.getItem(RULING_KEY) || "{}"); } catch (e) { saved = {}; }
+const state = {};
+let storageOK = true;
+try { localStorage.setItem("__ruling_probe", "1"); localStorage.removeItem("__ruling_probe"); } catch (e) { storageOK = false; }
+// Where storage is blocked (a sandboxed artifact, some file:// setups) the page must not claim answers are saved.
+function markUnsaved(){ const el=document.getElementById("saved"); if (el) { el.textContent="Not saved in this window: copy your answers before you close it"; el.classList.add("unsaved"); } }
+function persist(){ if (!storageOK) { markUnsaved(); return; } try { localStorage.setItem(RULING_KEY, JSON.stringify(state)); const el=document.getElementById("saved"); if (el) { el.textContent="Saved"; clearTimeout(persist.t); persist.t=setTimeout(()=>el.textContent="Answers save as you go", 1200); } } catch (e) { storageOK = false; markUnsaved(); } }
+if (!storageOK) markUnsaved();
+const cards = document.getElementById("cards");
+function render(){
+  cards.innerHTML = "";
+  let lastGroup = null;
+  D.forEach(d => {
+    const g = d.group || lastGroup;
+    if (g && g !== lastGroup) { const h = document.createElement("h3"); h.className="group"; h.textContent = g; cards.appendChild(h); lastGroup = g; }
+    if (!(d.id in state)) {
+      const sv = saved[d.id];
+      state[d.id] = (sv && Number.isInteger(sv.choice) && sv.choice >= 0 && sv.choice < d.opts.length)
+        ? { choice: sv.choice, other: typeof sv.other === "string" ? sv.other : "" }
+        : { choice: d.pick, other: (sv && typeof sv.other === "string") ? sv.other : "" };
+    }
+    const c = document.createElement("section"); c.className="card";
+    // Card text is data, not markup: every field is set with textContent so pasted source text cannot inject HTML.
+    const h2 = document.createElement("h2"); const tag = document.createElement("span"); tag.className="tag"; tag.textContent = d.id;
+    h2.append(tag, document.createTextNode(d.title)); c.appendChild(h2);
+    const q = document.createElement("p"); q.className="q"; q.textContent = d.q; c.appendChild(q);
+    const opts = document.createElement("div"); opts.className="opts";
+    d.opts.forEach((o,i) => {
+      const b = document.createElement("button"); b.className="opt"+(state[d.id].choice===i?" sel":"");
+      if (i===d.pick) { const rec = document.createElement("span"); rec.className="rec"; rec.textContent="MY PICK"; b.appendChild(rec); }
+      const head = document.createElement("span"); head.className="head";
+      const radio = document.createElement("span"); radio.className="radio";
+      const lbl = document.createElement("span"); lbl.className="lbl"; lbl.textContent = o[0];
+      head.append(radio, lbl);
+      const desc = document.createElement("span"); desc.className="desc"; desc.textContent = o[1];
+      b.append(head, desc);
+      b.onclick = () => { state[d.id].choice=i; persist(); render(); };
+      opts.appendChild(b);
+    });
+    c.appendChild(opts);
+    const why = document.createElement("div"); why.className="why"; const wb = document.createElement("b"); wb.textContent = "Why my pick:"; why.append(wb, document.createTextNode(" "+d.why)); c.appendChild(why);
+    const ev = document.createElement("div"); ev.className="ev"; ev.textContent = "Evidence: "+d.ev; c.appendChild(ev);
+    const t = document.createElement("textarea"); t.placeholder="Anything else? Type it here (optional)"; t.value=state[d.id].other;
+    t.oninput = e => { state[d.id].other = e.target.value; persist(); };
+    c.appendChild(t);
+    cards.appendChild(c);
+  });
+  if (typeof count==='function') count();
+}
+render();
+function count(){ const kept=D.filter(d=>state[d.id].choice===d.pick).length; const el=document.getElementById('count'); el.textContent = kept===D.length ? 'All '+D.length+' on my pick' : (D.length-kept)+' changed from my pick'; el.className='count'+(kept===D.length?'':' changed'); }
+count();
+document.getElementById("acceptAll").onclick = () => { D.forEach(d => { state[d.id].choice=d.pick; }); persist(); render(); };
+document.getElementById("copy").onclick = async () => {
+  const lines = ["Rulings:"];
+  D.forEach(d => {
+    const s = state[d.id]; const o = d.opts[s.choice][0];
+    let line = `${d.id} ${d.title}: ${o}${s.choice===d.pick?" (your pick)":" (NOT your pick)"}`;
+    if (s.other.trim()) line += ` | note: ${s.other.trim()}`;
+    lines.push(line);
+  });
+  const text = lines.join("\n");
+  const out = document.getElementById("out"); out.textContent = text; out.style.display="block";
+  // Clipboard access is blocked in some hosts (sandboxed artifacts, file:// in some browsers).
+  // Only claim "Copied" when it worked; otherwise leave the text selected on the page to copy by hand.
+  let ok = false;
+  try { await navigator.clipboard.writeText(text); ok = true; } catch(e) {
+    try { const r = document.createRange(); r.selectNodeContents(out); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); ok = document.execCommand("copy"); } catch(e2) { ok = false; }
+  }
+  const t = document.getElementById("toast"); t.textContent = ok ? "Copied. Paste it into the chat." : "Could not copy automatically. The answers are selected below: copy them by hand."; t.style.display = "block"; if (!ok) out.scrollIntoView({block:"center"}); setTimeout(()=>t.style.display="none", ok ? 2500 : 6000);
+};
+</script>
+</body>
+</html>
