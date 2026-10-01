@@ -8,7 +8,7 @@ Once installed (Claude Code plugin, or the skill copied into Codex), ask for a t
 
 - `agent-browser` on the PATH (`npm i -g agent-browser && agent-browser install`), which the persona agents drive.
 - The artefact served over HTTP (a static export: `python3 -m http.server`), a screen inventory or a nav to derive one from, a source of truth for "expected" (the spec or the design system's rules), and one output directory per persona.
-- Claude Code or Codex with subagents; three personas is the default, four or five when the artefact has distinct audiences. In Claude Code each persona is one `general-purpose` agent with an explicit model. In Codex each is a `worker` spawned with `fork_turns: "none"`, and the session needs `--sandbox danger-full-access`, because the macOS `workspace-write` sandbox cannot launch Chromium. Install for Codex by copying `skills/persona-teardown` to `~/.codex/skills/persona-teardown`.
+- Claude Code or Codex with subagents; three personas is the default, four or five when the artefact has distinct audiences. In Claude Code each persona is one `general-purpose` agent with an explicit model. In Codex each is a `worker` spawned with `fork_turns: "none"`, and the session needs `--sandbox danger-full-access`, because the macOS `workspace-write` sandbox cannot launch Chromium. Full access lets each persona read and send anything your account can, so on Codex only tear down an artefact you control (your own export or staging URL). Install for Codex by copying `skills/persona-teardown` to `~/.codex/skills/persona-teardown`.
 
 ## The rules that carry it
 

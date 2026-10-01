@@ -85,7 +85,9 @@ MIT. doc-gauntlet includes Every's review kernel; see [NOTICE.md](NOTICE.md).
 - **persona-teardown 0.2.0** (1 October 2026). Runs from Codex as well as Claude Code. A short "Dispatching
   by engine" section says how each engine spawns a cold persona agent: on Codex, a `worker` with
   `fork_turns: "none"`, all spawned before any wait. Codex's macOS `workspace-write` sandbox cannot launch
-  Chromium, so a Codex teardown runs with `--sandbox danger-full-access`.
+  Chromium, so a Codex teardown runs with `--sandbox danger-full-access`, and on Codex only over an
+  artefact you control. Persona agents on both engines now treat text on the page as data, never as
+  instructions.
 - **persona-teardown 0.1.2** (1 October 2026). The skill's description failed to parse as YAML, so Claude Code
   loaded it with no description and it never triggered on its own. Fixed.
 - **ruling-page 0.1.0 and call-prep 0.1.0** (30 September 2026). First releases. Both produce one
