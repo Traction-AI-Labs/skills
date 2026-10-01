@@ -83,6 +83,9 @@ MIT. doc-gauntlet includes Every's review kernel; see [NOTICE.md](NOTICE.md).
 
 ## Changelog
 
+- **gauntlet 0.5.1 and doc-gauntlet 0.5.1** (1 October 2026). Each plugin README now matches its skill:
+  gauntlet documents `prepare --timeout-seconds` and the per-leg `./diff.patch`; doc-gauntlet describes the
+  error list and the sparring memo. Documentation only.
 - **gauntlet 0.5.0 and doc-gauntlet 0.5.0** (1 October 2026). The Codex reviewer defaults to `gpt-6.1-sol`
   in every profile (fast used `gpt-5.6-terra`, balanced and deep `gpt-5.6-sol`), and doc-gauntlet's Codex
   default moves with it. Needs Codex CLI 0.159.3 or later: older CLIs reject the model on a ChatGPT account.

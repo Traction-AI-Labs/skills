@@ -2,7 +2,7 @@
 
 These examples are for a clone of this package directory. If you installed the Claude Code plugin, ask for a document gauntlet in session instead.
 
-Document Gauntlet runs six independent breadth lenses followed by two independent adversarial reviews of one committed document revision. The default pair is Claude and Codex. Pass `--engines grok,codex` or `--engines claude,grok` to substitute Grok for one engine. Breadth uses Claude when Claude is in the pair; otherwise Grok. A row is `RUNNING` until its reviewer exits, then `FAILED` if it has no valid result; neither state is convergence.
+Document Gauntlet runs six independent breadth lenses followed by two independent adversarial reviews of one committed document revision, and returns two outputs: a short list of errors the document must fix and a sparring memo for the author. The default pair is Claude and Codex. Pass `--engines grok,codex` or `--engines claude,grok` to substitute Grok for one engine. Breadth uses Claude when Claude is in the pair; otherwise Grok. A row is `RUNNING` until its reviewer exits, then `FAILED` if it has no valid result; neither state is convergence.
 
 ## Quickstart
 
@@ -26,7 +26,7 @@ for result in "$RUN"/results/breadth-*.json; do
   printf '\n%s\n' "$result"
   cat "$result"
 done
-printf '%s' "If any breadth finding needs a revision, press Ctrl-C now. Otherwise press Enter to start the final pair. "
+printf '%s' "If any breadth error needs a fix, press Ctrl-C now. Otherwise press Enter to start the final pair. "
 if ! IFS= read -r _; then
   printf '%s\n' "No confirmation received. Stopping before the final reviewers." >&2
   exit 1
@@ -42,11 +42,11 @@ printf '%s\n' "$OUTPUT"
 )
 ```
 
-Read each breadth-lens JSON finding before the final line. A clean breadth review plus `ADVERSARIAL: CONVERGED` means the review gate passes. Any breadth finding or `ADVERSARIAL: BLOCK` needs human adjudication and usually a revised document. `GAUNTLET: RUNNING` names unfinished reviewers. `GAUNTLET: FAILED` names completed reviewers without a valid result; inspect the printed failure, recover only that reviewer, then collect again. Save the output before running `clean`.
+Read each breadth-lens JSON finding before the final line. Every finding is one of two kinds. An `error` or `omission` (a false premise, a wrong or unverifiable fact, broken logic, a contradiction, or wording that would make a reader act wrongly) goes on the error list and is fixed in the document; a fix corrects or deletes, never adds a hedge. A `sparring` point goes into a short memo for the author (a two-line verdict, then at most six ranked points, each with a concrete fix) and is the author's to weigh, never auto-applied. `ADVERSARIAL: BLOCK` means a reviewer reported at least one error or omission; `ADVERSARIAL: CONVERGED` means none, and may still carry sparring points. The review gate passes when no verified error remains. `GAUNTLET: RUNNING` names unfinished reviewers. `GAUNTLET: FAILED` names completed reviewers without a valid result; inspect the printed failure, recover only that reviewer, then collect again. Save the output before running `clean`.
 
-A document gets up to two rounds, one when a code gauntlet has already reviewed the same change. Each successful round is appended to the round record at `~/.gauntlet/rounds.jsonl` (override the path with `GAUNTLET_ROUND_RECORD`), keyed on the repository and the document path; a round is a distinct document content, so a re-run on an unchanged document is a retry of the same round and is never refused. Breadth runs once. The runner numbers rounds and refuses nothing; stopping at the limit is the operator's call. `--override-round-budget` is accepted and ignored.
+A document gets up to two rounds, one when a code gauntlet has already reviewed the same change. Each successful round is appended to the round record at `~/.gauntlet/rounds.jsonl` (override the path with `GAUNTLET_ROUND_RECORD`), keyed on the repository and the document path; a round is a distinct document content, so a re-run on an unchanged document is a retry of the same round. The runner numbers rounds and refuses nothing on round count; `--override-round-budget` is accepted and ignored. Breadth runs once.
 
-The second round, after the document is revised and committed, prepares only the two adversarial reviewers. It has no breadth rows, so do not run the quickstart above against it; run this instead, with the first round's saved `collect` output as the prior findings:
+The second round, after the errors are fixed and committed, prepares only the two adversarial reviewers. It has no breadth rows, so do not run the quickstart above against it; run this instead, with the first round's saved `collect` output as the prior findings:
 
 ```sh
 RUN="$(DOC_GAUNTLET_REPO="<absolute review worktree>" bash skills/doc-gauntlet/scripts/doc-gauntlet.sh prepare --authorize-provider --doc docs/plan.md --type plan --pair-only --prior-findings <round-1-collect-output> | sed -n 's/^WORKDIR=//p')"
