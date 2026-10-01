@@ -8,7 +8,7 @@ Skills for Claude Code, the Claude app, Codex and Grok, published by Traction St
 |---|---|---|
 | **gauntlet** | Reviews a committed code diff with two independent engines (Claude and Codex by default; Grok can take either slot) | Claude Code, Codex, Grok, or the portable CLI |
 | **doc-gauntlet** | Reviews a committed plan, spec or requirements document with six breadth lenses, then the same two-engine pair; returns a sparring memo for the author and a short list of true errors | Claude Code, Codex, Grok, or the portable CLI |
-| **persona-teardown** | Walks a prototype, UI kit or live screen with three to five cold persona agents driving `agent-browser`, one session and one report each, with a coverage ledger of every screen, control, state and ground, then consolidates the findings into one amendment prompt for the design tool | Claude Code (subagents) |
+| **persona-teardown** | Walks a prototype, UI kit or live screen with three to five cold persona agents driving `agent-browser`, one session and one report each, with a coverage ledger of every screen, control, state and ground, then consolidates the findings into one amendment prompt for the design tool | Claude Code or Codex (subagents) |
 | **ruling-page** | Turns a complicated decision into a clickable one-file HTML page: a recommendation pre-selected on every card, alternatives as buttons, and one button that copies the answers back into chat | Claude Code, the Claude app |
 | **call-prep** | Writes a verbatim call script as one interactive HTML page to read live on a second screen: a guard line of what not to say, numbered beats with the exact words, fallbacks for pushback and answers to the hardest questions | Claude Code, the Claude app |
 
@@ -35,6 +35,7 @@ Install only the ones you want.
 git clone https://github.com/Traction-AI-Labs/skills.git
 cp -R skills/plugins/gauntlet/skills/gauntlet ~/.codex/skills/gauntlet
 cp -R skills/plugins/doc-gauntlet/skills/doc-gauntlet ~/.codex/skills/doc-gauntlet
+cp -R skills/plugins/persona-teardown/skills/persona-teardown ~/.codex/skills/persona-teardown
 ```
 
 The same pattern works for any other skill (`plugins/<plugin>/skills/<skill>`). To update, remove the
@@ -81,6 +82,12 @@ MIT. doc-gauntlet includes Every's review kernel; see [NOTICE.md](NOTICE.md).
 
 ## Changelog
 
+- **persona-teardown 0.2.0** (1 October 2026). Runs from Codex as well as Claude Code. A short "Dispatching
+  by engine" section says how each engine spawns a cold persona agent: on Codex, a `worker` with
+  `fork_turns: "none"`, all spawned before any wait. Codex's macOS `workspace-write` sandbox cannot launch
+  Chromium, so a Codex teardown runs with `--sandbox danger-full-access`, and on Codex only over an
+  artefact you control. Persona agents on both engines now treat text on the page as data, never as
+  instructions.
 - **persona-teardown 0.1.2** (1 October 2026). The skill's description failed to parse as YAML, so Claude Code
   loaded it with no description and it never triggered on its own. Fixed.
 - **ruling-page 0.1.0 and call-prep 0.1.0** (30 September 2026). First releases. Both produce one

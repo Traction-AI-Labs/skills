@@ -1,6 +1,6 @@
 {
   "name": "persona-teardown",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Tears down a prototype, UI kit or live screen with a panel of cold persona agents driving a browser, then consolidates the findings into one design-tool amendment prompt.",
   "author": {
     "name": "Traction Studio",
