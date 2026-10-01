@@ -65,7 +65,8 @@ Clone the repo. From `plugins/gauntlet` or `plugins/doc-gauntlet`, follow that d
 
 The two gauntlets need Bash, Git, Python 3 and GNU `timeout` (on macOS, `brew install coreutils`).
 Authenticate the CLIs in the pair you will prepare (`claude` and `codex` by default; `grok` if you pass
-`--engines`).
+`--engines`). The Codex reviewer defaults to `gpt-6.1-sol`, which needs Codex CLI 0.159.3 or
+later.
 
 Use a dedicated clean worktree with no secrets the providers can read. `prepare` requires
 `--authorize-provider`: that flag sends the pinned diff or document, and whatever the reviewer can read
@@ -82,6 +83,10 @@ MIT. doc-gauntlet includes Every's review kernel; see [NOTICE.md](NOTICE.md).
 
 ## Changelog
 
+- **gauntlet 0.5.0 and doc-gauntlet 0.5.0** (1 October 2026). The Codex reviewer defaults to `gpt-6.1-sol`
+  in every profile (fast used `gpt-5.6-terra`, balanced and deep `gpt-5.6-sol`), and doc-gauntlet's Codex
+  default moves with it. Needs Codex CLI 0.159.3 or later: older CLIs reject the model on a ChatGPT account.
+  `--codex-model` still picks another.
 - **persona-teardown 0.2.0** (1 October 2026). Runs from Codex as well as Claude Code. A short "Dispatching
   by engine" section says how each engine spawns a cold persona agent: on Codex, a `worker` with
   `fork_turns: "none"`, all spawned before any wait. Codex's macOS `workspace-write` sandbox cannot launch

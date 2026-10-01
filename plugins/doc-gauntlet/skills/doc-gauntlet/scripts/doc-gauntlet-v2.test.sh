@@ -58,6 +58,8 @@ grep -Fxq "Repository path: $repo_canonical" "$RUN/prompts/adversarial-claude-na
 TYPE_RUN="$TMP/type-run"
 DOC_GAUNTLET_REPO="$REPO" DOC_GAUNTLET_DIR="$TYPE_RUN" "$RUNNER" prepare --authorize-provider --doc docs/requirements.md --type requirements >/dev/null
 grep -Fq 'Document type: requirements' "$TYPE_RUN/prompts/breadth-feasibility.md"
+# With no --codex-model, the Codex default is gpt-6.1-sol.
+python3 -c 'import json, sys; m = json.load(open(sys.argv[1]))["codex"]["model"]; assert m == "gpt-6.1-sol", m' "$TYPE_RUN/rows.json"
 DOC_GAUNTLET_DIR="$TYPE_RUN" "$RUNNER" clean --force
 if DOC_GAUNTLET_REPO="$REPO" DOC_GAUNTLET_DIR="$TMP/missing-type" "$RUNNER" prepare --authorize-provider --doc docs/plan.md >/dev/null 2> "$TMP/missing-type.err"; then exit 1; fi
 grep -Fq 'prepare requires --type requirements|plan' "$TMP/missing-type.err"

@@ -92,7 +92,7 @@ run ingest --engine claude --text "$TMP/claude.txt"
 grep -Fq '"verdict": "APPROVE"' "$TMP/run/results/claude.json"
 
 cat > "$TMP/codex.txt" <<EOF
-{"engine":"codex","model":"gpt-5.6-terra","transport":"codex-native","scope_sha":"$scope_sha","scope_digest":"$scope_digest","verdict":"BLOCK","findings":[{"severity":"P1","location":"app.txt:1","failure_mode":"broken","evidence":"fixture","causal_relation":"introduced","verification":"test","suggested_fix":"repair the fixture"}]}
+{"engine":"codex","model":"gpt-6.1-sol","transport":"codex-native","scope_sha":"$scope_sha","scope_digest":"$scope_digest","verdict":"BLOCK","findings":[{"severity":"P1","location":"app.txt:1","failure_mode":"broken","evidence":"fixture","causal_relation":"introduced","verification":"test","suggested_fix":"repair the fixture"}]}
 EOF
 run ingest --engine codex --text "$TMP/codex.txt"
 run collect > "$TMP/collect.out"
@@ -182,7 +182,14 @@ PATH="$TMP/frozen-clock:$TMP/bin:$PATH" FAKE_CLAUDE_SLEEP=2 FAKE_CLAUDE_DIFF="$T
 PATH="$TMP/bin:$PATH" REAL_TIMEOUT="$REAL_TIMEOUT" FAKE_CLAUDE_TIMEOUT="$TMP/claude.timeout" FAKE_CODEX_TIMEOUT="$TMP/codex.timeout" GAUNTLET_PROVIDER_TIMEOUT_SECONDS=88 FAKE_CODEX_DIFF="$TMP/codex.diff" FAKE_CODEX_ARGS="$TMP/codex.args" FAKE_CODEX_ENV="$TMP/codex.env" GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$TMP/cli-run" bash "$RUNNER" run-cli --engine codex
 wait_for_leg "$TMP/cli-run" claude
 wait_for_leg "$TMP/cli-run" codex
-grep -Fq -- 'model_reasoning_effort=low -m gpt-5.6-terra' "$TMP/codex.args"
+grep -Fq -- 'model_reasoning_effort=low -m gpt-6.1-sol' "$TMP/codex.args"
+# The Codex default is gpt-6.1-sol in every profile, and --codex-model still overrides it.
+for profile in fast balanced deep; do
+  GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$TMP/model-$profile" bash "$RUNNER" prepare --authorize-provider --base main --profile "$profile" --identity "model-$profile" > /dev/null
+  python3 -c 'import json, sys; m = json.load(open(sys.argv[1]))["codex"]["model"]; assert m == "gpt-6.1-sol", (sys.argv[1], m)' "$TMP/model-$profile/rows.json"
+done
+GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$TMP/model-override" bash "$RUNNER" prepare --authorize-provider --base main --profile balanced --identity model-override --codex-model override-model > /dev/null
+python3 -c 'import json, sys; m = json.load(open(sys.argv[1]))["codex"]["model"]; assert m == "override-model", m' "$TMP/model-override/rows.json"
 grep -Fq -- '--safe-mode' "$TMP/claude.args"
 grep -Fq -- '--mcp-config' "$TMP/claude.args"
 grep -Fq -- '--strict-mcp-config' "$TMP/claude.args"
@@ -352,7 +359,7 @@ cat > "$TMP/bin3/codex" <<'EOF'
 set -euo pipefail
 p="$(cat)"; sha="$(sed -n 's/^Scope SHA: //p' <<<"$p")"; digest="$(sed -n 's/^Scope digest: //p' <<<"$p")"
 out=""; prev=""; for arg in "$@"; do [[ "$prev" == --output-last-message ]] && out="$arg"; prev="$arg"; done
-printf '{"engine":"codex","model":"gpt-5.6-terra","transport":"codex-cli","scope_sha":"%s","scope_digest":"%s","verdict":"APPROVE","findings":[]}\n' "$sha" "$digest" > "$out"
+printf '{"engine":"codex","model":"gpt-6.1-sol","transport":"codex-cli","scope_sha":"%s","scope_digest":"%s","verdict":"APPROVE","findings":[]}\n' "$sha" "$digest" > "$out"
 EOF
 chmod +x "$TMP/bin3/codex"
 GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$TMP/timeout-run" bash "$RUNNER" prepare --authorize-provider --base main --profile fast --identity timeoutrun --timeout-seconds 5 > /dev/null

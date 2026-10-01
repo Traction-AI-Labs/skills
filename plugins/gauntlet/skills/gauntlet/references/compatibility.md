@@ -7,6 +7,8 @@
 | Grok Build TUI | one fresh read-only grok reviewer with one bounded wait | CLI for the other prepared engine |
 | Other hosts | none | both prepared CLIs |
 
+The Codex leg defaults to `gpt-6.1-sol` and needs Codex CLI 0.159.3 or later; older CLIs reject that model on a ChatGPT account. `--codex-model` picks another.
+
 Native receives `<run>/prompts/<engine>-native.md`; CLI receives `<run>/prompts/<engine>-cli.md`. Read the matching model and effort from `rows.json`. Native replaces only the matching engine's CLI row.
 
 On Codex, dispatch `explorer` with `fork_turns: none`, use one bounded `wait_agent`, and call `interrupt_agent` if unfinished. On Claude Code, dispatch one fresh `Explore` task, use one bounded final-result/status call, and use `TaskStop` if unfinished.

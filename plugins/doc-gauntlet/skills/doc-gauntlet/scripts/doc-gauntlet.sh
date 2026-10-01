@@ -360,7 +360,7 @@ review_guidance() {
 }
 prepare() {
   require_runtime
-  local authorised=false doc="" type="" origin=none ledger=none prior_findings="" engines_raw=claude,codex claude_model=opus codex_model=gpt-5.6-sol grok_model=grok-4.6 effort=medium timeout_seconds='' repo="${DOC_GAUNTLET_REPO:-$(git rev-parse --show-toplevel)}"
+  local authorised=false doc="" type="" origin=none ledger=none prior_findings="" engines_raw=claude,codex claude_model=opus codex_model=gpt-6.1-sol grok_model=grok-4.6 effort=medium timeout_seconds='' repo="${DOC_GAUNTLET_REPO:-$(git rev-parse --show-toplevel)}"
   local engine_a engine_b engine breadth_model
   local pair_only=false
   local -a pair=()

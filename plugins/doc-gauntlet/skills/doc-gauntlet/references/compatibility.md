@@ -7,6 +7,8 @@
 | Grok Build TUI | one fresh read-only grok reviewer with one bounded wait | CLI for the other prepared engine |
 | Other hosts | none | both prepared CLIs |
 
+The Codex leg defaults to `gpt-6.1-sol` and needs Codex CLI 0.159.3 or later; older CLIs reject that model on a ChatGPT account. `--codex-model` picks another.
+
 Breadth native prompts are `<run>/prompts/breadth-<lens>.md`. Breadth uses Claude when Claude is in the pair; otherwise Grok. Adversarial native prompts are `<run>/prompts/adversarial-<engine>-native.md`; CLI uses the matching `*-cli.md` file. Read the prepared pair, breadth engine, models, and effort from `rows.json`.
 
 On Codex, dispatch `explorer` with `fork_turns: none`, use one bounded `wait_agent`, and call `interrupt_agent` if unfinished. On Claude Code, dispatch one fresh `Explore` task, use one bounded final-result/status call, and use `TaskStop` if unfinished.

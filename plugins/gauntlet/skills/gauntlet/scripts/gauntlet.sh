@@ -428,9 +428,9 @@ prepare() {
   [[ "${#pair[@]}" -eq 2 ]] || die 'prepare requires exactly two engines'
   engine_a="${pair[0]}"; engine_b="${pair[1]}"
   case "$profile" in
-    fast) claude="${claude:-sonnet}"; codex="${codex:-gpt-5.6-terra}"; grok="${grok:-grok-4.6}"; effort="${effort:-low}" ;;
-    balanced) claude="${claude:-opus}"; codex="${codex:-gpt-5.6-sol}"; grok="${grok:-grok-4.6}"; effort="${effort:-medium}" ;;
-    deep) claude="${claude:-opus}"; codex="${codex:-gpt-5.6-sol}"; grok="${grok:-grok-4.6}"; effort="${effort:-high}" ;;
+    fast) claude="${claude:-sonnet}"; codex="${codex:-gpt-6.1-sol}"; grok="${grok:-grok-4.6}"; effort="${effort:-low}" ;;
+    balanced) claude="${claude:-opus}"; codex="${codex:-gpt-6.1-sol}"; grok="${grok:-grok-4.6}"; effort="${effort:-medium}" ;;
+    deep) claude="${claude:-opus}"; codex="${codex:-gpt-6.1-sol}"; grok="${grok:-grok-4.6}"; effort="${effort:-high}" ;;
     *) die 'profile must be fast, balanced, or deep' ;; esac
   timeout_seconds="${timeout_seconds:-1800}"
   [[ "$timeout_seconds" =~ ^[1-9][0-9]*$ ]] || die '--timeout-seconds must be a positive whole number of seconds'
