@@ -58,10 +58,10 @@ Persona agents run shell commands and write files, so they need a writable role,
   omitted `fork_turns` copies the orchestrator's whole history into the persona), all spawned before any
   `wait_agent`. `task_name` takes lowercase letters, digits and underscores only, so `busy_shopper` for
   persona `busy-shopper`; the `--session` and directory keep the hyphenated name. Wait in minutes, not
-  seconds, until every persona returns; `interrupt_agent` any you give up on and record it as not reached. Codex's macOS sandbox cannot launch Chromium in `workspace-write`, even
-  with network access and `~/.agent-browser` writable, so run the session with
-  `--sandbox danger-full-access` (`sandbox_mode = "danger-full-access"` in config); spawned agents
-  inherit it.
+  seconds, until every persona returns; `interrupt_agent` any you give up on and record it as not
+  reached. Codex's macOS sandbox cannot launch Chromium in `workspace-write`, even with network access
+  and `~/.agent-browser` writable, so run the session with `--sandbox danger-full-access`
+  (`sandbox_mode = "danger-full-access"` in config); spawned agents inherit it.
 
 ## Persona template
 
