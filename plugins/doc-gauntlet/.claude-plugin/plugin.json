@@ -1,6 +1,6 @@
 {
   "name": "doc-gauntlet",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Reviews a committed plan or requirements document with six breadth lenses and two independent engines.",
   "author": {
     "name": "Traction Studio",
