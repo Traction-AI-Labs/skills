@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en-AU" class="no-js">
+<head>
+<!--
+  Reading-page template (skill: reading-page). One self-contained page: inline CSS and JS,
+  no external assets, no network, works from file://.
+
+  Normal path: write markdown, then run scripts/build.py, which fills the six marked regions
+  below (the page title tag, @title, @meta, @standfirst, @toc, @body). Hand-built pages: copy this file and replace
+  only those regions (an empty @toc is built by the script), using the component classes shown in the demo body (lead, callout--rec /
+  --risk / --decision / --note / --verified / --inferred, prov marks, table-wrap + sortable,
+  fold sections, pre blocks). The TOC, scroll-spy, copy buttons, sorting, mobile table cards and
+  theme toggle are built by the script at the bottom from whatever is in the article.
+-->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Reading page template</title>
+<script>
+  // Apply a saved theme before first paint so there is no flash.
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/, "js");
+  try { var t = localStorage.getItem("reading-page:theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+<style>
+  :root {
+    --paper:#f4f5f2; --surface:#ffffff; --ink:#1c232b; --ink-2:#38424d; --muted:#5b6570; --rule:#d9ded7; --rule-2:#e8ebe6;
+    --accent:#1d5a55; --accent-ink:#164744; --accent-tint:#e2eeea; --accent-line:#9fc4bc;
+    --rec:#1f6b45; --rec-tint:#e5f2ea; --risk:#a2333b; --risk-tint:#f8e8e8; --dec:#5b3fa3; --dec-tint:#eeeaf8;
+    --note:#3f5a7a; --note-tint:#e8eef5; --ver:#2a6b3c; --ver-tint:#e3f1e6; --inf:#80620c; --inf-tint:#f6efd9;
+    --code-bg:#eceee9; --sel:#cfe5df; --shadow:0 1px 0 rgba(28,35,43,.04), 0 10px 30px -18px rgba(28,35,43,.25);
+    --serif:"Charter","Iowan Old Style","Sitka Text",Cambria,Georgia,serif;
+    --sans:"Avenir Next","Avenir","Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,"Liberation Mono",monospace;
+    --measure:68ch; --rail:250px; --bar-h:0px;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --paper:#13171b; --surface:#1a1f25; --ink:#e3e7e9; --ink-2:#c3cacf; --muted:#97a1aa; --rule:#2c343c; --rule-2:#232a31;
+    --accent:#7cc3b6; --accent-ink:#a9dbd1; --accent-tint:#1b2c2a; --accent-line:#2f5650;
+    --rec:#7fcf9f; --rec-tint:#17281f; --risk:#f09aa0; --risk-tint:#2d1b1e; --dec:#bba8f2; --dec-tint:#231f33;
+    --note:#9db7d6; --note-tint:#1b2430; --ver:#8fd3a0; --ver-tint:#16271b; --inf:#e5c56b; --inf-tint:#2a2414;
+    --code-bg:#20262d; --sel:#2a4a45; --shadow:0 1px 0 rgba(0,0,0,.3), 0 10px 30px -18px rgba(0,0,0,.6);
+  } }
+  :root[data-theme="dark"] {
+    --paper:#13171b; --surface:#1a1f25; --ink:#e3e7e9; --ink-2:#c3cacf; --muted:#97a1aa; --rule:#2c343c; --rule-2:#232a31;
+    --accent:#7cc3b6; --accent-ink:#a9dbd1; --accent-tint:#1b2c2a; --accent-line:#2f5650;
+    --rec:#7fcf9f; --rec-tint:#17281f; --risk:#f09aa0; --risk-tint:#2d1b1e; --dec:#bba8f2; --dec-tint:#231f33;
+    --note:#9db7d6; --note-tint:#1b2430; --ver:#8fd3a0; --ver-tint:#16271b; --inf:#e5c56b; --inf-tint:#2a2414;
+    --code-bg:#20262d; --sel:#2a4a45; --shadow:0 1px 0 rgba(0,0,0,.3), 0 10px 30px -18px rgba(0,0,0,.6);
+  }
+
+  * { box-sizing:border-box; }
+  html { -webkit-text-size-adjust:100%; text-size-adjust:100%; scroll-padding-top:calc(var(--bar-h) + 20px); }
+  body { margin:0; background:var(--paper); color:var(--ink); font:18px/1.62 var(--serif); font-kerning:normal;
+         font-variant-numeric:oldstyle-nums proportional-nums; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+  ::selection { background:var(--sel); }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:3px; border-radius:3px; }
+  a { color:var(--accent-ink); text-decoration:underline; text-decoration-color:var(--accent-line); text-decoration-thickness:1px; text-underline-offset:.18em; }
+  a:hover { text-decoration-color:currentColor; }
+  button { font:inherit; color:inherit; }
+
+  /* Reading progress: a hairline along the top edge. */
+  .progress { position:fixed; inset:0 0 auto 0; height:3px; z-index:30; pointer-events:none; }
+  .progress i { display:block; height:100%; width:100%; background:var(--accent); transform-origin:0 50%; transform:scaleX(0); }
+
+  /* Layout: a sticky contents rail beside one reading column. */
+  .shell { display:grid; grid-template-columns:var(--rail) minmax(0,1fr); gap:0 56px; max-width:1240px; margin:0 auto; padding:0 40px; }
+  .rail { position:sticky; top:0; align-self:start; height:100vh; padding:56px 0 32px; display:flex; flex-direction:column; min-height:0; }
+  main { min-width:0; padding:56px 0 120px; max-width:900px; }
+
+  /* Masthead */
+  .masthead { padding-bottom:28px; margin-bottom:8px; border-bottom:1px solid var(--rule); }
+  .masthead h1 { font-family:var(--sans); font-weight:700; font-size:clamp(2rem, 1.4rem + 2.4vw, 2.9rem); line-height:1.08; letter-spacing:-.022em; margin:0 0 18px; max-width:22ch; text-wrap:balance; }
+  .standfirst { font-size:1.12rem; line-height:1.55; color:var(--ink-2); max-width:var(--measure); margin:0 0 22px; }
+  .standfirst p { margin:0 0 .6em; }
+  .meta { display:flex; flex-wrap:wrap; align-items:center; gap:10px 28px; font-family:var(--sans); font-size:.86rem; color:var(--muted); }
+  .meta dl { display:flex; flex-wrap:wrap; gap:8px 26px; margin:0; }
+  .meta dl div { display:flex; gap:7px; align-items:baseline; }
+  .meta dt { color:var(--muted); }
+  .meta dd { margin:0; color:var(--ink); font-weight:600; }
+  .status { display:inline-block; padding:2px 10px; border-radius:999px; background:var(--accent-tint); color:var(--accent-ink); font-weight:600; }
+  .tools { display:flex; gap:8px; margin-left:auto; }
+  .tool { display:inline-flex; align-items:center; gap:7px; font-family:var(--sans); font-size:.82rem; font-weight:600; color:var(--ink-2);
+          background:var(--surface); border:1px solid var(--rule); border-radius:8px; padding:6px 11px; cursor:pointer; }
+  .tool:hover { border-color:var(--accent-line); color:var(--accent-ink); }
+  .tool svg { width:15px; height:15px; flex:none; }
+
+  /* Contents rail */
+  .toc-label { font-family:var(--sans); font-size:.8rem; font-weight:600; color:var(--muted); margin:0 0 12px 14px; }
+  .toc { overflow:auto; min-height:0; overscroll-behavior:contain; scrollbar-width:thin; padding-right:6px; }
+  .toc ol { list-style:none; margin:0; padding:0; }
+  .toc a { display:block; position:relative; font-family:var(--sans); font-size:.88rem; line-height:1.35; color:var(--muted); text-decoration:none;
+           padding:7px 10px 7px 14px; border-left:2px solid var(--rule); transition:color .15s, border-color .15s; }
+  .toc a:hover { color:var(--ink); }
+  .toc .lvl3 a { padding-left:28px; font-size:.83rem; }
+  .toc a.active { color:var(--accent-ink); border-left-color:var(--accent); font-weight:600; }
+  .toc a .n { display:inline-block; min-width:1.4em; color:inherit; opacity:.7; font-variant-numeric:lining-nums tabular-nums; }
+
+  /* Mobile bar: the contents button and the section you are in. */
+  .bar { display:none; }
+
+  /* Article typography */
+  article { counter-reset:none; }
+  .sec > *, .fold > *:not(summary) { max-width:var(--measure); }
+  .sec > .table-wrap, .fold > .table-wrap, .sec > .code, .fold > .code { max-width:none; }
+  article p { margin:0 0 1.05em; hanging-punctuation:first; }
+  /* A long URL or hash must wrap, never push a 390-wide phone sideways. */
+  article p, article li, article td, article th, article dd, .standfirst, .lead p, .callout, .mark-src, .footnotes,
+  .masthead h1, article h2, article h3, article h4, nav.toc a { overflow-wrap:break-word; }
+  sup.footnote-ref { line-height:0; }
+  sup.footnote-ref a { font-family:var(--sans); font-size:.78em; font-weight:600; text-decoration:none; padding:0 .1em; }
+  .footnotes ol { font-size:.92rem; color:var(--ink-2); }
+  .footnote-backref { text-decoration:none; font-family:var(--sans); margin-left:.25em; }
+  article ul, article ol { margin:0 0 1.15em; padding-left:1.35em; }
+  article li { margin:0 0 .45em; padding-left:.2em; }
+  article li::marker { color:var(--muted); font-family:var(--sans); font-size:.9em; }
+  article ol > li::marker { font-weight:600; font-variant-numeric:lining-nums; }
+  article li > p { margin-bottom:.4em; }
+  article strong { font-weight:700; color:var(--ink); }
+  article h2, article h3, article h4 { font-family:var(--sans); color:var(--ink); text-wrap:balance; }
+  article h2 { font-size:1.6rem; line-height:1.2; letter-spacing:-.015em; font-weight:700; margin:0 0 .75em; }
+  article h3 { font-size:1.18rem; line-height:1.3; font-weight:650; margin:2em 0 .55em; }
+  article h4 { font-size:1rem; font-weight:650; margin:1.6em 0 .4em; }
+  article h2 .n { color:var(--accent); margin-right:.35em; font-variant-numeric:lining-nums; }
+  .sec { padding-top:3.1rem; margin-top:3.1rem; border-top:1px solid var(--rule); }
+  .sec:first-child { border-top:0; margin-top:1.6rem; padding-top:0; }
+  article code { font-family:var(--mono); font-size:.82em; background:var(--code-bg); padding:.06em .28em; border-radius:4px; overflow-wrap:anywhere; }
+  article hr { border:0; border-top:1px solid var(--rule); margin:2.4em 0; }
+  article blockquote { margin:0 0 1.2em; padding:.2em 0 .2em 1.1em; border-left:3px solid var(--rule); color:var(--ink-2); font-style:italic; }
+  article img { max-width:100%; height:auto; border-radius:6px; }
+  .legend { font-family:var(--sans); font-size:.86rem; color:var(--muted); }
+
+  /* The bottom line: the one loud element on the page. */
+  .lead { position:relative; margin:0 0 2.2em; padding:28px 32px 26px 34px; background:var(--accent-tint); border-radius:4px 14px 14px 4px;
+          border-left:6px solid var(--accent); }
+  .lead-label { font-family:var(--sans); font-size:.8rem; font-weight:600; color:var(--accent); margin:0 0 6px; letter-spacing:.01em; }
+  .lead p { font-size:1.22rem; line-height:1.55; margin:0 0 .7em; max-width:62ch; color:var(--ink); }
+  .lead p:last-child { margin-bottom:0; }
+  .lead p > strong:first-child { display:block; font-family:var(--sans); font-size:1.5rem; line-height:1.25; letter-spacing:-.012em; margin-bottom:.45em; color:var(--accent-ink); }
+
+  /* Callouts */
+  .callout { margin:1.5em 0 1.6em; padding:16px 20px 6px 20px; border-radius:4px 10px 10px 4px; border-left:4px solid var(--c); background:var(--ct); }
+  .callout-label { display:flex; align-items:center; gap:8px; font-family:var(--sans); font-size:.86rem; font-weight:700; color:var(--c); margin:0 0 8px; }
+  .callout-label svg { width:16px; height:16px; flex:none; }
+  .callout p, .callout li { font-size:.97rem; }
+  .callout > :last-child { margin-bottom:12px; }
+  .callout--rec { --c:var(--rec); --ct:var(--rec-tint); }
+  .callout--risk { --c:var(--risk); --ct:var(--risk-tint); }
+  .callout--decision { --c:var(--dec); --ct:var(--dec-tint); }
+  .callout--note { --c:var(--note); --ct:var(--note-tint); }
+  .callout--verified { --c:var(--ver); --ct:var(--ver-tint); }
+  .callout--inferred { --c:var(--inf); --ct:var(--inf-tint); }
+
+  /* Provenance marks: verified vs inferred, inline. */
+  .mark { display:inline-block; font-family:var(--sans); font-size:.68rem; font-weight:700; line-height:1; letter-spacing:.02em; vertical-align:.14em;
+          padding:3px 6px 3px; border-radius:4px; white-space:nowrap; font-style:normal; }
+  .mark--v { color:var(--ver); background:var(--ver-tint); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--ver) 30%, transparent); }
+  .mark--i { color:var(--inf); background:var(--inf-tint); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--inf) 30%, transparent); }
+  .mark-src { font-family:var(--sans); font-size:.78em; color:var(--muted); margin-left:.3em; }
+  .mark-src code { font-size:.95em; }
+  strong > .mark { vertical-align:.1em; }
+
+  /* Tables: may run wider than the text measure; become cards on a phone. */
+  .table-wrap { margin:1.4em 0 1.8em; overflow-x:auto; background:var(--surface); border:1px solid var(--rule); border-radius:10px; box-shadow:var(--shadow); }
+  table { width:100%; border-collapse:collapse; font-family:var(--sans); font-size:.86rem; line-height:1.45; font-variant-numeric:lining-nums tabular-nums; }
+  th, td { text-align:left; vertical-align:top; padding:11px 14px; border-bottom:1px solid var(--rule-2); }
+  thead th { font-size:.78rem; font-weight:700; color:var(--muted); background:color-mix(in srgb, var(--paper) 60%, var(--surface)); border-bottom:1px solid var(--rule); white-space:nowrap; position:relative; }
+  tbody tr:last-child td { border-bottom:0; }
+  tbody tr:hover td { background:color-mix(in srgb, var(--accent-tint) 45%, transparent); }
+  td:first-child { font-weight:600; color:var(--ink); min-width:9em; }
+  td { color:var(--ink-2); }
+  td code { font-size:.88em; }
+  table.sortable thead th { cursor:pointer; user-select:none; padding-right:26px; }
+  table.sortable thead th:hover { color:var(--ink); }
+  table.sortable thead th::after { content:""; position:absolute; right:11px; top:50%; margin-top:-5px; border:4px solid transparent; border-top-color:currentColor; opacity:.25; transform:translateY(3px); }
+  table.sortable thead th[aria-sort="ascending"]::after { border-top-color:transparent; border-bottom-color:var(--accent); opacity:1; transform:translateY(-3px); }
+  table.sortable thead th[aria-sort="descending"]::after { border-top-color:var(--accent); opacity:1; }
+  .table-note { font-family:var(--sans); font-size:.8rem; color:var(--muted); margin:-1.1em 0 1.6em; }
+
+  /* Code blocks with a copy button */
+  .code { position:relative; margin:1.2em 0 1.5em; }
+  .code pre { margin:0; padding:16px 18px; background:var(--code-bg); border-radius:10px; overflow:auto; font:13.5px/1.6 var(--mono); color:var(--ink); tab-size:2; }
+  .code pre code { background:none; padding:0; font-size:inherit; overflow-wrap:normal; }
+  .copy { position:absolute; top:8px; right:8px; font-family:var(--sans); font-size:.74rem; font-weight:600; color:var(--muted); background:var(--surface);
+          border:1px solid var(--rule); border-radius:6px; padding:4px 9px; cursor:pointer; opacity:.85; }
+  .copy:hover { opacity:1; color:var(--accent-ink); border-color:var(--accent-line); }
+  .copy.done { color:var(--rec); border-color:var(--rec); }
+
+  /* Collapsible evidence */
+  details.fold > summary { list-style:none; cursor:pointer; display:flex; align-items:baseline; gap:12px; }
+  details.fold > summary::-webkit-details-marker { display:none; }
+  details.fold > summary h2 { margin:0; flex:0 1 auto; }
+  details.fold > summary .fold-hint { font-family:var(--sans); font-size:.82rem; font-weight:600; color:var(--accent-ink); white-space:nowrap; }
+  details.fold > summary .chev { display:inline-block; width:9px; height:9px; border-right:2px solid var(--accent); border-bottom:2px solid var(--accent); transform:rotate(-45deg); margin-right:2px; transition:transform .2s; align-self:center; flex:none; }
+  details.fold[open] > summary .chev { transform:rotate(45deg); }
+  details.fold[open] > summary { margin-bottom:1em; }
+  details.fold li { overflow-wrap:anywhere; }
+  .fold-hint .when-open { display:none; }
+  details.fold[open] .fold-hint .when-open { display:inline; }
+  details.fold[open] .fold-hint .when-closed { display:none; }
+
+
+  /* Narrower screens: rail becomes a sticky bar with a contents sheet. */
+  @media (max-width: 1060px) {
+    :root { --bar-h:50px; }
+    .shell { display:block; padding:0 22px; }
+    .rail { position:fixed; z-index:40; top:var(--bar-h); left:0; right:0; height:auto; max-height:calc(100vh - var(--bar-h)); padding:14px 16px 18px;
+            background:var(--surface); border-bottom:1px solid var(--rule); box-shadow:0 18px 40px -20px rgba(0,0,0,.35); transform:translateY(-8px); opacity:0; visibility:hidden;
+            transition:opacity .16s, transform .16s, visibility .16s; }
+    body.toc-open .rail { opacity:1; transform:none; visibility:visible; }
+    .toc-label { display:none; }
+    .toc a { padding-top:10px; padding-bottom:10px; }
+    .bar { display:flex; position:sticky; top:0; z-index:41; height:var(--bar-h); align-items:center; gap:10px; padding:0 14px 0 8px;
+           background:color-mix(in srgb, var(--paper) 88%, transparent); backdrop-filter:saturate(160%) blur(10px); -webkit-backdrop-filter:saturate(160%) blur(10px); border-bottom:1px solid var(--rule); }
+    .bar-btn { display:flex; align-items:center; gap:10px; min-width:0; flex:1; height:40px; padding:0 8px; background:none; border:0; cursor:pointer; text-align:left; font-family:var(--sans); }
+    .bar-btn .lines { width:18px; height:12px; flex:none; border-top:2px solid var(--ink); border-bottom:2px solid var(--ink); position:relative; }
+    .bar-btn .lines::after { content:""; position:absolute; left:0; right:4px; top:3px; border-top:2px solid var(--ink); }
+    .bar-btn .where { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.88rem; font-weight:600; }
+    .bar-btn .where small { font-weight:500; color:var(--muted); margin-right:6px; }
+    main { padding-top:30px; }
+  }
+  /* Without JavaScript (e.g. iOS Quick Look): no inert bar or tools; the contents list sits above the page. */
+  .no-js .tools { display:none; }
+  @media (max-width: 1060px) {
+    .no-js { --bar-h:0px; }
+    .no-js .bar { display:none; }
+    .no-js .rail { position:static; opacity:1; transform:none; visibility:visible; max-height:none; box-shadow:none; background:none; border-bottom:1px solid var(--rule); padding:24px 0 12px; }
+    .no-js .toc-label { display:block; margin-left:0; }
+  }
+  .img-off { font-family:var(--sans); font-size:.86rem; color:var(--muted); }
+  @media (max-width: 640px) {
+    body { font-size:17px; line-height:1.58; }
+    .shell { padding:0 18px; }
+    .masthead h1 { font-size:1.95rem; }
+    .meta { gap:12px; }
+    .tools { margin-left:0; width:100%; }
+    .tool .tool-text { display:none; }
+    .tool { padding:8px 10px; }
+    .lead { padding:20px 18px 18px 20px; margin-left:-4px; margin-right:-4px; }
+    .lead p { font-size:1.08rem; }
+    .lead p > strong:first-child { font-size:1.28rem; }
+    .callout { padding:14px 15px 4px 15px; }
+    article h2 { font-size:1.38rem; }
+    .sec { padding-top:2.4rem; margin-top:2.4rem; }
+    /* Tables as stacked cards: one card per row, each cell labelled with its column. */
+    .table-wrap.stack { background:none; border:0; box-shadow:none; overflow:visible; }
+    .table-wrap.stack table, .table-wrap.stack tbody, .table-wrap.stack tr, .table-wrap.stack td { display:block; width:100%; }
+    .table-wrap.stack thead { display:none; }
+    .table-wrap.stack tr { background:var(--surface); border:1px solid var(--rule); border-radius:10px; margin:0 0 12px; padding:6px 0; box-shadow:var(--shadow); }
+    .table-wrap.stack td { border:0; padding:6px 14px; }
+    .table-wrap.stack td:first-child { font-size:1rem; padding-top:10px; padding-bottom:8px; border-bottom:1px solid var(--rule-2); margin-bottom:4px; }
+    .table-wrap.stack td:not(:first-child)::before { content:attr(data-label); display:block; font-size:.74rem; font-weight:700; color:var(--muted); margin-bottom:1px; }
+    .table-wrap.stack tbody tr:hover td { background:none; }
+    .code pre { font-size:12.5px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; scroll-behavior:auto !important; } }
+
+  @media print {
+    :root { --paper:#fff; --surface:#fff; --ink:#000; --ink-2:#222; --muted:#555; --code-bg:#f2f2f2; }
+    body { font-size:11pt; line-height:1.5; background:#fff; }
+    .rail, .bar, .progress, .tools, .copy, .fold-hint { display:none !important; }
+    .shell { display:block; padding:0; max-width:none; }
+    main { padding:0; max-width:none; }
+    .sec { break-inside:auto; }
+    article h2, article h3 { break-after:avoid; }
+    .callout, .lead, .code, tr { break-inside:avoid; }
+    .table-wrap { box-shadow:none; overflow:visible; }
+    a { color:#000; text-decoration:underline; }
+    article a[href^="http"]:not(.bare)::after { content:" (" attr(href) ")"; font-family:var(--sans); font-size:.75em; color:#555; overflow-wrap:anywhere; }
+    details.fold > summary .chev { display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" aria-hidden="true"><i></i></div>
+<div class="bar">
+  <button class="bar-btn" type="button" aria-expanded="false" aria-controls="toc"><span class="lines" aria-hidden="true"></span><span class="where"><small>Contents</small><span class="where-text"></span></span></button>
+</div>
+<div class="shell">
+  <aside class="rail" aria-label="Contents">
+    <p class="toc-label">Contents</p>
+    <nav class="toc" id="toc"><!--@toc--><!--/@toc--></nav>
+  </aside>
+  <main>
+    <header class="masthead">
+      <h1><!--@title-->Reading page template<!--/@title--></h1>
+      <div class="standfirst"><!--@standfirst--><p>Every report you read arrives as a page like this one. This copy doubles as the component gallery: each element below is what the build script produces from ordinary markdown.</p><!--/@standfirst--></div>
+      <div class="meta">
+        <dl><!--@meta--><div><dt>Date</dt><dd>7 October 2026</dd></div><div><dt>By</dt><dd>Claude</dd></div><div><dt>Status</dt><dd><span class="status">Template</span></dd></div><!--/@meta--></dl>
+        <div class="tools">
+          <button class="tool" type="button" data-act="theme" aria-label="Switch theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span class="tool-text">Dark</span></button>
+          <button class="tool" type="button" data-act="folds" aria-label="Open all evidence sections" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M7 9l5 5 5-5"/></svg><span class="tool-text">Open evidence</span></button>
+          <button class="tool" type="button" data-act="print" aria-label="Print or save as PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2M7 14h10v7H7z"/></svg><span class="tool-text">Print</span></button>
+        </div>
+      </div>
+    </header>
+    <article>
+<!--@body-->
+<section class="sec" id="sec-recommendation">
+  <h2 id="h-recommendation">Recommendation</h2>
+  <div class="lead"><p class="lead-label">Bottom line</p><p><strong>Write markdown, run the build script, open the page.</strong> The script turns a normal agent report into this layout: contents on the left, the answer up top, risks and decisions called out, evidence folded away until you want it.</p></div>
+  <aside class="callout callout--rec"><p class="callout-label">Recommendation</p><p>A paragraph that opens with a bold label such as <strong>Recommendation:</strong> or <strong>Smallest version worth having:</strong> becomes this box, together with the list that follows it.</p></aside>
+  <aside class="callout callout--risk"><p class="callout-label">Main risks</p><ul><li>A label containing "risk", "caveat" or "concern" becomes a risk box.</li><li>The list under the label comes along with it.</li></ul></aside>
+  <aside class="callout callout--decision"><p class="callout-label">Decision needed</p><p>Labels like <strong>Decision needed:</strong> or <strong>Open question:</strong> become this box. A report that needs several rulings links to its ruling page from here.</p></aside>
+</section>
+<section class="sec" id="sec-evidence-marks">
+  <h2 id="h-evidence-marks"><span class="n">1.</span>Verified and inferred</h2>
+  <p>Agents tag claims with <span class="prov"><span class="mark mark--v" title="Verified from a primary source or a live read">Verified</span></span> or <span class="prov"><span class="mark mark--i" title="Inference, not checked against a source">Inferred</span></span>. A source after the tag stays beside it <span class="prov"><span class="mark mark--v" title="Verified from a primary source or a live read">Verified</span><span class="mark-src">docs.github.com</span></span>, so the reader can see what each claim rests on at a glance.</p>
+  <aside class="callout callout--verified"><p class="callout-label">Verified</p><p>A blockquote starting <code>[!VERIFIED]</code> becomes this box.</p></aside>
+  <aside class="callout callout--inferred"><p class="callout-label">Inferred</p><p>And <code>[!INFERRED]</code> becomes this one.</p></aside>
+  <h3 id="h-tables">Tables</h3>
+  <p>Tables with four or more rows sort by clicking a column heading. On a phone each row becomes a card with its column names beside the values.</p>
+  <div class="table-wrap"><table class="sortable"><thead><tr><th>Option</th><th>Monthly cost</th><th>Verdict</th></tr></thead><tbody>
+    <tr><td>Build on Cloudflare</td><td>US$5</td><td>Recommended</td></tr>
+    <tr><td>display.dev</td><td>EUR 49</td><td>Stopgap</td></tr>
+    <tr><td>Claude Team</td><td>US$25 per seat</td><td>Founders-only fallback</td></tr>
+    <tr><td>Notion HTML blocks</td><td>Existing plan</td><td>Watch it</td></tr>
+  </tbody></table></div>
+  <h3 id="h-code">Code</h3>
+  <div class="code"><pre><code>uv run <skill-dir>/scripts/build.py report.md report.html</code></pre></div>
+</section>
+<section class="sec" id="sec-sources">
+  <details class="fold">
+    <summary><span class="chev" aria-hidden="true"></span><h2 id="h-sources">Sources</h2><span class="fold-hint"><span class="when-closed">Show</span><span class="when-open">Hide</span></span></summary>
+    <p>Sections named Sources, Evidence, References, Appendix or Method fold away by default. Links open in a new tab.</p>
+    <ul><li>Example source: <a href="https://example.com" class="bare" target="_blank" rel="noopener">https://example.com</a></li></ul>
+  </details>
+</section>
+<!--/@body-->
+    </article>
+  </main>
+</div>
+<script>
+(function () {
+  "use strict";
+  var doc = document, root = doc.documentElement, article = doc.querySelector("article");
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* Theme: follow the system until the toggle is used; the choice is remembered. */
+  var themeBtn = doc.querySelector('[data-act="theme"]');
+  function isDark() { var t = root.dataset.theme; return t ? t === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches; }
+  function paintThemeBtn() { var txt = themeBtn.querySelector(".tool-text"); var next = isDark() ? "Light" : "Dark"; txt.textContent = next; themeBtn.setAttribute("aria-label", "Switch to " + next.toLowerCase() + " theme"); }
+  themeBtn.addEventListener("click", function () { var next = isDark() ? "light" : "dark"; root.dataset.theme = next; try { localStorage.setItem("reading-page:theme", next); } catch (e) {} paintThemeBtn(); });
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", paintThemeBtn);
+  paintThemeBtn();
+
+  /* Print: open every fold first so nothing is hidden on paper. */
+  var folds = Array.prototype.slice.call(doc.querySelectorAll("details.fold"));
+  var printOpened = [];
+  window.addEventListener("beforeprint", function () { printOpened = folds.filter(function (d) { return !d.open; }); printOpened.forEach(function (d) { d.open = true; }); });
+  window.addEventListener("afterprint", function () { printOpened.forEach(function (d) { d.open = false; }); printOpened = []; });
+  doc.querySelector('[data-act="print"]').addEventListener("click", function () { window.print(); });
+
+  /* Open or close all evidence sections. */
+  var foldBtn = doc.querySelector('[data-act="folds"]');
+  function paintFoldBtn() { var allOpen = folds.every(function (d) { return d.open; }); foldBtn.querySelector(".tool-text").textContent = allOpen ? "Close evidence" : "Open evidence"; foldBtn.setAttribute("aria-label", allOpen ? "Close all evidence sections" : "Open all evidence sections"); }
+  if (folds.length) {
+    foldBtn.hidden = false;
+    foldBtn.addEventListener("click", function () { var allOpen = folds.every(function (d) { return d.open; }); folds.forEach(function (d) { d.open = !allOpen; }); paintFoldBtn(); });
+    folds.forEach(function (d) { d.addEventListener("toggle", paintFoldBtn); });
+    paintFoldBtn();
+  }
+
+  /* Contents: built from the h2 and h3 headings in the article. */
+  var heads = Array.prototype.slice.call(article.querySelectorAll("h2[id], h3[id]"));
+  var toc = doc.getElementById("toc"), list = toc.querySelector("ol"), links = [];
+  if (list) {
+    /* build.py wrote the list into the page (so it reads without JavaScript): reuse it. */
+    links = Array.prototype.slice.call(list.querySelectorAll("a")).filter(function (a) { return doc.getElementById(fragId(a.getAttribute("href"))); });
+    heads = links.map(function (a) { return doc.getElementById(fragId(a.getAttribute("href"))); });
+  } else { list = doc.createElement("ol");
+  heads.forEach(function (h) {
+    var li = doc.createElement("li"); li.className = "lvl" + h.tagName.charAt(1);
+    var a = doc.createElement("a"); a.href = "#" + h.id;
+    var n = h.querySelector(".n");
+    if (n) { var s = doc.createElement("span"); s.className = "n"; s.textContent = n.textContent.replace(/\.$/, ""); a.appendChild(s); }
+    var label = h.cloneNode(true); var nn = label.querySelector(".n"); if (nn) nn.remove();
+    a.appendChild(doc.createTextNode(label.textContent.trim()));
+    li.appendChild(a); list.appendChild(li); links.push(a);
+  });
+  toc.appendChild(list); }
+
+  var barBtn = doc.querySelector(".bar-btn"), whereText = doc.querySelector(".where-text");
+  function setToc(open) { doc.body.classList.toggle("toc-open", open); barBtn.setAttribute("aria-expanded", open ? "true" : "false"); }
+  barBtn.addEventListener("click", function () { setToc(!doc.body.classList.contains("toc-open")); });
+  doc.addEventListener("keydown", function (e) { if (e.key === "Escape") setToc(false); });
+  doc.addEventListener("click", function (e) { if (doc.body.classList.contains("toc-open") && !e.target.closest(".rail") && !e.target.closest(".bar")) setToc(false); });
+
+  /* The id an in-page href names, percent-decoded ("#h-caf%C3%A9" -> "h-café"), as a browser
+     does natively without JavaScript. */
+  function fragId(href) { var raw = href.charAt(0) === "#" ? href.slice(1) : href; try { return decodeURIComponent(raw); } catch (e) { return raw; } }
+  function goTo(id, push) {
+    var el = doc.getElementById(id); if (!el) return;
+    var fold = el.closest("details.fold"); if (fold && !fold.open) fold.open = true;
+    el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    if (push) history.replaceState(null, "", "#" + id);
+  }
+  toc.addEventListener("click", function (e) {
+    var a = e.target.closest("a"); if (!a) return;
+    e.preventDefault(); setToc(false); goTo(fragId(a.getAttribute("href")), true);
+    lockSpy(a);
+  });
+  article.addEventListener("click", function (e) {
+    var a = e.target.closest('a[href^="#"]'); if (!a || a.getAttribute("href").length < 2) return;
+    e.preventDefault(); goTo(fragId(a.getAttribute("href")), true);
+  });
+  if (location.hash.length > 1) { var hid = fragId(location.hash); setTimeout(function () { goTo(hid, false); }, 0); }
+
+  /* Scroll-spy and reading progress. A TOC click pins the clicked entry until scrolling settles. */
+  var bar = doc.querySelector(".progress i"), active = null, pinned = null, pinTimer = null;
+  function lockSpy(a) { pinned = a; mark(a); clearTimeout(pinTimer); pinTimer = setTimeout(function () { pinned = null; }, 900); }
+  function mark(a) {
+    if (a === active) return;
+    if (active) active.classList.remove("active");
+    active = a;
+    if (a) { a.classList.add("active"); a.setAttribute("aria-current", "true"); whereText.textContent = a.textContent.replace(/^\d+/, "").trim();
+      var r = a.getBoundingClientRect(), tr = toc.getBoundingClientRect();
+      if (r.top < tr.top || r.bottom > tr.bottom) toc.scrollTop += r.top - tr.top - tr.height / 3; }
+    links.forEach(function (l) { if (l !== a) l.removeAttribute("aria-current"); });
+  }
+  var ticking = false;
+  function onScroll() {
+    ticking = false;
+    var max = root.scrollHeight - window.innerHeight;
+    bar.style.transform = "scaleX(" + (max > 0 ? Math.min(1, window.scrollY / max) : 1) + ")";
+    if (pinned) { clearTimeout(pinTimer); pinTimer = setTimeout(function () { pinned = null; }, 160); return; }
+    var line = (parseFloat(getComputedStyle(root).getPropertyValue("--bar-h")) || 0) + 90, cur = null;
+    for (var i = 0; i < heads.length; i++) {
+      var h = heads[i]; if (!h.offsetParent && !h.closest("summary")) continue;
+      if (h.getBoundingClientRect().top <= line) cur = links[i]; else break;
+    }
+    if (window.innerHeight + window.scrollY >= root.scrollHeight - 2 && links.length) {
+      // At the very bottom, light the last heading that is on screen.
+      for (var j = heads.length - 1; j >= 0; j--) { if (heads[j].getBoundingClientRect().top < window.innerHeight) { cur = links[j]; break; } }
+    }
+    mark(cur || links[0] || null);
+  }
+  window.addEventListener("scroll", function () { if (!ticking) { ticking = true; requestAnimationFrame(onScroll); } }, { passive: true });
+  window.addEventListener("resize", onScroll);
+  onScroll();
+
+  /* Copy buttons on code blocks. */
+  Array.prototype.forEach.call(article.querySelectorAll("pre"), function (pre) {
+    var wrap = pre.parentElement.classList.contains("code") ? pre.parentElement : null;
+    if (!wrap) { wrap = doc.createElement("div"); wrap.className = "code"; pre.parentNode.insertBefore(wrap, pre); wrap.appendChild(pre); }
+    var b = doc.createElement("button"); b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+    b.addEventListener("click", function () {
+      var text = pre.innerText.replace(/\n$/, "");
+      function done(ok) { b.textContent = ok ? "Copied" : "Select and copy"; b.classList.toggle("done", ok); setTimeout(function () { b.textContent = "Copy"; b.classList.remove("done"); }, 1600); }
+      if (navigator.clipboard && window.isSecureContext !== false) navigator.clipboard.writeText(text).then(function () { done(true); }, fallback); else fallback();
+      function fallback() { var ta = doc.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0"; doc.body.appendChild(ta); ta.select(); var ok = false; try { ok = doc.execCommand("copy"); } catch (e) {} ta.remove(); done(ok); }
+    });
+    wrap.appendChild(b);
+  });
+
+  /* Tables: wrap, label cells for the phone card view, sort on header click. */
+  Array.prototype.forEach.call(article.querySelectorAll("table"), function (t) {
+    var wrap = t.parentElement.classList.contains("table-wrap") ? t.parentElement : null;
+    if (!wrap) { wrap = doc.createElement("div"); wrap.className = "table-wrap"; t.parentNode.insertBefore(wrap, t); wrap.appendChild(t); }
+    var ths = Array.prototype.slice.call(t.querySelectorAll("thead th"));
+    var labels = ths.map(function (th) { return th.textContent.trim(); });
+    if (labels.length >= 3) wrap.classList.add("stack");
+    var body = t.tBodies[0]; if (!body) return;
+    Array.prototype.forEach.call(body.rows, function (r) { Array.prototype.forEach.call(r.cells, function (c, i) { if (labels[i]) c.setAttribute("data-label", labels[i]); }); });
+    if (!t.classList.contains("sortable")) return;
+    var original = Array.prototype.slice.call(body.rows);
+    ths.forEach(function (th, col) {
+      th.tabIndex = 0; th.setAttribute("aria-sort", "none"); th.title = "Sort by " + labels[col];
+      function sort() {
+        var state = th.getAttribute("aria-sort"), next = state === "none" ? "ascending" : state === "ascending" ? "descending" : "none";
+        ths.forEach(function (o) { o.setAttribute("aria-sort", "none"); });
+        th.setAttribute("aria-sort", next);
+        var rows = original.slice();
+        if (next !== "none") {
+          var key = function (r) { var s = (r.cells[col] ? r.cells[col].textContent : "").trim(); var m = s.replace(/[,\s]/g, "").match(/^[^\d-]*(-?\d+(?:\.\d+)?)/); return { n: m ? parseFloat(m[1]) : NaN, s: s.toLowerCase() }; };
+          rows.sort(function (a, b) { var x = key(a), y = key(b); var r = (!isNaN(x.n) && !isNaN(y.n)) ? x.n - y.n : x.s.localeCompare(y.s); return next === "ascending" ? r : -r; });
+        }
+        rows.forEach(function (r) { body.appendChild(r); });
+      }
+      th.addEventListener("click", sort);
+      th.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sort(); } });
+    });
+  });
+})();
+</script>
+</body>
+</html>

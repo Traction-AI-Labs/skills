@@ -37,6 +37,12 @@
       "source": "./plugins/call-prep",
       "description": "Writes a verbatim call script as one interactive HTML page read live on a second screen: a guard line of what not to say, numbered beats with the exact lines, fallbacks for pushback and answers to the hardest questions.",
       "version": "0.1.0"
+    },
+    {
+      "name": "reading-page",
+      "source": "./plugins/reading-page",
+      "description": "Turns anything longer than a chat message into one polished, self-contained HTML page to read instead of markdown: the bottom line first, a contents rail, callouts, sortable tables, folded evidence, light and dark.",
+      "version": "0.1.0"
     }
   ]
 }

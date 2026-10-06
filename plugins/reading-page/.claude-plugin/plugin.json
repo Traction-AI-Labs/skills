@@ -1,0 +1,12 @@
+{
+  "name": "reading-page",
+  "version": "0.1.0",
+  "description": "Turns anything longer than a chat message (a report, plan, brief or handoff) into one polished, self-contained HTML page to read instead of markdown: contents rail, bottom line first, callouts, sortable tables, folded evidence, light and dark.",
+  "author": {
+    "name": "Traction Studio",
+    "url": "https://github.com/Traction-AI-Labs"
+  },
+  "homepage": "https://github.com/Traction-AI-Labs/skills",
+  "repository": "https://github.com/Traction-AI-Labs/skills",
+  "license": "MIT"
+}
