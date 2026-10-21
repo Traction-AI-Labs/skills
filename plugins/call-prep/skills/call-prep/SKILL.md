@@ -14,25 +14,25 @@ to say in the moment, which is exactly when they can't.
 sticky header with the guard line and key legend (update the legend to the real beat count), a left
 nav that highlights the current beat, single-key jumps (digits for beats, `d` decide, `a` answers,
 `j`/`k` next and previous, `g` hides the guard line), large quoted lines, checkboxes for a decision
-rule, and status pills for a multi-part call. In Claude Code, write the file and open it for the
+rule, and status pills for a multi-part call. Delete the sections the call does not use, with their nav links and keys. In Claude Code, write the file and open it for the
 caller. **In the Claude app**, show the filled template as an HTML artifact. The HTML is the only copy:
 no markdown mirror, because mirrors drift.
 
 **The prep window is never screen-shared.** The guard line names what the counterpart must not see.
-If the caller has to share, they share a different window or tab; `g` hides the guard line as a
-fallback.
+If the caller has to share, they share a different window or tab; `g` hides only the guard line,
+which never makes this window safe to share.
 
 ## Before drafting
 
 1. **Confirm the date and time from the calendar and a clock**, never from memory of the
-   conversation. Pull the event: medium and link, attendees, who is driving, what the caller comes
+   conversation. Pull the event: its length, medium and link, attendees, who is driving, what the caller comes
    from and goes to. Counterpart in another time zone: both zones in the title. No calendar event: ask
    for the time and medium before drafting.
 2. **Gather the facts from their sources of truth**: the notes from the last call with this
    counterpart, the tracker or ticket state, the last email or chat thread, anything already sent to
-   them. Every number that will appear in a quoted line has a source. Nothing comes from an earlier
-   prep alone. The counterpart's own number can be quoted as theirs ("in your email you proposed ten
-   per cent"); stating it as fact needs your own record that agrees. First call with this
+   them. Every number that will appear in a quoted line has a source, or carries the *unverified* label
+   set out under the shape below. Nothing comes from an earlier
+   prep alone. The counterpart's own number can be quoted as theirs ("in your email you proposed 10%"); stating it as fact needs your own record that agrees. First call with this
    counterpart: anchor the first beat on what put the call in the diary, in their words.
 3. **Save it where the call's notes live**, somewhere the counterpart cannot see: next to the
    client's internal notes, or in the call's own dated folder. Never in a folder shared with them.
@@ -45,8 +45,9 @@ fallback.
 ## The shape
 
 **Two sizes.** A routine internal or briefing call gets the core: header, guard line if anything is
-off limits, script, "Answer if asked" when beats overflow into it, "Out of the room". A client call, a
-pricing or negotiation call, or a counterpart who pushed back last time gets the full shape.
+off limits, script, "Answer if asked" when beats overflow into it, "After the call". A client call, a
+pricing or negotiation call, or a counterpart who pushed back last time gets the full shape: the core,
+every section below whose condition the call meets, and the backing detail.
 
 **Header, five lines at most.** Title with day, date and time in 24-hour local time with its zone
 label (and the counterpart's zone). Who is on it and their roles, who drives, the medium and link, the
@@ -68,8 +69,8 @@ else's to give. Named in full once here, never repeated beat by beat; at most a 
 **The script comes next, before any backing detail.** Heading: "Script (read the quoted lines;
 italics are for you)". Then the beats:
 
-- **Five to seven beats for twenty minutes or less, eight for anything longer, never more.** If there
-  are more, the call is overloaded; cut, or move the rest to "Answer if asked".
+- **Five to seven beats for twenty minutes or less, eight for anything longer, never more.** Done beats
+  kept on a part-2 page do not count. If there are more, the call is overloaded; cut, or move the rest to "Answer if asked".
 - **A beat is a few sentences.** Past about a minute spoken, split it or move the back half to "Answer
   if asked". The caller has to find their place while someone is talking to them.
 - **A beat with more than one ask or answer gets visible sub-items, never "First… Second…" inside
@@ -97,7 +98,8 @@ italics are for you)". Then the beats:
   exactly as written. Small counts can stay words ("two things", "for a month"). Rewrite only notation
   nobody says as written ("78–125h" becomes "78 to 125 hours").
 - **None of these in a quoted line**, because nobody talks this way:
-  - a colon, which cannot be spoken (use a full stop or "so");
+  - a colon between clauses, which cannot be spoken (use a full stop or "so"); a colon inside a
+    time, link or other literal value ("3:30", a URL) is fine;
   - a line that announces what is coming instead of saying it ("What this adds is two things.", "The
     one habit that makes it repeatable: ...");
   - a headline fragment with no verb ("By four o'clock, a page that lands every weekday morning.");
@@ -133,7 +135,7 @@ arrives somewhere else.
 
 **Backing detail below the script**, in the order the caller would need it if the call goes
 off-script: where things stand going in, the state table (tickets, terms, commitments), open questions
-with a recommended reading attached, then `Out of the room` (what the caller does after, dated) and a
+with a recommended reading attached, then `After the call` (what the caller does after, dated) and a
 sources line.
 
 ## Example beat
@@ -141,9 +143,10 @@ sources line.
 ```
 **1. What we're building first** *(first, before the estimate; get agreement before moving on)*
 "Before the numbers, one thing from this morning. In the demo it came across as the full tool being
-built now, with the lighter version still an idea. What we agreed last week is the other way round.
-The lighter, customer-facing version is what we build first, and your team keeps using the current
-tool internally. Are we aligned on that?"
+built now, with the lighter version still an idea."
+
+"What we agreed last week is the other way round. The lighter, customer-facing version is what we
+build first, and your team keeps using the current tool internally. Are we aligned on that?"
 
 *If pushed: "That's fine, but then the estimate I'm about to share is for the wrong thing, so let's
 settle it now rather than after I send it."*
@@ -173,7 +176,7 @@ depends on (a message they said they'd send, a decision not yet made).
 | A numbered list of topics with "confirm it", "ask them to drop it" in the same line | A quoted sentence per topic, the instruction in italics on its own line |
 | Several asks in one beat as "First… Second…" in a quoted paragraph, fallbacks interleaved | Bold sub-items (7a, 7b, 7c), each with its own fallback beneath, listed in one italic line at the top of the beat |
 | Script buried under context tables | Script first; only the header, per-person lines and guard line above it |
-| Ten beats for a twenty-minute call | Five to seven, cap eight; overflow to "Answer if asked" |
+| Ten beats for a twenty-minute call | Five to seven; overflow to "Answer if asked" |
 | "15:00 today" written from conversation memory | Clock plus the calendar event, every time |
 | Times, dates or addresses spelled out ("seven o'clock", "the fourteenth", "name at example dot com") | Write them as in a message; expand only notation nobody says as written |
 | Pitch rhetoric in a conversation: colons, lines that announce before they say, verbless headlines, punchy runs, aphorisms | Whole sentences the way the caller talks, in short quoted blocks; write first, check after |
