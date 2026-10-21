@@ -14,7 +14,7 @@ to say in the moment, which is exactly when they can't.
 sticky header with the guard line and key legend (update the legend to the real beat count), a left
 nav that highlights the current beat, single-key jumps (digits for beats, `d` decide, `a` answers,
 `j`/`k` next and previous, `g` hides the guard line), large quoted lines, checkboxes for a decision
-rule, and status pills for a multi-part call. In Claude Code, write the file and open it for the
+rule, and status pills for a multi-part call. Delete the sections the call does not use, with their nav links and keys. In Claude Code, write the file and open it for the
 caller. **In the Claude app**, show the filled template as an HTML artifact. The HTML is the only copy:
 no markdown mirror, because mirrors drift.
 
@@ -25,7 +25,7 @@ which never makes this window safe to share.
 ## Before drafting
 
 1. **Confirm the date and time from the calendar and a clock**, never from memory of the
-   conversation. Pull the event: medium and link, attendees, who is driving, what the caller comes
+   conversation. Pull the event: its length, medium and link, attendees, who is driving, what the caller comes
    from and goes to. Counterpart in another time zone: both zones in the title. No calendar event: ask
    for the time and medium before drafting.
 2. **Gather the facts from their sources of truth**: the notes from the last call with this

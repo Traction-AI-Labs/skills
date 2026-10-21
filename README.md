@@ -83,6 +83,11 @@ MIT. doc-gauntlet includes Every's review kernel; see [NOTICE.md](NOTICE.md).
 
 ## Changelog
 
+- **call-prep 0.1.2** (21 October 2026). The skill and its template now agree: the post-call section is
+  "After the call", the full shape is the core plus every section whose condition the call meets, and unused
+  template sections are deleted with their nav links and keys. A number in a quoted line needs a source or the
+  *unverified* label, done beats on a part-2 page sit outside the beat cap, the call's length comes from the
+  calendar, and the `g` key hides only the guard line, which never makes the window safe to share.
 - **call-prep 0.1.1** (21 October 2026). Quoted lines read the way the caller talks across a table. Times,
   dates and addresses stay as written ("7am", "14 Oct", an email address), each beat is quoted in short
   blocks, and the skill lists the tells to check for after writing: spoken colons, lines that announce what
