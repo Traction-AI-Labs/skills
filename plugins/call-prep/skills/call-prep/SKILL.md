@@ -31,8 +31,7 @@ fallback.
 2. **Gather the facts from their sources of truth**: the notes from the last call with this
    counterpart, the tracker or ticket state, the last email or chat thread, anything already sent to
    them. Every number that will appear in a quoted line has a source. Nothing comes from an earlier
-   prep alone. The counterpart's own number can be quoted as theirs ("in your email you proposed ten
-   per cent"); stating it as fact needs your own record that agrees. First call with this
+   prep alone. The counterpart's own number can be quoted as theirs ("in your email you proposed 10%"); stating it as fact needs your own record that agrees. First call with this
    counterpart: anchor the first beat on what put the call in the diary, in their words.
 3. **Save it where the call's notes live**, somewhere the counterpart cannot see: next to the
    client's internal notes, or in the call's own dated folder. Never in a folder shared with them.
@@ -97,7 +96,8 @@ italics are for you)". Then the beats:
   exactly as written. Small counts can stay words ("two things", "for a month"). Rewrite only notation
   nobody says as written ("78–125h" becomes "78 to 125 hours").
 - **None of these in a quoted line**, because nobody talks this way:
-  - a colon, which cannot be spoken (use a full stop or "so");
+  - a colon between clauses, which cannot be spoken (use a full stop or "so"); a colon inside a
+    time, link or other literal value ("3:30", a URL) is fine;
   - a line that announces what is coming instead of saying it ("What this adds is two things.", "The
     one habit that makes it repeatable: ...");
   - a headline fragment with no verb ("By four o'clock, a page that lands every weekday morning.");
@@ -141,9 +141,10 @@ sources line.
 ```
 **1. What we're building first** *(first, before the estimate; get agreement before moving on)*
 "Before the numbers, one thing from this morning. In the demo it came across as the full tool being
-built now, with the lighter version still an idea. What we agreed last week is the other way round.
-The lighter, customer-facing version is what we build first, and your team keeps using the current
-tool internally. Are we aligned on that?"
+built now, with the lighter version still an idea."
+
+"What we agreed last week is the other way round. The lighter, customer-facing version is what we
+build first, and your team keeps using the current tool internally. Are we aligned on that?"
 
 *If pushed: "That's fine, but then the estimate I'm about to share is for the wrong thing, so let's
 settle it now rather than after I send it."*
