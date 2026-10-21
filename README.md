@@ -83,6 +83,11 @@ MIT. doc-gauntlet includes Every's review kernel; see [NOTICE.md](NOTICE.md).
 
 ## Changelog
 
+- **call-prep 0.1.1** (21 October 2026). Quoted lines read the way the caller talks across a table. Times,
+  dates and addresses stay as written ("7am", "14 Oct", an email address), each beat is quoted in short
+  blocks, and the skill lists the tells to check for after writing: spoken colons, lines that announce what
+  is coming, verbless headlines, runs of short punchy sentences, aphorisms and validation openers. Where a
+  recording of the caller exists, it reads a few minutes of it first.
 - **gauntlet 0.5.1 and doc-gauntlet 0.5.1** (1 October 2026). Each plugin README now matches its skill:
   gauntlet documents `prepare --timeout-seconds` and the per-leg `./diff.patch`; doc-gauntlet describes the
   error list and the sparring memo. Documentation only.

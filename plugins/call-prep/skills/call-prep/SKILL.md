@@ -83,10 +83,30 @@ italics are for you)". Then the beats:
   sequence. Mark the beats that must land whatever happens; the close becomes "before we drop off".
 - Each beat: a bold numbered heading, an optional italic cue in brackets (why this beat, who to look
   at, what to get before moving on), then the lines in quotes.
-- **Quoted lines are spoken English in the caller's own register.** Numbers spelled the way they'd be
-  said ("seventy-eight to a hundred and twenty-five hours"). Short sentences. No jargon they wouldn't
-  use aloud. No em dashes. Warm where they would be warm. In the counterpart's own terms from the last
-  exchange.
+- **Quoted lines are how the caller talks across a table, not a pitch.** If a recording or transcript
+  of the caller on an earlier call exists, read a few minutes of it first and imitate how they join
+  their sentences. Whole sentences joined the way people talk ("so", "and", "because"), saying what the
+  caller did, what they'd do next and why. Plain facts and plain questions, in the counterpart's own
+  terms from the last exchange. Warm where they would be warm. No jargon they wouldn't use aloud. No em
+  dashes.
+- **Quote a beat in short blocks**, two or three sentences each, every block its own quoted paragraph,
+  so the caller can find their place while someone talks. A whole beat as one run-on paragraph is as
+  hard to read live as a list of fragments.
+- **Numbers as the caller would type them in a message.** Times, dates, money, measures and addresses
+  in digits and as written: "7am", "by 4", "14 Oct", "30 minutes", "a 6-digit code", an email address
+  exactly as written. Small counts can stay words ("two things", "for a month"). Rewrite only notation
+  nobody says as written ("78–125h" becomes "78 to 125 hours").
+- **None of these in a quoted line**, because nobody talks this way:
+  - a colon, which cannot be spoken (use a full stop or "so");
+  - a line that announces what is coming instead of saying it ("What this adds is two things.", "The
+    one habit that makes it repeatable: ...");
+  - a headline fragment with no verb ("By four o'clock, a page that lands every weekday morning.");
+  - a run of short punchy sentences ("The page runs on its own. The skill only changes when you want it
+    to. Give it two weeks.");
+  - an aphorism ("Reading is the safe first step.");
+  - a validation or flattery opener ("Fair question.", "You could, and you'd be good at it.").
+- **Write the lines first, then check them against that list.** Writing while dodging rules is what
+  makes lines stiff; colons creep in where a dash was avoided.
 - **Instructions to the caller are italic and on their own line, never inside a quoted line.** "Don't
   say the cap" is a stage direction; it does not live in the sentence they read out.
 - **A number with no source stays out of a quoted line.** If there is no way around it, an italic
@@ -121,8 +141,8 @@ sources line.
 ```
 **1. What we're building first** *(first, before the estimate; get agreement before moving on)*
 "Before the numbers, one thing from this morning. In the demo it came across as the full tool being
-built now, with the lighter version still an idea. What we agreed last week is the other way round:
-the lighter, customer-facing version is what we build first, and your team keeps using the current
+built now, with the lighter version still an idea. What we agreed last week is the other way round.
+The lighter, customer-facing version is what we build first, and your team keeps using the current
 tool internally. Are we aligned on that?"
 
 *If pushed: "That's fine, but then the estimate I'm about to share is for the wrong thing, so let's
@@ -155,7 +175,8 @@ depends on (a message they said they'd send, a decision not yet made).
 | Script buried under context tables | Script first; only the header, per-person lines and guard line above it |
 | Ten beats for a twenty-minute call | Five to seven, cap eight; overflow to "Answer if asked" |
 | "15:00 today" written from conversation memory | Clock plus the calendar event, every time |
-| Numbers as digits and units nobody says aloud | Spell them the way they're spoken |
+| Times, dates or addresses spelled out ("seven o'clock", "the fourteenth", "name at example dot com") | Write them as in a message; expand only notation nobody says as written |
+| Pitch rhetoric in a conversation: colons, lines that announce before they say, verbless headlines, punchy runs, aphorisms | Whole sentences the way the caller talks, in short quoted blocks; write first, check after |
 | An estimate invented live in a quoted line ("this will take about two weeks") | Never. An agreed, sourced estimate can be quoted |
 | "Answer if asked" in the polite phrasing | The hostile phrasing, with an answer the caller can say to it |
 | A slip held back until they raise it | An early beat, in the caller's words |
