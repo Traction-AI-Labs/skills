@@ -19,8 +19,8 @@ caller. **In the Claude app**, show the filled template as an HTML artifact. The
 no markdown mirror, because mirrors drift.
 
 **The prep window is never screen-shared.** The guard line names what the counterpart must not see.
-If the caller has to share, they share a different window or tab; `g` hides the guard line as a
-fallback.
+If the caller has to share, they share a different window or tab; `g` hides only the guard line,
+which never makes this window safe to share.
 
 ## Before drafting
 
@@ -30,7 +30,8 @@ fallback.
    for the time and medium before drafting.
 2. **Gather the facts from their sources of truth**: the notes from the last call with this
    counterpart, the tracker or ticket state, the last email or chat thread, anything already sent to
-   them. Every number that will appear in a quoted line has a source. Nothing comes from an earlier
+   them. Every number that will appear in a quoted line has a source, or carries the *unverified* label
+   set out under the shape below. Nothing comes from an earlier
    prep alone. The counterpart's own number can be quoted as theirs ("in your email you proposed 10%"); stating it as fact needs your own record that agrees. First call with this
    counterpart: anchor the first beat on what put the call in the diary, in their words.
 3. **Save it where the call's notes live**, somewhere the counterpart cannot see: next to the
@@ -44,8 +45,9 @@ fallback.
 ## The shape
 
 **Two sizes.** A routine internal or briefing call gets the core: header, guard line if anything is
-off limits, script, "Answer if asked" when beats overflow into it, "Out of the room". A client call, a
-pricing or negotiation call, or a counterpart who pushed back last time gets the full shape.
+off limits, script, "Answer if asked" when beats overflow into it, "After the call". A client call, a
+pricing or negotiation call, or a counterpart who pushed back last time gets the full shape: the core,
+every section below whose condition the call meets, and the backing detail.
 
 **Header, five lines at most.** Title with day, date and time in 24-hour local time with its zone
 label (and the counterpart's zone). Who is on it and their roles, who drives, the medium and link, the
@@ -67,8 +69,8 @@ else's to give. Named in full once here, never repeated beat by beat; at most a 
 **The script comes next, before any backing detail.** Heading: "Script (read the quoted lines;
 italics are for you)". Then the beats:
 
-- **Five to seven beats for twenty minutes or less, eight for anything longer, never more.** If there
-  are more, the call is overloaded; cut, or move the rest to "Answer if asked".
+- **Five to seven beats for twenty minutes or less, eight for anything longer, never more.** Done beats
+  kept on a part-2 page do not count. If there are more, the call is overloaded; cut, or move the rest to "Answer if asked".
 - **A beat is a few sentences.** Past about a minute spoken, split it or move the back half to "Answer
   if asked". The caller has to find their place while someone is talking to them.
 - **A beat with more than one ask or answer gets visible sub-items, never "First… Second…" inside
@@ -133,7 +135,7 @@ arrives somewhere else.
 
 **Backing detail below the script**, in the order the caller would need it if the call goes
 off-script: where things stand going in, the state table (tickets, terms, commitments), open questions
-with a recommended reading attached, then `Out of the room` (what the caller does after, dated) and a
+with a recommended reading attached, then `After the call` (what the caller does after, dated) and a
 sources line.
 
 ## Example beat
@@ -174,7 +176,7 @@ depends on (a message they said they'd send, a decision not yet made).
 | A numbered list of topics with "confirm it", "ask them to drop it" in the same line | A quoted sentence per topic, the instruction in italics on its own line |
 | Several asks in one beat as "First… Second…" in a quoted paragraph, fallbacks interleaved | Bold sub-items (7a, 7b, 7c), each with its own fallback beneath, listed in one italic line at the top of the beat |
 | Script buried under context tables | Script first; only the header, per-person lines and guard line above it |
-| Ten beats for a twenty-minute call | Five to seven, cap eight; overflow to "Answer if asked" |
+| Ten beats for a twenty-minute call | Five to seven; overflow to "Answer if asked" |
 | "15:00 today" written from conversation memory | Clock plus the calendar event, every time |
 | Times, dates or addresses spelled out ("seven o'clock", "the fourteenth", "name at example dot com") | Write them as in a message; expand only notation nobody says as written |
 | Pitch rhetoric in a conversation: colons, lines that announce before they say, verbless headlines, punchy runs, aphorisms | Whole sentences the way the caller talks, in short quoted blocks; write first, check after |
