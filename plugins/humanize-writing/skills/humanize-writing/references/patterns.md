@@ -15,7 +15,7 @@ These are rarely a writer's own choice.
 | Stock opener or closer | "In today's fast-moving world", "I hope this finds you well", "Feel free to reach out", "Exciting times ahead" | Cut |
 | Engagement bait | A closing "What's your take? Let me know below 👇" on a post | Cut, unless the writer is genuinely asking something specific |
 | Staged feeling | A short emotional beat dropped in on cue: "That stung.", "Honestly? I was floored." | Cut the beat, or fold the feeling into the sentence that carries the fact. Never add one |
-| Pre-emptive empathy | "I know this may be frustrating", "Rest assured", "We truly appreciate your patience and understanding" | Cut. Keep a real offer or apology the draft makes, said once and plainly |
+| Pre-emptive empathy | "I know this may be frustrating", "Rest assured", "We truly appreciate your patience and understanding" | Cut. Keep a real offer, apology or thanks the draft makes, said once and plainly |
 
 ## Act when they cluster
 

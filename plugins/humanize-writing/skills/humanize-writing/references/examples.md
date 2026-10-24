@@ -55,7 +55,7 @@ After:
 >
 > The tiles you selected for the Coogee bathroom are back-ordered, and the supplier now expects them on 14 March. Tiling will start on 17 March instead of 3 March, so the bathroom will be ready around 28 March rather than 14 March.
 >
-> If you'd prefer, we can switch to a similar in-stock tile and keep the original dates. Could you let me know by Friday?
+> If you'd prefer, we can switch to a similar in-stock tile and keep the original dates. Could you let me know by Friday so we can lock things in?
 >
 > Thanks for your patience.
 >

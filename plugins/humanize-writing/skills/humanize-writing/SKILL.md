@@ -38,10 +38,10 @@ How far you go depends on the genre.
 |---|---|---|
 | Technical, reference, legal, instructions | All structure: numbered steps, headings, labels, tables, code | Sentence level only: padding that restates the heading, filler such as "it's important to note". Often nothing |
 | Email and messages | Every date, figure, name, ask, offer and commitment | Open on the point. Cut the line announcing the email, guesses at the reader's feelings, stock reassurance and sign-off padding. A short email needs no headings |
-| Marketing and product pages | Every feature, price, condition and call to action | Say what the thing does. Cut slogan pairs, one-line taglines heading each section, payoff clauses bolted onto facts, "no X, no Y, just Z" lists, and pairs of virtue adjectives where several sit together |
-| Personal posts | The writer's stance, asides and any roughness | Undo the genre template: the hook, the bolded lessons, the round of thanks, the closing question, the hashtag block. Cut staged emotion and the closing moral. Never add a feeling or an opinion |
+| Marketing and product pages | Every feature, price, condition and call to action | Say what the thing does. Cut slogan pairs, one-line taglines heading each section, payoff clauses bolted onto facts, "no X, no Y, just Z" lists, pairs of virtue adjectives |
+| Personal posts | The writer's stance, asides and any roughness | Undo the genre template: the hook, the bolded lessons (fold one into its sentence when it says more than the paragraph under it), the round of thanks, the closing question, the hashtag block. Cut staged emotion and the closing moral. Never add a feeling or an opinion |
 
-If the genre is unclear, edit as for the technical row. If the draft mixes genres, edit each part by its own row; steps, terms and code follow the technical row wherever they appear.
+The Change column says where each genre's giveaways sit; each one still goes through step 2, company rule included. If the genre is unclear, edit as for the technical row. If the draft mixes genres, edit each part by its own row; steps, terms and code follow the technical row wherever they appear.
 
 ### 2. Mark what gives it away
 
@@ -70,7 +70,7 @@ A sentence that passes the four tests stays exactly as written, and so does one 
 Before answering, compare your version with the draft sentence by sentence.
 
 - **Added:** anything from the list under the first rule that neither the draft nor the user's request had. Take it out.
-- **Dropped:** any fact, figure, name, date, step, reason, warning, ask, offer, condition, limit, opinion the writer states, order that matters (of steps, events or ranked items), or meaningful qualifier ("usually", "only if", "before") the draft had. Put it back.
+- **Dropped:** any fact, figure, name, date, step, reason, warning, ask, offer, condition, limit, opinion the writer states, order that matters (of steps, events or ranked items), or meaningful qualifier ("usually", "only if", "before") that the draft had and your version has lost. Put it back. A pattern you cut under step 2 is not a drop if your version still says what it said, or if it said nothing a reader could act on or check, such as "Feel free to reach out" or "This ensures a smooth process".
 - **Survivors:** payoff clauses, slogan pairs, a closing moral, and a stock first or last line are the patterns most likely to survive a first pass. Look for them again, and weigh them the same way.
 
 Fix what you find, once. Editing your own result again should change nothing.
