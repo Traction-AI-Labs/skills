@@ -1,5 +1,7 @@
 # Banned words and phrases
 
+_© 2026 Traction AI Studio Pty Ltd. MIT licence, see LICENSE._
+
 These show up in AI writing far more often than in human writing. Do not use them.
 
 ## Transition words to avoid
