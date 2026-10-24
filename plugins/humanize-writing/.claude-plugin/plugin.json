@@ -1,0 +1,12 @@
+{
+  "name": "humanize-writing",
+  "version": "0.1.0",
+  "description": "Rewrites AI-generated text to read like a person wrote it: strips the tells (em dashes, rule-of-three lists, contrast framing, self-narration, a banned list of words and phrases), then adds a voice back.",
+  "author": {
+    "name": "Traction Studio",
+    "url": "https://github.com/Traction-AI-Labs"
+  },
+  "homepage": "https://github.com/Traction-AI-Labs/skills",
+  "repository": "https://github.com/Traction-AI-Labs/skills",
+  "license": "MIT"
+}
