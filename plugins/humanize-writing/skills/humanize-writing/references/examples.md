@@ -28,7 +28,7 @@ After:
 
 > Last month the Greenway team wrapped up the new kitchen garden at Riverside Primary, and the kids have already harvested their first lettuces.
 >
-> The Year 4 class drew the bed layout, and we built it almost exactly as drawn. Six raised beds now feed the school canteen once a week.
+> Kids are the best project managers: the Year 4 class drew the bed layout, and we built it almost exactly as drawn. Six raised beds now feed the school canteen once a week.
 >
 > Thanks to the Riverside P&C, who funded the timber and soil.
 

@@ -1,6 +1,6 @@
 # Patterns that give model prose away
 
-Use with the five tests in SKILL.md. The fix column never adds anything; when a fix would need a fact the draft does not have, cut instead. Examples here are invented for illustration.
+Use with the tests in SKILL.md. The fix column never adds anything; when a fix would need a fact the draft does not have, cut instead. Examples here are invented for illustration.
 
 ## Act on sight
 
