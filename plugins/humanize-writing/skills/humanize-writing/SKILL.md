@@ -3,7 +3,7 @@ name: humanize-writing
 description: "Rewrite AI-generated text to read like a human wrote it. Use this skill whenever the user wants to fix robotic or AI-sounding writing, remove AI patterns from text, make content sound more natural or human, de-AI text, clean up LLM output, or improve the voice and personality of any written content. Triggers on: humanize this, make this sound human, fix AI writing, remove AI patterns, this sounds like AI, make this more natural, rewrite this naturally, de-AI this text, sound less robotic, add personality to this writing. Also use when reviewing or editing any content and the user mentions it sounds generic, flat, corporate, or machine-generated."
 ---
 
-<!-- © 2026 Traction AI Studio Pty Ltd. MIT licence, see LICENSE. -->
+<!-- © 2026 Traction AI Studio Pty Ltd. Adapted from humanizer by Siqi Chen (https://github.com/blader/humanizer), © 2025, MIT. MIT licence, see LICENSE. -->
 
 # Humanize Writing
 

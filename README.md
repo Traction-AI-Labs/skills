@@ -82,7 +82,8 @@ The other plugins need no CLIs or keys. persona-teardown needs `agent-browser` i
 
 ## Licence
 
-MIT. doc-gauntlet includes Every's review kernel; see [NOTICE.md](NOTICE.md).
+MIT. doc-gauntlet includes Every's review kernel, and humanize-writing is adapted from Siqi Chen's
+humanizer; see [NOTICE.md](NOTICE.md).
 
 ## Changelog
 

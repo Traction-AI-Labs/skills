@@ -33,3 +33,10 @@ up when you say a draft sounds generic, flat or corporate.
 
 The full banned list is in `skills/humanize-writing/references/banned-list.md`. Edit it to suit your
 house style.
+
+## Credit
+
+Adapted from [humanizer](https://github.com/blader/humanizer) by Siqi Chen (MIT), which draws on
+Wikipedia's [Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) guide.
+Its copyright notice is kept in `LICENSE`, and a copy sits inside the skill folder so the upload zip and
+the Codex copy carry it.
