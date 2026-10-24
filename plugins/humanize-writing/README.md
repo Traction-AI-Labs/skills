@@ -1,12 +1,14 @@
 # Humanize writing
 
-Rewrites AI-generated text so it reads like a person wrote it. It works in two passes. The first removes
-the patterns that give AI writing away: em dashes, lists that always come in threes, "it's not X, it's Y"
-framing, sentences that announce their own importance, and a banned list of words, phrases and emojis
-with plain replacements. The second adds a voice back, because text with the tells stripped and nothing
-added still reads like a press release.
+Edits a draft so it reads like a person wrote it for its reader, without adding anything the draft did not
+say. Current models rarely give themselves away with single words any more; they write in templates: the
+stock LinkedIn post, the email that announces itself, the product page made of slogans. The skill names the
+genre and reader first, removes the template with the smallest edit that works, leaves technical documents'
+structure alone, and checks the result against the draft in both directions: nothing added, nothing dropped.
+When a draft already reads cleanly it comes back unchanged.
 
-It returns the rewrite and a short summary of what changed.
+It returns the edited text, with a short note only when there is something to flag: a detail the draft
+lacks, or a specific that may have been invented when the draft was generated.
 
 ## Install
 
@@ -29,14 +31,19 @@ It returns the rewrite and a short summary of what changed.
 ## Use
 
 Paste text and ask Claude to humanize it, de-AI it or make it sound less robotic. The skill also picks
-up when you say a draft sounds generic, flat or corporate.
+up when you say a draft sounds generic, templated or corporate.
 
-The full banned list is in `skills/humanize-writing/references/banned-list.md`. Edit it to suit your
-house style.
+The pattern catalogue is in `skills/humanize-writing/references/patterns.md` and one worked edit per genre
+in `references/examples.md`. Edit either to suit your house style.
 
 ## Credit
 
-Adapted from [humanizer](https://github.com/blader/humanizer) by Siqi Chen (MIT), which draws on
-Wikipedia's [Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) guide.
-Its copyright notice is kept in `LICENSE`, and a copy sits inside the skill folder so the upload zip and
-the Codex copy carry it.
+Written from scratch for Traction Studio. It draws on ideas, not text, from
+[humanizer](https://github.com/blader/humanizer) by Siqi Chen (checking facts in both directions; weak
+patterns needing company), [avoid-ai-writing](https://github.com/conorbronsdon/avoid-ai-writing) by Conor
+Bronsdon (the no-invention rule placed on the editor),
+[ce-noslop](https://github.com/EveryInc/compound-engineering-plugin) from Every (sentence tests; an edit
+that a second pass leaves alone), [no-ai-slop](https://github.com/petergyang/no-ai-slop) by Peter Yang (the
+portability test) and Wikipedia's
+[Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing). Version 0.1.0 was
+adapted from humanizer and is in this repository's history.
