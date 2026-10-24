@@ -12,6 +12,7 @@ Skills for Claude Code, the Claude app, Codex and Grok, published by Traction St
 | **ruling-page** | Turns a complicated decision into a clickable one-file HTML page: a recommendation pre-selected on every card, alternatives as buttons, and one button that copies the answers back into chat | Claude Code, the Claude app |
 | **call-prep** | Writes a verbatim call script as one interactive HTML page to read live on a second screen: a guard line of what not to say, numbered beats with the exact words, fallbacks for pushback and answers to the hardest questions | Claude Code, the Claude app |
 | **humanize-writing** | Rewrites AI-generated text to read like a person wrote it: removes the tells (em dashes, rule-of-three lists, contrast framing, self-narration, a banned list of words and phrases), then adds a voice back | Claude Code, the Claude app, Codex |
+| **go-deeper** | Rewrites a task to be more ambitious before doing it: what a top professional in the field would do that wasn't asked, the rawest material they'd start from, the methods and tools they'd use and an outside judge, then a rewritten prompt. Also covers altitude (the outcome behind the deliverable) and range (methods from other fields) | Claude Code, the Claude app, Codex |
 
 Each plugin's own README covers set-up and use in more detail.
 
@@ -27,6 +28,7 @@ Each plugin's own README covers set-up and use in more detail.
 /plugin install ruling-page@traction
 /plugin install call-prep@traction
 /plugin install humanize-writing@traction
+/plugin install go-deeper@traction
 ```
 
 Install only the ones you want.
@@ -49,12 +51,13 @@ Same copy, destination `~/.grok/skills/<skill>`.
 
 ### The Claude app
 
-ruling-page, call-prep and humanize-writing install as upload zips. Build them from the repository root:
+ruling-page, call-prep, humanize-writing and go-deeper install as upload zips. Build them from the repository root:
 
 ```
 bash plugins/ruling-page/scripts/build-zip.sh
 bash plugins/call-prep/scripts/build-zip.sh
 bash plugins/humanize-writing/scripts/build-zip.sh
+bash plugins/go-deeper/scripts/build-zip.sh
 ```
 
 Each lands in that plugin's `dist/` folder. In the Claude app, open **Customize**, then **Skills**, upload
@@ -87,6 +90,9 @@ humanizer; see [NOTICE.md](NOTICE.md).
 
 ## Changelog
 
+- **go-deeper 0.1.0** (25 October 2026). First release: the depth prompt with its four-part analysis and
+  rewritten prompt, plus altitude, range and the self-efficacy notes from Felix Rieseberg's essay. Upload-zip
+  builder included.
 - **humanize-writing 0.1.0** (24 October 2026). First release: the editing rules, the content, language and style
   patterns to remove, the personality pass, and a banned list of words, phrases and emojis with plain
   replacements. Upload-zip builder included.

@@ -49,6 +49,12 @@
       "source": "./plugins/humanize-writing",
       "description": "Rewrites AI-generated text to read like a person wrote it: strips the tells, then adds a voice back.",
       "version": "0.1.0"
+    },
+    {
+      "name": "go-deeper",
+      "source": "./plugins/go-deeper",
+      "description": "Rewrites a task to be more ambitious before doing it: what a top professional would do, the rawest material, the methods, and an outside judge.",
+      "version": "0.1.0"
     }
   ]
 }
