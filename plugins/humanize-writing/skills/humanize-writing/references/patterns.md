@@ -65,7 +65,7 @@ Models fill the stock skeleton of the genre in the order the brief gave them the
 
 - **Personal post:** hook line with an emoji, one line of context, "Here's what I learned:", three bolded lessons, a round of thanks, a closing question, a block of generic hashtags. Keep the content; drop the frame parts that carry none; keep a specific hashtag (an event or company name) and cut generic ones.
 - **About page:** "Our story / Our mission / What we do / Our approach" headings on a short page. Keep the content in plain paragraphs; keep a heading only where the page is long enough to need it.
-- **Short email:** headings such as "Summary / Next steps" over a few lines. Use sentences, with a list only for steps the reader follows in order or for more than three things they must do.
+- **Short email:** headings such as "Summary / Next steps" over a few lines. Use sentences under no headings. Keep a list of asks or steps the draft has; do not add one.
 - **Announcement:** "We're thrilled to announce..." then features, then "Stay tuned". Start with what changed and for whom.
 - **How-to or README:** a Title Case title, an "Overview" restating it, a bold label on every step, a closing recap. Keep the steps; drop the rest of the frame where it carries nothing.
 - **Article:** "In this article", headings phrased as questions, a summary line closing each section, a conclusion restating the introduction. Keep the argument and its examples in the order that carries it.
