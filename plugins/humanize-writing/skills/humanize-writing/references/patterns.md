@@ -69,6 +69,7 @@ Models fill the stock skeleton of the genre in the order the brief gave them the
 - **Announcement:** "We're thrilled to announce..." then features, then "Stay tuned". Start with what changed and for whom.
 - **How-to or README:** a Title Case title, an "Overview" restating it, a bold label on every step, a closing recap. Keep the steps; drop the rest of the frame where it carries nothing.
 - **Article:** "In this article", headings phrased as questions, a summary line closing each section, a conclusion restating the introduction. Keep the argument and its examples in the order that carries it.
+- **Any longer piece:** every paragraph ending on a line built to be quoted, every example followed by a sentence telling the reader what it means, paragraphs that could swap places without changing anything. Cut the quotable tails, let examples stand on their own, and order paragraphs so each follows from the one before.
 - **Cover letter:** "I am writing to express my interest in...", a paragraph of self-praise, "I look forward to hearing from you". Open with the role, then the strongest facts.
 
 ## Words and punctuation
@@ -88,3 +89,5 @@ Dashes: some models still lean on the em dash. Replace it with what the sentence
 - Turning a long list or a table into prose, or prose into a list, without being asked.
 - Rewording only the flagged phrase and leaving the sentence around it stiff.
 - Swapping the draft's passive voice for an invented actor: if the draft never says who does it, do not guess.
+- Making a claim more confident than the draft did: "may" to "will", "some" to "most", a hint to a cause.
+- Adding roughness to look human: typos, slang, filler, a stray aside.

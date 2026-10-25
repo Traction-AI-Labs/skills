@@ -8,6 +8,7 @@ Published: 2026-09-13
 
 Humanize writing 0.2.0 and later is written from scratch. It draws on ideas,
 not text, from humanizer by Siqi Chen (https://github.com/blader/humanizer),
+clarity by Addy Osmani (https://github.com/addyosmani/clarity),
 avoid-ai-writing by Conor Bronsdon
 (https://github.com/conorbronsdon/avoid-ai-writing), Every's ce-noslop
 (https://github.com/EveryInc/compound-engineering-plugin), no-ai-slop by Peter

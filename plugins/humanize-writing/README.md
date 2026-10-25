@@ -47,7 +47,9 @@ Written from scratch for Traction Studio. It draws on ideas, not text, from
 [humanizer](https://github.com/blader/humanizer) by Siqi Chen (checking facts in both directions; weak
 patterns needing company), [avoid-ai-writing](https://github.com/conorbronsdon/avoid-ai-writing) by Conor
 Bronsdon (the no-invention rule placed on the editor),
-[ce-noslop](https://github.com/EveryInc/compound-engineering-plugin) from Every (sentence tests; an edit
+[clarity](https://github.com/addyosmani/clarity) by Addy Osmani (strengthening nothing; saying when a draft has nothing specific to say;
+the flatten and relation tests for formulas; passive voice where the actor is unknown; a review that changes
+nothing), [ce-noslop](https://github.com/EveryInc/compound-engineering-plugin) from Every (sentence tests; an edit
 that a second pass leaves alone), [no-ai-slop](https://github.com/petergyang/no-ai-slop) by Peter Yang (the
 portability test) and Wikipedia's
 [Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing). Version 0.1.0 was
