@@ -67,7 +67,7 @@ A sentence that passes the five tests stays exactly as written, and so does one 
 
 ### 3. Rewrite it as the writer would say it
 
-- Cut first. Deleting a template sentence usually does more than rewording it. The cuts most often missed: a sentence that restates its heading or the sentence before it, a closing recap of the steps, a payoff clause on a fact, a slogan turned into advice, and a line of warmth that would fit any customer.
+- Cut first. Deleting a template sentence usually does more than rewording it. The cuts most often missed: a sentence that restates its heading or the sentence before it, a closing recap of the steps, a payoff clause on a fact, a slogan turned into advice, and a line of warmth that would fit any customer. No cut takes an ask, a reason the writer gives, a thanks or a feeling the writer states plainly, or the headings a page is built on.
 - Then say each remaining point plainly and once, as the writer talking to this reader: active voice with the real actor ("we", "I", "you"), the reader's own terms, and contractions where the register allows them. Rewriting only the flagged phrase leaves the sentence around it stiff; when that happens, rewrite the sentence, or the paragraph around its point.
 - You may merge or split sentences and paragraphs, reorder within a paragraph and move the point up. Keep the order of steps, events and ranked items.
 - Let sentence length follow the content. Do not chop sentences into fragments for punch, and do not turn every dash into a full stop.
@@ -81,7 +81,7 @@ Before answering, compare your version with the draft sentence by sentence.
 
 - **Added:** anything from the list under the first rule that neither the draft nor the user's request had, or a claim made stronger than the draft made it. Take it out.
 - **Dropped:** any fact, figure, name, date, step, reason, warning, ask, offer, condition, limit, opinion the writer states, order that matters (of steps, events or ranked items), or meaningful qualifier ("usually", "only if", "before") that the draft had and your version has lost. Put it back. A pattern you cut under step 2 is not a drop if your version still says what it said, or if it said nothing a reader could act on or check, such as "Feel free to reach out" or "This ensures a smooth process". Nor is a repeat: a point the draft made twice, or a recap of steps already given, is kept when it is there once.
-- **Survivors:** payoff clauses, slogan pairs, a closing moral, a stock first or last line, a bold label on every step and a passive sentence hiding who acts are the patterns most likely to survive a first pass. Look for them again, and weigh them the same way.
+- **Survivors:** payoff clauses, slogan pairs, a closing moral, a line built to be quoted, a stock first or last line, a bold label on every step and a passive sentence hiding who acts are the patterns most likely to survive a first pass. Look for them again, and weigh them the same way.
 - **Colder:** a cut that took out humour, a real aside, an earned line, or warmth only this writer would show this reader. Put it back. Warmth that would fit any customer ("We really enjoy looking after you") is stock and stays cut. A version that loses a giveaway but reads flatter than the draft is not finished.
 
 Fix what you find, once. Rewriting your own result again should change nothing.
