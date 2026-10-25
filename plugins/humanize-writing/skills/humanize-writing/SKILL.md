@@ -67,7 +67,7 @@ A sentence that passes the five tests stays exactly as written, and so does one 
 
 ### 3. Rewrite it as the writer would say it
 
-- Cut first. Deleting a template sentence usually does more than rewording it. The cuts most often missed: a sentence that restates its heading or the sentence before it, a closing recap of the steps, a payoff clause on a fact, a slogan turned into advice, and a line of warmth that would fit any customer. No cut takes an ask, a reason the writer gives, a thanks or a feeling the writer states plainly, or the headings a page is built on.
+- Cut first. Deleting a template sentence usually does more than rewording it. The cuts most often missed: a sentence that restates its heading or the sentence before it, a closing recap of the steps, a payoff clause on a fact, a slogan turned into advice, and a line of warmth that would fit any customer. No cut takes an ask, a reason the writer gives, a thanks or a feeling about this reader or this event, or the headings a page is built on.
 - Then say each remaining point plainly and once, as the writer talking to this reader: active voice with the real actor ("we", "I", "you"), the reader's own terms, and contractions where the register allows them. Rewriting only the flagged phrase leaves the sentence around it stiff; when that happens, rewrite the sentence, or the paragraph around its point.
 - You may merge or split sentences and paragraphs, reorder within a paragraph and move the point up. Keep the order of steps, events and ranked items.
 - Let sentence length follow the content. Do not chop sentences into fragments for punch, and do not turn every dash into a full stop.
