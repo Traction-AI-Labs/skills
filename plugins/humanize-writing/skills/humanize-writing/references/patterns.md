@@ -19,7 +19,7 @@ These are rarely a writer's own choice.
 
 ## Act when they cluster
 
-One alone may be the writer's. Three in a paragraph is a template.
+One alone may be the writer's. Three in a paragraph is a template, and so is any one of them in a draft that already carries its genre's template.
 
 | Pattern | Looks like | Fix |
 |---|---|---|
