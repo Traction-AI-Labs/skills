@@ -11,7 +11,7 @@ Skills for Claude Code, the Claude app, Codex and Grok, published by Traction St
 | **persona-teardown** | Walks a prototype, UI kit or live screen with three to five cold persona agents driving `agent-browser`, one session and one report each, with a coverage ledger of every screen, control, state and ground, then consolidates the findings into one amendment prompt for the design tool | Claude Code or Codex (subagents) |
 | **ruling-page** | Turns a complicated decision into a clickable one-file HTML page: a recommendation pre-selected on every card, alternatives as buttons, and one button that copies the answers back into chat | Claude Code, the Claude app |
 | **call-prep** | Writes a verbatim call script as one interactive HTML page to read live on a second screen: a guard line of what not to say, numbered beats with the exact words, fallbacks for pushback and answers to the hardest questions | Claude Code, the Claude app |
-| **humanize-writing** | Rewrites AI-generated text to read like a person wrote it: removes the tells (em dashes, rule-of-three lists, contrast framing, self-narration, a banned list of words and phrases), then adds a voice back | Claude Code, the Claude app, Codex |
+| **humanize-writing** | Rewrites a draft so it reads like a person wrote it for its reader, adding nothing the draft did not say: removes the templates current models write in, says each point in the writer's own voice, keeps technical text's steps and figures, and checks every edit against the draft | Claude Code, the Claude app, Codex |
 | **go-deeper** | Rewrites a task to be more ambitious before doing it: what a top professional in the field would do that wasn't asked, the rawest material they'd start from, the methods and tools they'd use and an outside judge, then a rewritten prompt. Also covers altitude (the outcome behind the deliverable) and range (methods from other fields) | Claude Code, the Claude app, Codex |
 
 Each plugin's own README covers set-up and use in more detail.
@@ -85,11 +85,19 @@ The other plugins need no CLIs or keys. persona-teardown needs `agent-browser` i
 
 ## Licence
 
-MIT. doc-gauntlet includes Every's review kernel, and humanize-writing is adapted from Siqi Chen's
-humanizer; see [NOTICE.md](NOTICE.md).
+MIT. doc-gauntlet includes Every's review kernel, and humanize-writing draws on ideas from several
+open-source writing skills; see [NOTICE.md](NOTICE.md).
 
 ## Changelog
 
+- **humanize-writing 0.2.0** (25 October 2026). Rewritten from scratch as an editor that adds nothing the draft
+  did not say. It names the genre, the writer and the reader first, targets the templates current models write in
+  (genre skeletons, slogan pairs, payoff clauses, staged feeling, a bold label on every step) with five sentence
+  tests, then says each remaining point the way the writer would say it to that reader, and checks every edit
+  against the draft in both directions. Technical documents keep their steps, headings, commands and figures and
+  lose their decoration; articles, cover letters and bios get their own rules. The personality pass and the
+  banned list are gone; a pattern catalogue and one worked edit per genre replace them. Credits the open-source
+  skills whose ideas it draws on.
 - **go-deeper 0.1.0** (25 October 2026). First release: the depth prompt with its four-part analysis and
   rewritten prompt, plus altitude, range and the self-efficacy notes from Felix Rieseberg's essay. Upload-zip
   builder included.

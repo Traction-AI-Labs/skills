@@ -47,8 +47,8 @@
     {
       "name": "humanize-writing",
       "source": "./plugins/humanize-writing",
-      "description": "Rewrites AI-generated text to read like a person wrote it: strips the tells, then adds a voice back.",
-      "version": "0.1.0"
+      "description": "Rewrites a draft so it reads like a person wrote it for its reader, adding nothing the draft did not say: removes the templates current models write in, says each point in the writer's own voice, keeps technical text's steps and figures, and checks every edit against the draft.",
+      "version": "0.2.0"
     },
     {
       "name": "go-deeper",
