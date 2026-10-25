@@ -87,7 +87,7 @@ open-source writing skills; see [NOTICE.md](NOTICE.md).
 
 ## Changelog
 
-- **humanize-writing 0.2.0** (24 October 2026). Rewritten from scratch as an editor that adds nothing the draft
+- **humanize-writing 0.2.0** (25 October 2026). Rewritten from scratch as an editor that adds nothing the draft
   did not say. It names the genre, the writer and the reader first, targets the templates current models write in
   (genre skeletons, slogan pairs, payoff clauses, staged feeling, a bold label on every step) with five sentence
   tests, then says each remaining point the way the writer would say it to that reader, and checks every edit
