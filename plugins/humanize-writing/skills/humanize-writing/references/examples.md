@@ -87,37 +87,75 @@ After:
 
 Before:
 
+> # How To Restore The Staging Database
+>
 > ## Overview
 >
 > This document describes how to restore the staging database from a nightly backup.
 >
 > ## Steps
 >
-> 1. Confirm that no deploys are running on staging. This ensures a smooth and seamless restore process.
-> 2. Run `./scripts/restore.sh --env staging --date YYYY-MM-DD`.
-> 3. Wait for the script to print `Restore complete`. This typically takes around 10 minutes.
-> 4. Run the smoke tests with `make smoke ENV=staging`.
+> 1. **Check for deploys.** It should be confirmed that no deploys are running on staging. This ensures a smooth and seamless restore process.
+> 2. **Run the restore script.** Run `./scripts/restore.sh --env staging --date YYYY-MM-DD`.
+> 3. **Wait for completion.** Wait for the script to print `Restore complete`. This typically takes around **10 minutes**.
+> 4. **Run smoke tests.** Run the smoke tests with `make smoke ENV=staging`.
 >
 > ## Notes
 >
-> Backups are kept for 14 days. It's important to note that restoring overwrites all data written to staging since the backup was taken.
+> Backups are kept for **14 days**. It's important to note that restoring overwrites all data written to staging since the backup was taken.
 
-After (two cuts; the structure, commands and every fact stay):
+After (the steps, headings, commands, figures and warning stay; the labels, emphasis, padding and the Overview heading over one restating sentence go):
 
-> ## Overview
+> # How to restore the staging database
 >
-> This document describes how to restore the staging database from a nightly backup.
+> This restores the staging database from a nightly backup.
 >
 > ## Steps
 >
-> 1. Confirm that no deploys are running on staging.
+> 1. Check that no deploys are running on staging.
 > 2. Run `./scripts/restore.sh --env staging --date YYYY-MM-DD`.
-> 3. Wait for the script to print `Restore complete`. This typically takes around 10 minutes.
+> 3. Wait for the script to print `Restore complete`. It usually takes about 10 minutes.
 > 4. Run the smoke tests with `make smoke ENV=staging`.
 >
 > ## Notes
 >
-> Backups are kept for 14 days. Restoring overwrites all data written to staging since the backup was taken.
+> Backups are kept for 14 days. Restoring overwrites everything written to staging since the backup was taken.
+
+## Cover letter
+
+Before:
+
+> Dear Hiring Manager,
+>
+> I am writing to express my keen interest in the Operations Coordinator role at Harbour Freight. As a highly organised, detail-oriented professional with a passion for logistics, I am confident that I would be a valuable addition to your team.
+>
+> In my current role at Coastline Removals, I manage the booking schedule for a fleet of 14 trucks and coordinate with around 30 drivers each week. I introduced a shared job board that reduced double bookings from roughly ten a month to one or two. I also handle customer complaints, which has strengthened my communication and problem-solving skills.
+>
+> I am excited about the opportunity to bring my skills and experience to Harbour Freight, and I would welcome the chance to discuss how I can contribute to your continued success.
+>
+> Thank you for your time and consideration.
+>
+> Kind regards,
+> Jess Morgan
+
+After:
+
+> Dear Hiring Manager,
+>
+> I'd like to apply for the Operations Coordinator role at Harbour Freight.
+>
+> At Coastline Removals I manage the booking schedule for a fleet of 14 trucks and coordinate around 30 drivers each week. I set up a shared job board that cut double bookings from roughly ten a month to one or two, and I handle customer complaints.
+>
+> I'd welcome the chance to talk about the role.
+>
+> Thank you for your time.
+>
+> Kind regards,
+> Jess Morgan
+
+Notes:
+
+- The letter would be stronger with a line on why Harbour Freight in particular; the draft does not say.
 
 ## Already clean
 
