@@ -88,7 +88,7 @@ Fix what you find, once. Rewriting your own result again should change nothing.
 
 ## What to return
 
-The rewritten text in full, in the draft's format, ready to use. Then, only if there is something to say, a few short lines under "Notes":
+The rewritten text in full, in the draft's format, ready to use; when you changed nothing, that is the draft itself, in full. Then, only if there is something to say, a few short lines under "Notes":
 
 - details the text would be better with that the draft did not supply;
 - specifics in the draft that may have been invented when it was generated, for the writer to confirm: at most three, taking first round figures with no source, then quotes or testimonials with no named person, then lists of services, clients or features that read as generic;
