@@ -32,7 +32,7 @@ One alone may be the writer's. Three in a paragraph is a template, and so is any
 | Virtue adjectives | "fast, friendly service", "smart, simple and secure" | Say what makes it so if the draft says; otherwise use the plain noun |
 | Bolded run-in phrases | Each paragraph or list item opening with a bold aphorism | Fold the point into its sentence. In documents, see the formatting table below |
 | Inflated significance | "a pivotal moment", "a testament to", "plays a key role in" | State the fact the phrase is inflating, or cut |
-| Vague authority | "Experts agree", "studies show", "many businesses find" | Cut unless the draft names the source |
+| Vague authority | "Experts agree", "studies show", "many businesses find" | Cut the phrase together with the claim it props up when the claim says nothing checkable. Otherwise keep it as the draft gives it and flag it in your notes. Never leave the claim standing without it |
 | Stacked qualifiers | "may potentially", "could possibly help" | Keep one qualifier. Keep every qualifier that marks a real exception or a legal limit |
 | Bookends | The opening and the closing restate the same frame | Keep one |
 
