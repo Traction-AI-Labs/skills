@@ -1,0 +1,12 @@
+{
+  "name": "go-deeper",
+  "version": "0.1.0",
+  "description": "Rewrites a task to be more ambitious before doing it: what a top professional would do, the rawest material they'd start from, the methods they'd use and an outside judge, plus altitude (the outcome behind the deliverable) and range (methods borrowed from other fields).",
+  "author": {
+    "name": "Traction Studio",
+    "url": "https://github.com/Traction-AI-Labs"
+  },
+  "homepage": "https://github.com/Traction-AI-Labs/skills",
+  "repository": "https://github.com/Traction-AI-Labs/skills",
+  "license": "MIT"
+}
