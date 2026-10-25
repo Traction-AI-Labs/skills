@@ -11,7 +11,7 @@ Skills for Claude Code, the Claude app, Codex and Grok, published by Traction St
 | **persona-teardown** | Walks a prototype, UI kit or live screen with three to five cold persona agents driving `agent-browser`, one session and one report each, with a coverage ledger of every screen, control, state and ground, then consolidates the findings into one amendment prompt for the design tool | Claude Code or Codex (subagents) |
 | **ruling-page** | Turns a complicated decision into a clickable one-file HTML page: a recommendation pre-selected on every card, alternatives as buttons, and one button that copies the answers back into chat | Claude Code, the Claude app |
 | **call-prep** | Writes a verbatim call script as one interactive HTML page to read live on a second screen: a guard line of what not to say, numbered beats with the exact words, fallbacks for pushback and answers to the hardest questions | Claude Code, the Claude app |
-| **humanize-writing** | Edits a draft so it reads like a person wrote it for its reader, adding nothing the draft did not say: removes the templates current models write in, keeps technical text's structure, and checks every edit against the draft | Claude Code, the Claude app, Codex |
+| **humanize-writing** | Rewrites a draft so it reads like a person wrote it for its reader, adding nothing the draft did not say: removes the templates current models write in, says each point in the writer's own voice, keeps technical text's steps and figures, and checks every edit against the draft | Claude Code, the Claude app, Codex |
 
 Each plugin's own README covers set-up and use in more detail.
 
@@ -88,11 +88,13 @@ open-source writing skills; see [NOTICE.md](NOTICE.md).
 ## Changelog
 
 - **humanize-writing 0.2.0** (24 October 2026). Rewritten from scratch as an editor that adds nothing the draft
-  did not say. It names the genre and reader first, leaves technical documents' structure alone, targets the
-  templates current models write in (genre skeletons, slogan pairs, payoff clauses, staged feeling) with five
-  sentence tests, and checks every edit against the draft in both directions. The personality pass and the banned
-  list are gone; a pattern catalogue and one worked edit per genre replace them. Credits the open-source skills
-  whose ideas it draws on.
+  did not say. It names the genre, the writer and the reader first, targets the templates current models write in
+  (genre skeletons, slogan pairs, payoff clauses, staged feeling, a bold label on every step) with five sentence
+  tests, then says each remaining point the way the writer would say it to that reader, and checks every edit
+  against the draft in both directions. Technical documents keep their steps, headings, commands and figures and
+  lose their decoration; articles, cover letters and bios get their own rules. The personality pass and the
+  banned list are gone; a pattern catalogue and one worked edit per genre replace them. Credits the open-source
+  skills whose ideas it draws on.
 - **humanize-writing 0.1.0** (24 October 2026). First release: the editing rules, the content, language and style
   patterns to remove, the personality pass, and a banned list of words, phrases and emojis with plain
   replacements. Upload-zip builder included.
