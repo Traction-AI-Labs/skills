@@ -32,7 +32,7 @@ which never makes this window safe to share.
    counterpart, the tracker or ticket state, the last email or chat thread, anything already sent to
    them. Every number that will appear in a quoted line has a source, or carries the *unverified* label
    set out under the shape below. Nothing comes from an earlier
-   prep alone. The counterpart's own number can be quoted as theirs ("in your email you proposed 10%"); stating it as fact needs your own record that agrees. First call with this
+   prep alone. The counterpart's own number can be quoted as theirs ("in your email you proposed 10%"); stating it as fact needs your own record that agrees. Anything said on an earlier call (a quote, a figure, "you agreed") is read from that call's raw transcript, never from a summary of it: summaries turn "that would be a great outcome" into "the target you agreed". First call with this
    counterpart: anchor the first beat on what put the call in the diary, in their words.
 3. **Save it where the call's notes live**, somewhere the counterpart cannot see: next to the
    client's internal notes, or in the call's own dated folder. Never in a folder shared with them.
@@ -41,6 +41,27 @@ which never makes this window safe to share.
    access and instructions. Don't submit, send or change anything live; use a copy or a preview. Fix
    each stall you can; otherwise record it as a blocker in the prep and tell the caller. Then the
    first beat after the opener says what to do, where, how many are in scope, and by when.
+
+## Everything the call promises is ready before the call
+
+The prep is not done until the caller's only remaining actions are to talk and to press send. A script
+that promises "I'll email you the scorecard this afternoon" while the scorecard is unwritten leaves the
+caller exposed on the call and with work to do after it.
+
+1. **Every artefact the script sends, shares, pastes or shows is finished before the call:** written for
+   the counterpart (no internal labels, notes or analysis), independently reviewed, and sitting in
+   send-ready form (a draft email on the right thread, attachments on it). "After the call: send X" is
+   allowed only for the part that genuinely depends on what is said; the rest is drafted, and the open
+   part is named.
+2. **A "What you send" panel at the top of the page**, under the guard line: each item, where it is,
+   and the one action the caller takes. If nothing is sent, say so.
+3. **Every ask and follow-up in plain words, in the beat that raises it:** what it is, why the
+   counterpart wants it, what happens next. No shorthand the caller has to decode mid-call.
+4. **A figure framed as agreed names who said it and when**, from the transcript.
+5. **A slip is the caller's only if the thread shows they owed the next step.** Read the thread before
+   writing an apology into the opener.
+6. **Not ready by call time:** the panel and the handover say what isn't ready, as a count ("2 of 3
+   ready; the email is in review"). Never call an unwritten or unreviewed artefact ready.
 
 ## The shape
 
@@ -162,9 +183,15 @@ as written and any instruction that has leaked into a quoted line. Apply what th
 the sources line. A call inside the hour: do both checks yourself and say so; a late script is worse
 than an unreviewed one. A routine internal call gets no review.
 
+**Whatever the call's topic, everything the call hands over gets its own independent review before the
+call:** a scorecard, a report, a draft email, by a reviewer who did not produce it and works from the
+source, not from the author's answer. Instructions or a prompt the counterpart will paste into their own
+tool get an adversarial run against the real cases they will be used on. An author re-checking their
+own counts is not a review.
+
 ## Handing it over
 
-Give the path (and confirm it is open) or the artifact, the guard line (or that nothing is off
+First line: what the caller sends and whether it is ready, as a count. Then the path (and confirm it is open) or the artifact, the guard line (or that nothing is off
 limits), the beat headings, and whether a review ran. Not the whole script; they open the page. Flag
 anything you could not verify against a source, and anything the caller still owes that the call
 depends on (a message they said they'd send, a decision not yet made).
@@ -183,6 +210,9 @@ depends on (a message they said they'd send, a decision not yet made).
 | An estimate invented live in a quoted line ("this will take about two weeks") | Never. An agreed, sourced estimate can be quoted |
 | "Answer if asked" in the polite phrasing | The hostile phrasing, with an answer the caller can say to it |
 | A slip held back until they raise it | An early beat, in the caller's words |
+| An apology for a slip that was the counterpart's to act on | Read the thread for who owed the next step first |
+| "After the call: email them X" when X could be written now | X drafted, reviewed and ready to send before the call; the "What you send" panel says where |
+| A follow-up named in shorthand ("the half hour on the logging") | One plain sentence in the beat: what it is, why they want it, what happens |
 | A linear script for a call someone else drives | Beats keyed to their trigger, must-land beats marked |
 | The full shape, state table and all, for a fifteen-minute internal sync | Core only |
 | A markdown prep, or an HTML one plus a markdown mirror | One HTML page from the template |
