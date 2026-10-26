@@ -90,6 +90,12 @@ open-source writing skills; see [NOTICE.md](NOTICE.md).
 
 ## Changelog
 
+- **call-prep 0.1.3** (26 October 2026). A prep is done only when everything the call promises is ready: each
+  artefact it sends or shows is written for the counterpart, independently reviewed and send-ready before the call,
+  listed in a "What you send" panel at the top, with any part that depends on the call named. Asks are explained in
+  plain words in their beat, figures framed as agreed are attributed from the transcript, and the handover leads
+  with a readiness count. The review now covers every handed-over artefact whatever the call's topic, plus an
+  adversarial test for instructions the counterpart will run.
 - **humanize-writing 0.2.0** (25 October 2026). Rewritten from scratch as an editor that adds nothing the draft
   did not say. It names the genre, the writer and the reader first, targets the templates current models write in
   (genre skeletons, slogan pairs, payoff clauses, staged feeling, a bold label on every step) with five sentence
