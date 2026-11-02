@@ -66,7 +66,7 @@ LEAD_HEADS = re.compile(r"^(recommendation|recommendations|bottom line|summary|e
 FOLD_HEADS = re.compile(r"^(sources|source list|evidence|references|appendix.*|method|methodology|notes|raw notes|working notes|bibliography)$", re.I)
 
 CALLOUT_LABELS = [
-    ("decision", re.compile(r"decision|needs? (your|the approver\b|\w+'s (go|ruling|call|sign-?off|decision|input|answer|ok)\b)|for you to|ask of you|open question|to decide|your call", re.I)),
+    ("decision", re.compile(r"decision|needs? (your|the reader|the approver\b|\w+'s (go|ruling|call|sign-?off|decision|input|answer|ok)\b)|for you to|ask of you|open question|to decide|your call", re.I)),
     ("risk", re.compile(r"risk|caveat|concern|watch out|danger|gotcha|warning|downside", re.I)),
     ("rec", re.compile(r"recommend|bottom line|smallest version|verdict|next step|what to do|proposal|the plan|do this", re.I)),
     ("note", re.compile(r"^note|when .* would|alternative|aside|context|background", re.I)),

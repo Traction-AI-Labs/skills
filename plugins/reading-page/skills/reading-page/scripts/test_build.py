@@ -299,6 +299,7 @@ def test_only_n_dot_space_is_a_numbered_section(head, hid):
     ("Decision needed", "decision"),
     ("Open question", "decision"),
     ("Needs your go", "decision"),
+    ("Needs the reader", "decision"),
     ("Needs the approver", "decision"),
     ("Needs Pat's go", "decision"),
     ("Needs Pat's ruling", "decision"),

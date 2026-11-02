@@ -112,8 +112,10 @@ for candidate in (os.path.abspath(run), os.path.realpath(run)):
 # (18 Oct 2026: an empty ~/.agents file, and instruction files in the
 # review worktree that made collect refuse it as dirty).
 for extra_home in (os.path.expanduser("~/.claude"), os.path.expanduser("~/.agents"), os.path.expanduser("~/.cursor"), os.path.expanduser("~/.gauntlet")):
-    if os.path.lexists(extra_home):
-        add(os.path.abspath(extra_home))
+    # A symlinked home folder is denied by its target; a dangling one is skipped.
+    if os.path.exists(extra_home):
+        if not os.path.islink(extra_home):
+            add(os.path.abspath(extra_home))
         add(os.path.realpath(extra_home))
 # Grok refuses to start when a deny entry is a symlink (19 Oct 2026: a repo whose
 # AGENTS.md links to CLAUDE.md failed every Grok leg at startup), and a ** pattern
