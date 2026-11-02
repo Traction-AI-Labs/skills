@@ -94,6 +94,19 @@ open-source writing skills; see [NOTICE.md](NOTICE.md).
 
 ## Changelog
 
+- **gauntlet 0.6.0, doc-gauntlet 0.6.0 and reading-page 0.2.1** (3 November 2026). gauntlet and doc-gauntlet:
+  Grok legs run without a forced output schema (it let Grok answer without opening a file), keep its JSON output
+  as the record, and a one-turn reply fails the leg; the Grok sandbox denies only instruction files that exist and
+  never a symlink; `--prior-findings` can be given more than once; a leg that lands or is retried after the round
+  was archived gets its own archive; reviewers are told to read every changed file's hunks and trace every existing
+  user of what changed, and to report every defect they trace. gauntlet also treats `--exclude` paths literally
+  and adds `collect --started-only` (record a prepared leg you never started as not run) and a locked `clean`.
+  doc-gauntlet: a breadth-only round is archived, and the client-draft review in `derivation-ledger.md` gains the
+  rules on naming the fault and never the sentence, the final figures check, read-only reviewers, deriving what
+  someone said from their own words, one round on a short message, and a reviewer's tool-call budget.
+  reading-page: the "decision" callout also matches "needs the approver's go", "needs <name>'s ruling" and
+  similar; the browser check also resizes a desktop page to phone width and fails if anything covers the title.
+
 - **ruling-page 0.2.0, reading-page 0.2.0 and call-prep 0.2.0** (2 November 2026). One shared look across
   the three pages, with no one-sided accents: state shows as a tinted fill, a full outline or a label.
   ruling-page: a new engine with a brief at the top, a progress strip, a contents rail and a status per

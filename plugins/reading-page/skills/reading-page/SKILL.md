@@ -63,8 +63,10 @@ things. Put raw evidence under a Sources or Evidence heading so it folds away.
 ## Check before they see it
 
 Headless only, never on the reader's screen. `scripts/browser_check.sh <page>.html` (needs
-`agent-browser`) loads the page at phone width with JavaScript off and on, and checks the contents,
-links, ids, the phone bar, sideways overflow and the console; it exits non-zero on any failure.
+`agent-browser`) loads the page at phone width with JavaScript off and on, loads it at desktop
+width and resizes it to phone width without a reload (nothing may cover the title or standfirst while
+the window narrows or after), and checks the contents, links, ids, the phone bar, sideways overflow
+and the console; it exits non-zero on any failure.
 Headless browsers are heavy: if the reader's machine is busy, run it on another machine. When you
 change the template or `build.py`, also build `scripts/fixtures/long-tokens.md` with the copy you
 changed and check that page.

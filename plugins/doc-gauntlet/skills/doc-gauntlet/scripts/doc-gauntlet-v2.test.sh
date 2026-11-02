@@ -337,9 +337,31 @@ printf '%s\n' "$*" > "$FAKE_GROK_ARGS"
 grep -Fq 'extends = "strict"' .grok/sandbox.toml
 grep -Eq '^read_only = \["[^"]+"\]$' .grok/sandbox.toml
 grep -Eq '^deny = \[' .grok/sandbox.toml
-grep -Fq 'AGENTS.md' .grok/sandbox.toml
-grep -Eq '"[^"]*/\.gauntlet"' .grok/sandbox.toml
+# Instruction files are listed one by one, never by a ** pattern (a pattern can
+# match a symlink, and Grok refuses to start on a symlinked deny entry).
+if grep -Fq '*' .grok/sandbox.toml; then echo 'sandbox carries a pattern' >&2; exit 1; fi
+# ~/.gauntlet is denied only where it exists, so the check needs no particular home.
+[[ ! -e "$HOME/.gauntlet" ]] || grep -Fq "\"$HOME/.gauntlet\"" .grok/sandbox.toml
 ! grep -Fq '/sessions' .grok/sandbox.toml
+# Real Grok creates a denied literal path that does not exist, empty, and
+# leaves it there (18 Oct 2026); the fake does the same in the repo,
+# and under $FAKE_GROK_HOME_ROOT when a case points HOME at a scratch home.
+python3 - .grok/sandbox.toml <<'PY'
+import json, os, re, sys
+t = open(sys.argv[1]).read()
+repo = json.loads(re.search(r"^read_only = \[(.*)\]$", t, re.M).group(1))
+roots = (repo + "/", os.path.realpath(repo) + "/")
+if os.environ.get("FAKE_GROK_HOME_ROOT"):
+    roots += (os.environ["FAKE_GROK_HOME_ROOT"].rstrip("/") + "/",)
+for p in json.loads("[" + re.search(r"^deny = \[(.*)\]$", t, re.M).group(1) + "]"):
+    # Real Grok refuses to start when a deny entry is a symlink (19 Oct 2026).
+    if os.path.islink(p):
+        sys.exit(f"grok: sandbox deny entry is a symlink: {p}")
+    if "*" not in p and p.startswith(roots) and not os.path.lexists(p):
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        open(p, "w").close()
+PY
+[[ -z "${FAKE_GROK_SANDBOX:-}" ]] || cp .grok/sandbox.toml "$FAKE_GROK_SANDBOX"
 prompt=""
 prev=""
 for arg in "$@"; do
@@ -349,11 +371,13 @@ done
 p="$(cat "$prompt")"
 lens="$(sed -n 's/^You are the \([a-z-]*\) document-review lens.*/\1/p' <<< "$p")"
 if [[ -n "$lens" ]]; then
-  printf '{"reviewer":"%s","findings":[],"residual_risks":[],"deferred_questions":[]}\n' "$lens"
+  reply="$(printf 'Read the plan and its sources.\n{"reviewer":"%s","findings":[],"residual_risks":[],"deferred_questions":[]}' "$lens")"
 else
   head="$(sed -n 's/^Pinned HEAD SHA: //p' <<< "$p")"; digest="$(sed -n 's/^Pinned scope digest: //p' <<< "$p")"
-  printf '{"engine":"grok","model":"fixture","transport":"grok-cli","scope_sha":"%s","scope_digest":"%s","verdict":"CONVERGED","findings":[]}\n' "$head" "$digest"
+  reply="$(printf '{"engine":"grok","model":"fixture","transport":"grok-cli","scope_sha":"%s","scope_digest":"%s","verdict":"CONVERGED","findings":[]}' "$head" "$digest")"
 fi
+# Grok's --output-format json wrapper: the reply is a string, num_turns counts tool rounds.
+python3 -c 'import json,sys; print(json.dumps({"text": sys.argv[1], "num_turns": int(sys.argv[2])}))' "$reply" "${FAKE_GROK_TURNS:-4}"
 EOF
 chmod +x "$TMP/bin/grok"
 env PATH="$TMP/bin:$PATH" REAL_TIMEOUT="$REAL_TIMEOUT" FAKE_GROK_TIMEOUT="$TMP/doc-grok.timeout" GAUNTLET_TIMEOUT_GROK_SECONDS=27 FAKE_GROK_ARGS="$TMP/doc-grok.args" FAKE_GROK_CWD="$TMP/doc-grok.cwd" DOC_GAUNTLET_DIR="$GROK_PAIR" "$RUNNER" run-cli --lens coherence
@@ -363,8 +387,90 @@ grep -Eq -- '--sandbox g[0-9a-f]{16}' "$TMP/doc-grok.args"
 ! grep -Fq -- '--sandbox read-only' "$TMP/doc-grok.args"
 grep -Fq -- '--tools read_file,grep,list_dir' "$TMP/doc-grok.args"
 ! grep -Fq -- '--cwd' "$TMP/doc-grok.args"
+# Forced structured output let Grok answer without reading (15 Oct 2026); the
+# runner asks for the JSON wrapper instead and keeps it beside the reply.
+grep -Fq -- '--output-format json' "$TMP/doc-grok.args"
+! grep -Fq -- '--json-schema' "$TMP/doc-grok.args"
 test "$(cat "$TMP/doc-grok.timeout")" = 27
 test -f "$GROK_PAIR/results/breadth-coherence.json"
+grep -Fq '"num_turns": 4' "$GROK_PAIR/raw-breadth-coherence.grok.txt"
+# A one-turn Grok answer opened no file: the leg fails and records no result.
+env PATH="$TMP/bin:$PATH" REAL_TIMEOUT="$REAL_TIMEOUT" FAKE_GROK_TIMEOUT="$TMP/doc-grok.timeout" FAKE_GROK_TURNS=1 FAKE_GROK_ARGS="$TMP/doc-grok-one.args" DOC_GAUNTLET_DIR="$GROK_PAIR" "$RUNNER" run-cli --lens feasibility
+wait_for_leg "$GROK_PAIR" breadth-feasibility
+test ! -e "$GROK_PAIR/results/breadth-feasibility.json"
+grep -Fq 'answered in one turn without opening a file' "$GROK_PAIR/failures/breadth-feasibility.txt"
+# The home side: under a home holding .claude and .gauntlet but no .agents or .cursor, only the existing two
+# are denied, and the leg leaves that home as it found it.
+mkdir -p "$TMP/dochome/.grok" "$TMP/dochome/.claude" "$TMP/dochome/.gauntlet"; printf '{}' > "$TMP/dochome/.grok/auth.json"
+# The reviewed repo carries an ignored AGENTS.md linking to an ignored CLAUDE.md: the real Grok refuses a
+# symlinked deny entry, and so does the fake, so this run fails if the runner denies the link itself.
+printf 'AGENTS.md\nCLAUDE.md\n' >> "$REPO/.git/info/exclude"; printf 'instructions\n' > "$REPO/CLAUDE.md"; ln -s CLAUDE.md "$REPO/AGENTS.md"
+env HOME="$TMP/dochome" PATH="$TMP/bin:$PATH" REAL_TIMEOUT="$REAL_TIMEOUT" FAKE_GROK_TIMEOUT="$TMP/doc-grok.timeout" FAKE_GROK_ARGS="$TMP/doc-grok-home.args" \
+  FAKE_GROK_SANDBOX="$TMP/doc-grok.sandbox" FAKE_GROK_HOME_ROOT="$TMP/dochome" DOC_GAUNTLET_DIR="$GROK_PAIR" "$RUNNER" run-cli --lens scope-guardian
+wait_for_leg "$GROK_PAIR" breadth-scope-guardian
+test -f "$GROK_PAIR/results/breadth-scope-guardian.json"
+grep -Fq "\"$TMP/dochome/.claude\"" "$TMP/doc-grok.sandbox"
+grep -Fq "\"$TMP/dochome/.gauntlet\"" "$TMP/doc-grok.sandbox"
+if grep -Fq "\"$TMP/dochome/.agents\"" "$TMP/doc-grok.sandbox" || grep -Fq "\"$TMP/dochome/.cursor\"" "$TMP/doc-grok.sandbox"; then exit 1; fi
+grep -Fq "/CLAUDE.md\"" "$TMP/doc-grok.sandbox"
+rm "$REPO/AGENTS.md" "$REPO/CLAUDE.md"
+test ! -e "$TMP/dochome/.agents"
+test ! -e "$TMP/dochome/.cursor"
+# A repo whose AGENTS.md is a symlink to CLAUDE.md (19 Oct 2026):
+# Grok refuses to start when a deny entry is a symlink, so the profile denies the
+# link's target and never the link, lists every instruction file it finds, top
+# level and nested, uses no ** pattern, and skips a dangling link without
+# creating anything. The writer is run straight from the runner script.
+SYM="$TMP/symlink-agents"
+mkdir -p "$SYM/repo/docs/sub/.claude/rules" "$SYM/repo/.cursor/rules" "$SYM/cwd" "$SYM/run" "$SYM/home"
+printf 'instructions\n' > "$SYM/repo/CLAUDE.md"
+ln -s CLAUDE.md "$SYM/repo/AGENTS.md"
+printf 'nested\n' > "$SYM/repo/docs/sub/CLAUDE.md"
+printf 'nested\n' > "$SYM/repo/docs/AGENTS.md"
+ln -s ../missing.md "$SYM/repo/docs/sub/AGENTS.md"
+printf 'rule\n' > "$SYM/repo/docs/sub/.claude/rules/r.md"
+printf 'readme\n' > "$SYM/repo/README.md"
+# A symlinked .claude directory pointing outside the repo, holding CLAUDE.md and rules/.
+mkdir -p "$SYM/outside/rules"; printf 'linked\n' > "$SYM/outside/CLAUDE.md"; printf 'rule\n' > "$SYM/outside/rules/r.md"
+ln -s ../../outside "$SYM/repo/docs/.claude"
+(
+  eval "$(awk '/^write_grok_sandbox\(\) \{/,/^}$/' "$RUNNER")"
+  HOME="$SYM/home" write_grok_sandbox "$SYM/cwd" "$SYM/repo" "$SYM/run" > /dev/null
+)
+python3 - "$SYM/cwd/.grok/sandbox.toml" "$SYM/repo" <<'PY'
+import os, sys, tomllib
+profile, repo = sys.argv[1:]
+data = tomllib.load(open(profile, "rb"))
+(body,) = data["profiles"].values()
+deny = body["deny"]
+real = os.path.realpath(repo)
+for entry in deny:
+    assert not os.path.islink(entry), f"deny entry is a symlink: {entry}"
+    assert "*" not in entry, f"deny entry is a pattern: {entry}"
+    assert os.path.lexists(entry), f"deny entry does not exist: {entry}"
+must = ["CLAUDE.md", "docs/AGENTS.md", "docs/sub/CLAUDE.md", "docs/sub/.claude/rules", ".cursor/rules"]
+for rel in must:
+    assert any(os.path.realpath(e) == os.path.join(real, rel) for e in deny), f"not denied: {rel}"
+assert f"{repo}/CLAUDE.md" in deny, "AGENTS.md's target is not denied by path"
+assert not any(e.endswith("AGENTS.md") and os.path.realpath(e) == os.path.join(real, "AGENTS.md") for e in deny)
+assert not any(e.endswith("README.md") for e in deny), "README.md is denied"
+outside = os.path.realpath(os.path.join(repo, "..", "outside"))
+for rel in ("CLAUDE.md", "rules"):
+    assert os.path.join(outside, rel) in deny, f"not denied inside the linked .claude: {rel}"
+assert not os.path.lexists(os.path.join(repo, "docs/missing.md")), "dangling target created"
+PY
+test ! -e "$SYM/repo/docs/missing.md"
+# The adversarial prompt shows the shape of one finding. On 15 Oct 2026 it showed
+# the per-reviewer breadth envelope, and Grok, with no schema flag to hold it,
+# nested its findings inside that envelope and the leg failed validation.
+python3 - "$GROK_PAIR/prompts/adversarial-grok-cli.md" <<'PY'
+import json, sys
+text = open(sys.argv[1]).read()
+at = text.index('Every finding matches this schema:')
+schema = json.JSONDecoder().raw_decode(text, text.index('{', at))[0]
+assert 'reviewer' not in schema.get('properties', {}), 'adversarial prompt shows the breadth envelope'
+assert {'title', 'finding_type', 'severity'} <= set(schema['required']), schema.get('required')
+PY
 
 # ---------------------------------------------------------------------------
 # Round numbering (plan tests 21 and 22). Own scratch repository, own round
@@ -608,6 +714,28 @@ assert obj["round"] == 2 and obj["identity"] == "doc:docs/pairdoc.md", obj
 PY
 DOC_GAUNTLET_DIR="$P2" "$RUNNER" clean
 test ! -e "$P2"
+
+# A round 2 after a breadth round 1 has several results files, one
+# --prior-findings each: prepare snapshots every one, in order, never only the
+# last (27 Oct 2026, the pair saw only the security lens's findings). A file
+# with no final newline does not run into the next one.
+printf '{"reviewer":"coherence","findings":[{"status":"accepted","section":"Coherence marker"}]}\n' > "$TMP/prior-coherence.json"
+printf '{"reviewer":"security-lens","findings":[{"status":"accepted","section":"Security marker"}]}' > "$TMP/prior-security.json"
+printf '{"engine":"codex","findings":[{"status":"accepted","section":"Codex marker"}]}\n' > "$TMP/prior-codex.json"
+PMULTI="$TMP/pair-r2-multi"
+budget_prepare "$PMULTI" --doc docs/pairdoc.md --pair-only --prior-findings "$TMP/prior-coherence.json" --prior-findings "$TMP/prior-security.json" --prior-findings "$TMP/prior-codex.json" >/dev/null
+test "$(grep -c '^{' "$PMULTI/scope/prior-findings.snapshot")" = 3
+test "$(sed -n 2p "$PMULTI/scope/prior-findings.snapshot")" = "$(cat "$TMP/prior-security.json")"
+for marker in 'Coherence marker' 'Security marker' 'Codex marker'; do
+  grep -Fq "$marker" "$PMULTI/prompts/adversarial-claude-cli.md"
+  grep -Fq "$marker" "$PMULTI/prompts/adversarial-codex-native.md"
+done
+DOC_GAUNTLET_DIR="$PMULTI" "$RUNNER" clean --force
+# Every file is checked, not only the last one given.
+status=0; budget_prepare "$TMP/pair-r2-missing" --doc docs/pairdoc.md --pair-only --prior-findings "$TMP/no-such-findings.json" --prior-findings "$TMP/prior-codex.json" >/dev/null 2> "$TMP/pair-r2-missing.err" || status=$?
+test "$status" = 2
+test ! -e "$TMP/pair-r2-missing"
+grep -Fq 'prior findings must be a non-symlink regular file' "$TMP/pair-r2-missing.err"
 
 # A record made unwritable after prepare keeps the accepted result and its
 # sentinel; collect reports the failed write and retries it exactly once.

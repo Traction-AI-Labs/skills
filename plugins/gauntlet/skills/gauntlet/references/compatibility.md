@@ -4,7 +4,6 @@
 |---|---|---|
 | Codex | one fresh read-only `explorer` with `fork_turns: none`, with no unrelated live collaboration task during the mailbox-wide wait | CLI for the other prepared engine |
 | Claude Code | one fresh read-only agent with one bounded final-result/status primitive | CLI for the other prepared engine |
-| Grok Build TUI | one fresh read-only grok reviewer with one bounded wait | CLI for the other prepared engine |
 | Other hosts | none | both prepared CLIs |
 
 The Codex leg defaults to `gpt-6.1-sol` and needs Codex CLI 0.159.3 or later; older CLIs reject that model on a ChatGPT account. `--codex-model` picks another.

@@ -16,6 +16,7 @@
 """
 from __future__ import annotations
 
+import html
 import importlib.util
 import json
 import re
@@ -297,12 +298,17 @@ def test_only_n_dot_space_is_a_numbered_section(head, hid):
     ("Next steps", "rec"),
     ("Decision needed", "decision"),
     ("Open question", "decision"),
+    ("Needs your go", "decision"),
+    ("Needs the approver", "decision"),
+    ("Needs Pat's go", "decision"),
+    ("Needs Pat's ruling", "decision"),
     ("Note", "note"),
     ("Alternative", "note"),
 ])
 def test_bold_label_callouts(label, kind):
     body = build(f"# T\n\nIntro.\n\n## A\n\n**{label}:**\n\n- one\n- two\n\nAfter.\n")["body"]
-    assert re.search(rf'<aside class="callout callout--{kind}"><p class="callout-label">{label}</p>\s*<ul>\s*<li>one</li>', body)
+    shown = re.escape(html.escape(label))
+    assert re.search(rf'<aside class="callout callout--{kind}"><p class="callout-label">{shown}</p>\s*<ul>\s*<li>one</li>', body)
     assert "<p>After.</p>" in body
 
 

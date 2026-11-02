@@ -60,20 +60,20 @@ done
 printf '%s\n' "$OUTPUT"
 ```
 
-Pass `--prior-findings <file>` to `prepare` when a previous round exists. The runner snapshots it and tells every prepared reviewer not to repeat accepted or known findings unless they remain in the current document.
+Pass `--prior-findings <file>` to `prepare` (repeat the flag for more than one file) when a previous round exists. The runner snapshots every file given and tells every prepared reviewer not to repeat accepted or known findings unless they remain in the current document.
 
 ## Requirements
 
 - Bash, Git, Python 3 and `timeout`
 - Authenticated CLIs for the prepared pair (`claude` and `codex` by default; `grok` when substituted)
-- Claude Code, Codex, or Grok Build TUI for optional matching native reviewers
+- Claude Code or Codex for optional matching native reviewers (a Grok leg always runs by the CLI)
 - Explicit provider authorisation before document or repository content is sent
 
 The runner has five commands: `prepare`, `run-cli`, `ingest`, `collect` and `clean`. The six breadth lenses run in two practical waves of three. Inspect breadth findings before starting the adversarial pair. `collect` reports only the pair outcome as `ADVERSARIAL: CONVERGED|BLOCK`; the host owns the overall verdict after breadth adjudication. A fix changes the pinned revision, so commit it and prepare a fresh run.
 
 A host may use a fresh read-only native reviewer, pass the exact prepared native prompt, save the returned text verbatim, then call `ingest`. The host owns one fixed native wait, interruption, one native retry and one same-engine CLI fallback. The runner validates the pinned scope, starts CLI legs detached, refuses concurrent same-leg launches and takes the last matching JSON object.
 
-Both provider CLIs can inspect the full repository and receive a provider-native output schema; tolerant ingestion remains the backstop. Each leg has a 1800-second default bound, overridable globally with `GAUNTLET_PROVIDER_TIMEOUT_SECONDS` or per engine with `GAUNTLET_TIMEOUT_CLAUDE_SECONDS`, `GAUNTLET_TIMEOUT_CODEX_SECONDS`, and `GAUNTLET_TIMEOUT_GROK_SECONDS`. Common secret-bearing selected inputs are refused, but that check is only a backstop. Use an operator-trusted repository without provider-readable secrets. The package includes its attributed review kernel and has no Compound Engineering runtime dependency.
+Claude and Codex can inspect the full repository and receive a provider-native output schema; Grok runs without one, because forced structured output let it answer without opening a file, so its reply is checked against the schema at ingestion and a one-turn reply is refused. Tolerant ingestion remains the backstop. Each leg has a 1800-second default bound, overridable globally with `GAUNTLET_PROVIDER_TIMEOUT_SECONDS` or per engine with `GAUNTLET_TIMEOUT_CLAUDE_SECONDS`, `GAUNTLET_TIMEOUT_CODEX_SECONDS`, and `GAUNTLET_TIMEOUT_GROK_SECONDS`. Common secret-bearing selected inputs are refused, but that check is only a backstop. Use an operator-trusted repository without provider-readable secrets. The package includes its attributed review kernel and has no Compound Engineering runtime dependency.
 
 When every prepared leg fails, `collect` writes `results/gauntlet-failed.json` with their raw exit codes and diagnostics. This is a durable failure artefact, never a review verdict.
 

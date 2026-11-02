@@ -93,9 +93,92 @@ review; both run.
 ## Ordering
 
 The review runs on a scratch file, never on a draft that already sits somewhere the sender can edit (their
-mailbox drafts, a shared doc). Sequence: write to the scratch file, style-check, leg one, leg two, apply,
-re-verify, then hand over (create the email draft once, or give the text in chat). If a round finds a P1,
+mailbox drafts, a shared doc). Sequence: write to the scratch file, leg one, leg two, apply, style-check and one read of the whole as the
+recipient, the final figures check (below), then hand over (create the email draft once, or give the text in chat). If a round finds a P1,
 the fix is made in the scratch file and the legs re-run there. Nothing is created, deleted or replaced in
 the sender's mailbox during the loop, and once a draft is in their mailbox it is theirs: a session never
 edits, deletes or replaces it. A session that deletes "its own" draft to post a revision can delete a
 message the sender has already edited and sent.
+
+## Wording: legs name the fault, never the sentence
+
+These rules override the paragraphs above where they differ.
+
+- **Leg two names the fault, never the sentence.** Each finding states what is wrong, the right value or
+  member from the ledger, and why it matters to the recipient. It carries no "Replace with" or "Add" text.
+  The writer writes the fix in natural sentences.
+- **A fix corrects or cuts; it never adds a reconciling, hedging or explaining sentence.** A missing member
+  or fact is a correction: it goes into the sentence or list that carries it. The ask stays a direct
+  question.
+- **Only facts are P1:** a wrong value; a missing, extra or duplicate member; a manifest gap; a predicate
+  that does not implement its claim; a cannot-derive; a claim about what someone said whose ledger source is
+  not their own words (below); an ask the recipient cannot act on. Tone and wording notes are advisory and
+  the writer may decline them.
+- **The style check runs after the fixes**, with one read of the whole message as the recipient, so every
+  applied fix is style-checked. It does not run before the legs.
+- **The final figures check.** A fresh reviewer of the same kind as the legs, never the writer, reconciles
+  the final text's figures, ranges, references, option strings, filenames and lists against leg one's
+  existing ledger, one to one, with no wording notes; it gets leg two's findings with the ledger. It also
+  reports a ledger item the final text dropped and a figure the ledger does not hold. A mismatch is set back
+  to the ledger value and an item dropped by accident goes back in; an item cut to resolve a finding, or
+  whose ledger line leg two found wrong, stays as the writer left it. A figure the ledger does not hold,
+  other than a scheduling date or time, comes out. What it finds is applied with no re-run of the legs, and
+  that closes the round. A natural rewrite can drop a fact, and the author's own re-check does not count.
+
+## Reviewers are read-only
+
+- Every reviewer in this procedure (leg one, leg two and the final figures check) is read-only. It reads
+  only the inputs its own step receives (leg one: the source and the manifest; leg two: the draft, the
+  ledger, the source and what the recipient has already been told on the matter; the final figures check:
+  the final text, the ledger and leg two's findings), writes only its own ledger or findings, and never
+  creates, edits, submits, sends or approves anything else.
+- Leg two runs the recipient's task as a read-only walk, or on a preview or copy the author made before
+  dispatch, in a place the recipient cannot see, passed to it by id. It never runs the task on the
+  recipient's live sheet, form, document or mailbox, and never makes a copy itself.
+- Every reviewer's brief states the first point in its opening lines, and leg two's brief also states the
+  second, because the subagent works from its brief.
+
+## What someone said, and a cannot-derive at the final check
+
+- **A claim about what someone said or asked is derived from their own words.** Leg one's source for it is
+  the engagement's whole set of transcripts, recordings and message threads, listed fresh for this run, with
+  the listing recorded in the ledger. Leg one finds who said it and where, and the ledger records both. Our
+  notes, ledgers, question lists and a recap or paraphrase of a call are never in leg one's input for such a
+  claim. Leg two reports a P1 where the ledger's recorded source for such a claim is anything other than that
+  person's own words.
+- **The final figures check also fails a cannot-derive still in the text.** For each item leg one recorded
+  as cannot-derive, it checks that the claim is out of the final text or that the text carries the
+  `UNREVIEWED NOTE` label naming the item. A reworded sentence that still carries the claim fails, and so
+  does an ask that still assumes the recipient raised or knows of the matter; the claim or the ask comes out.
+
+## Depth, short messages and when a reviewer stops
+
+- **One round only on a short message** (a heads-up or status note). The two legs run once, findings are
+  applied without a re-run, and anything still open goes to the sender named in one line. A figure behind a
+  manifest gap is not left open: the final figures check cuts it, as it cuts any figure the ledger does not
+  hold. This wins over the rule above that a predicate which does not implement its claim means a fresh leg
+  one.
+- **The manifest lists only the claims the draft makes, at the level it makes them.** A count is checked as
+  a count, and "all reconciled" as that state on the rows it covers. Nothing the draft does not state
+  (currencies, dates, amounts behind a count) is added. A manifest line that checks more than its claim is a
+  manifest error, the same as one that checks less.
+- **Models.** Leg one reads and counts, so a cheaper model can run it; leg two and the final figures check
+  use the high-capability model. Never a fork.
+- **Budget.** Each reviewer's brief states its budget in its opening lines: 40 tool calls on a short message
+  or status note, 120 on anything else. At the budget it stops and records every item it has not checked as
+  cannot-derive, "budget reached". On anything but a short message or a proposal, such an item may be
+  re-derived by a fresh leg one given only the manifest lines still open, with its own budget, writing a
+  second ledger beside the first; leg two and the final figures check read both.
+- **A refused source.** At a login wall or a permission error the reviewer stops and records the items that
+  need that source as cannot-derive with the refusal. It never retries past a rate limit and never switches
+  to another account or API key. After a rate limit it may carry on in the source's own website through the
+  sender's signed-in browser, within the same budget.
+- **A shared API allowance.** One tool call can run a script that makes hundreds of API requests, so the
+  budget does not cap API use. On a source whose daily allowance other scripts share, the reviewer follows
+  that source's own usage rule (list calls only, never record-by-record history, stop calling the API at the
+  first rate-limit response).
+- A cannot-derive from either stop follows the rule above: re-derived later, cut, labelled
+  `UNREVIEWED NOTE`, or, on a short message or a proposal, named to the sender in one line.
+- **A proposal** gets two doc-gauntlet rounds that check its facts and figures by re-derivation from the
+  source (the derivation leg above, a verbatim copy of its ledger appended to the reviewed export), then one
+  round of this review in the order above, whose findings are applied once, with no re-run.

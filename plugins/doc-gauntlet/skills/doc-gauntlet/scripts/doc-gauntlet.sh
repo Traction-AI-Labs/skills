@@ -10,7 +10,7 @@ cmd="${1:-}"; shift || true
 usage() { cat <<'EOF'
 Usage: doc-gauntlet.sh prepare --authorize-provider --doc PATH --type requirements|plan [--origin PATH|none] [--ledger PATH|none]
        [--engines ENG,ENG] [--claude-model MODEL] [--codex-model MODEL] [--grok-model MODEL]
-       [--effort low|medium|high|xhigh|max] [--timeout-seconds N] [--prior-findings FILE]
+       [--effort low|medium|high|xhigh|max] [--timeout-seconds N] [--prior-findings FILE]...
        [--pair-only]
        DOC_GAUNTLET_DIR=DIR doc-gauntlet.sh run-cli --lens NAME|--engine claude|codex|grok
        DOC_GAUNTLET_DIR=DIR doc-gauntlet.sh ingest --lens NAME|--engine claude|codex|grok --transport TRANSPORT --text FILE
@@ -95,18 +95,50 @@ def add(item):
         denied.append(item)
 for candidate in (os.path.abspath(run), os.path.realpath(run)):
     add(candidate)
+# A path is denied only when it exists: Grok's sandbox masks a denied path that
+# does not exist by creating it empty, parents included, and leaves it there
+# (18 Oct 2026: an empty ~/.agents file, and instruction files in the
+# review worktree that made collect refuse it as dirty).
 for extra_home in (os.path.expanduser("~/.claude"), os.path.expanduser("~/.agents"), os.path.expanduser("~/.cursor"), os.path.expanduser("~/.gauntlet")):
-    add(os.path.abspath(extra_home))
-    add(os.path.realpath(extra_home))
+    if os.path.lexists(extra_home):
+        add(os.path.abspath(extra_home))
+        add(os.path.realpath(extra_home))
+# Grok refuses to start when a deny entry is a symlink (19 Oct 2026: a repo whose
+# AGENTS.md links to CLAUDE.md failed every Grok leg at startup), and a ** pattern
+# can match such a link. So the repo's instruction files are found by walking it
+# and listed one by one, and a link is denied by its target. A dangling link has
+# no target to read and is skipped, since denying a missing path creates it.
+# The walk does not enter a symlinked directory (it could point anywhere, or at
+# itself), so the instruction files directly inside one, and its rules folder,
+# are looked up by hand and denied by their real paths.
+def add_real(item):
+    target = os.path.realpath(item)
+    if os.path.exists(target):
+        add(target)
+def add_existing(item):
+    if os.path.islink(item):
+        add_real(item)
+    else:
+        add(item)
 names = ("AGENTS.md", "Agents.md", "AGENT.md", "Claude.md", "CLAUDE.md", "CLAUDE.local.md")
-extras = (".grok/rules", ".claude/rules", ".cursor/rules", ".claude/CLAUDE.md", ".claude/CLAUDE.local.md")
+extras = (".grok/rules", ".claude/rules", ".cursor/rules")
+def instruction(parent, name):
+    return name in names or f"{os.path.basename(parent)}/{name}" in extras
 for root in (os.path.abspath(repo), os.path.realpath(repo)):
-    for name in names:
-        add(f"{root}/{name}")
-        add(f"{root}/**/{name}")
-    for extra in extras:
-        add(f"{root}/{extra}")
-        add(f"{root}/**/{extra}")
+    for here, dirs, files in os.walk(root):
+        dirs[:] = sorted(d for d in dirs if d != ".git")
+        for name in sorted(files + dirs):
+            entry = os.path.join(here, name)
+            if instruction(here, name):
+                add_existing(entry)
+            if name in dirs and os.path.islink(entry) and os.path.isdir(entry):
+                try:
+                    inside = sorted(os.listdir(entry))
+                except OSError:
+                    inside = []
+                for inner in inside:
+                    if instruction(entry, inner):
+                        add_real(os.path.join(entry, inner))
 profile = "g" + hashlib.sha256(os.fsencode(os.path.abspath(run))).hexdigest()[:16]
 pathlib.Path(path).write_text(
     "[profiles.%s]\nextends = \"strict\"\nread_only = [%s]\ndeny = [%s]\n"
@@ -360,11 +392,11 @@ review_guidance() {
 }
 prepare() {
   require_runtime
-  local authorised=false doc="" type="" origin=none ledger=none prior_findings="" engines_raw=claude,codex claude_model=opus codex_model=gpt-6.1-sol grok_model=grok-4.6 effort=medium timeout_seconds='' repo="${DOC_GAUNTLET_REPO:-$(git rev-parse --show-toplevel)}"
+  local authorised=false doc="" type="" origin=none ledger=none engines_raw=claude,codex claude_model=opus codex_model=gpt-6.1-sol grok_model=grok-4.6 effort=medium timeout_seconds='' repo="${DOC_GAUNTLET_REPO:-$(git rev-parse --show-toplevel)}"
   local engine_a engine_b engine breadth_model
-  local pair_only=false
-  local -a pair=()
-  while [[ $# -gt 0 ]]; do case "$1" in --authorize-provider) authorised=true; shift;; --doc) doc="$2"; shift 2;; --type) type="$2"; shift 2;; --origin) origin="$2"; shift 2;; --ledger) ledger="$2"; shift 2;; --prior-findings) prior_findings="$2"; shift 2;; --engines) engines_raw="$2"; shift 2;; --claude-model) claude_model="$2"; shift 2;; --codex-model) codex_model="$2"; shift 2;; --grok-model) grok_model="$2"; shift 2;; --effort) effort="$2"; shift 2;; --timeout-seconds) timeout_seconds="$2"; shift 2;; --pair-only) pair_only=true; shift;; --override-round-budget) shift 2;; *) fail "unknown argument: $1";; esac; done
+  local pair_only=false prior
+  local -a pair=() prior_findings=()
+  while [[ $# -gt 0 ]]; do case "$1" in --authorize-provider) authorised=true; shift;; --doc) doc="$2"; shift 2;; --type) type="$2"; shift 2;; --origin) origin="$2"; shift 2;; --ledger) ledger="$2"; shift 2;; --prior-findings) prior_findings+=("$2"); shift 2;; --engines) engines_raw="$2"; shift 2;; --claude-model) claude_model="$2"; shift 2;; --codex-model) codex_model="$2"; shift 2;; --grok-model) grok_model="$2"; shift 2;; --effort) effort="$2"; shift 2;; --timeout-seconds) timeout_seconds="$2"; shift 2;; --pair-only) pair_only=true; shift;; --override-round-budget) shift 2;; *) fail "unknown argument: $1";; esac; done
   [[ "$authorised" == true ]] || fail 'provider authorisation is required'
   repo="$(git -C "$repo" rev-parse --path-format=absolute --show-toplevel)"
   [[ -z "$(git -C "$repo" status --porcelain --untracked-files=all)" ]] || fail 'refusing mutable review evidence: use a clean committed worktree'
@@ -372,7 +404,7 @@ prepare() {
   [[ "$type" == requirements || "$type" == plan ]] || fail 'prepare requires --type requirements|plan'
   [[ "$origin" == none ]] || origin="$(tracked_input "$repo" "$origin" origin)"
   [[ "$ledger" == none ]] || ledger="$(tracked_input "$repo" "$ledger" ledger)"
-  if [[ -n "$prior_findings" ]]; then [[ -f "$prior_findings" && ! -L "$prior_findings" ]] || fail 'prior findings must be a non-symlink regular file'; fi
+  for prior in ${prior_findings[@]+"${prior_findings[@]}"}; do [[ -f "$prior" && ! -L "$prior" ]] || fail 'prior findings must be a non-symlink regular file'; done
   while IFS= read -r engine; do pair+=("$engine"); done < <(parse_engine_pair "$engines_raw")
   [[ "${#pair[@]}" -eq 2 ]] || fail 'prepare requires exactly two engines'
   engine_a="${pair[0]}"; engine_b="${pair[1]}"
@@ -386,7 +418,7 @@ prepare() {
   [[ "$effort" =~ ^(low|medium|high|xhigh|max)$ ]] || fail 'invalid effort'
   timeout_seconds="${timeout_seconds:-1800}"
   [[ "$timeout_seconds" =~ ^[1-9][0-9]*$ ]] || fail '--timeout-seconds must be a positive whole number of seconds'
-  [[ "$pair_only" != true || -n "$prior_findings" ]] || fail '--pair-only requires --prior-findings: without the earlier rounds'"'"' findings the pair is a discovery pass'
+  [[ "$pair_only" != true || "${#prior_findings[@]}" -gt 0 ]] || fail '--pair-only requires --prior-findings: without the earlier rounds'"'"' findings the pair is a discovery pass'
   # The round is numbered before any run directory exists, so a failed prepare
   # leaves nothing behind and the document digest is read from the worktree.
   local round_record round_record_default round_meta repo_common identity round_setup
@@ -407,7 +439,12 @@ prepare() {
     value="${!named}"; [[ "$value" == none ]] && continue
     cp "$value" "$dir/scope/$named.snapshot"
   done
-  [[ -z "$prior_findings" ]] || cp "$prior_findings" "$dir/scope/prior-findings.snapshot"
+  # One snapshot holds every --prior-findings file in the order given, each
+  # ending in a newline so one file never runs into the next. Each is read by
+  # redirection, so a file named - is read as a file, never as standard input.
+  if [[ "${#prior_findings[@]}" -gt 0 ]]; then
+    for prior in "${prior_findings[@]}"; do cat < "$prior"; [[ -z "$(tail -c 1 < "$prior")" ]] || echo; done > "$dir/scope/prior-findings.snapshot"
+  fi
   python3 - "$dir" <<'PY'
 import hashlib, pathlib, sys
 d=pathlib.Path(sys.argv[1]); h=hashlib.sha256()
@@ -447,6 +484,7 @@ if not rows.get("pair_only"):
 item=copy.deepcopy(findings["properties"]["findings"]["items"])
 item["additionalProperties"]=False
 item["required"]=sorted(item.get("properties", {}))
+(out/"finding.json").write_text(json.dumps(item,indent=2)+"\n")
 for engine in rows.get("engines", ["claude","codex"]):
     transport=engine+"-cli"
     schema={"$schema":"http://json-schema.org/draft-07/schema#","type":"object","additionalProperties":False,"required":["engine","model","transport","scope_sha","scope_digest","verdict","findings"],"properties":{"engine":{"type":"string","enum":[engine]},"model":{"type":"string","enum":[rows[engine]["model"]]},"transport":{"type":"string","enum":[transport]},"scope_sha":{"type":"string","enum":[head]},"scope_digest":{"type":"string","enum":[digest]},"verdict":{"type":"string","enum":["CONVERGED","BLOCK"]},"findings":{"type":"array","items":item}}}
@@ -499,7 +537,7 @@ PY
         if [[ -f "$dir/scope/prior-findings.snapshot" ]]; then printf 'Prior-round context follows. Do not re-raise a finding unless it persists in the current document; findings marked accepted or known are settled.\n\n'; cat "$dir/scope/prior-findings.snapshot"; printf '\n\n'; fi
         review_guidance
         printf 'Required result shape:\n{"engine":"%s","model":"%s","transport":"%s","scope_sha":"%s","scope_digest":"%s","verdict":"CONVERGED|BLOCK","findings":[]}\nBLOCK requires at least one error or omission. CONVERGED means none, and may still carry sparring points. Every finding matches this schema:\n' "$engine" "$model" "$transport" "$(cat "$dir/head.commit")" "$(cat "$dir/scope.digest")"
-        cat "$dir/schemas/findings.json"
+        cat "$dir/schemas/finding.json"
         printf '\n\nAdversarial instructions:\nChallenge the document by trying to falsify its premises, assumptions, sequencing, and load-bearing decisions. Construct concrete failure scenarios rather than a checklist. Do not re-litigate recorded decisions unless repository evidence makes them infeasible.\n'
         printf '\n\nPrepared document:\n'; cat "$dir/scope/document.snapshot"
         [[ -f "$dir/scope/origin.snapshot" ]] && { printf '\n\nPrepared origin:\n'; cat "$dir/scope/origin.snapshot"; }
@@ -520,9 +558,14 @@ ingest_locked() {
     local expected_breadth
     expected_breadth="$(breadth_engine "$dir")"
     [[ "$transport" == "$expected_breadth-cli" || "$transport" == "$expected_breadth-native" ]] || fail "breadth transport must be $expected_breadth-cli or $expected_breadth-native"
+    # Past its refusals, a leg that lands after collect archived the run gets
+    # its own archive; the first archive keeps what it held. A refused ingest
+    # keeps the record, so it never causes a second copy of the same round.
+    rm -f "$dir/archive-path"
     if ! python3 "$VALIDATOR" extract-breadth --raw "$text" --result "$result" --reviewer "$name" 2> "$failure"; then status=1; fi
   else
     [[ "$transport" == "$name-native" || "$transport" == "$name-cli" ]] || fail 'adversarial transport must match its engine'
+    rm -f "$dir/archive-path"
     if ! python3 "$VALIDATOR" extract-adversarial --raw "$text" --result "$result" --engine "$name" --transport "$transport" --scope-sha "$(cat "$dir/head.commit")" --scope-digest "$(cat "$dir/scope.digest")" --model "$(python3 - "$dir/rows.json" "$name" <<'PY'
 import json,sys
 print(json.load(open(sys.argv[1]))[sys.argv[2]]["model"])
@@ -606,6 +649,35 @@ provider_timeout_source() {
   read -r value source < <(provider_timeout_lookup "$dir" "$engine")
   printf '%s\n' "$source"
 }
+# Grok runs without --json-schema. Forced structured output let it answer in
+# one turn without opening a file: on 15 Oct 2026 three of four breadth legs
+# returned empty findings that way, at medium and at xhigh, and the same lens
+# without the schema read the repository for nine turns. The prompt already
+# carries the findings schema, and ingest finds the object in the reply.
+# grok_unwrap keeps Grok's JSON output beside the reply (raw-*.grok.txt, so
+# collect archives it), writes the reply text to the raw path, and refuses a
+# one-turn answer: a reviewer that opened no file checked no cited source.
+grok_unwrap() {
+  local raw="$1" output="$2"
+  mv "$raw" "$output"; chmod 600 "$output"
+  python3 - "$output" "$raw" <<'PY'
+import json, pathlib, sys
+source, reply = sys.argv[1:]
+try:
+    data = json.loads(pathlib.Path(source).read_text(errors='replace'))
+except json.JSONDecodeError:
+    raise SystemExit('Grok output was not its JSON wrapper; retry only this leg')
+if not isinstance(data, dict) or not isinstance(data.get('text'), str):
+    raise SystemExit('Grok output carried no reply text; retry only this leg')
+turns = data.get('num_turns')
+if not isinstance(turns, int) or turns < 2:
+    raise SystemExit('Grok answered in one turn without opening a file, so it did not review; retry only this leg')
+pathlib.Path(reply).write_text(data['text'])
+PY
+  local rc=$?
+  [[ ! -e "$raw" ]] || chmod 600 "$raw"
+  return "$rc"
+}
 run_cli_provider() {
   local dir="$1" target="$2" kind name prompt raw failure diagnostic_raw row_engine timeout_seconds schema
   kind="${target%%:*}"; name="${target#*:}"; prompt="$dir/prompts/$kind-$name.md"; [[ "$kind" == adversarial ]] && prompt="$dir/prompts/adversarial-$name-cli.md"; raw="$dir/raw-$kind-$name.txt"; failure="$dir/failures/$kind-$name.txt"; diagnostic_raw="$failure.raw"
@@ -633,7 +705,7 @@ PY
       grok_profile="$(write_grok_sandbox "$provider_cwd" "$repo_path" "$dir")"
       grok_home="$(write_grok_home "$provider_cwd")"
       cp "$prompt" "$provider_cwd/prompt.md"
-      (unset DOC_GAUNTLET_DIR; export GROK_HOME="$grok_home" GROK_CLAUDE_MCPS_ENABLED=false GROK_CURSOR_MCPS_ENABLED=false; cd "$provider_cwd" && timeout "$timeout_seconds" grok --prompt-file "$provider_cwd/prompt.md" --json-schema "$(<"$schema")" --model "$model" --effort "$effort" --permission-mode dontAsk --sandbox "$grok_profile" --tools read_file,grep,list_dir --disallowed-tools Agent,search_tool,use_tool --no-subagents --disable-web-search --no-memory --no-plan > "$raw" 2> "$diagnostic_raw") || rc=$?
+      (unset DOC_GAUNTLET_DIR; export GROK_HOME="$grok_home" GROK_CLAUDE_MCPS_ENABLED=false GROK_CURSOR_MCPS_ENABLED=false; cd "$provider_cwd" && timeout "$timeout_seconds" grok --prompt-file "$provider_cwd/prompt.md" --output-format json --model "$model" --effort "$effort" --permission-mode dontAsk --sandbox "$grok_profile" --tools read_file,grep,list_dir --disallowed-tools Agent,search_tool,use_tool --no-subagents --disable-web-search --no-memory --no-plan > "$raw" 2> "$diagnostic_raw") || rc=$?
       ;;
     *)
       (unset DOC_GAUNTLET_DIR; timeout "$timeout_seconds" codex exec --ignore-user-config --strict-config -C "$provider_cwd" --add-dir "$repo_path" --skip-git-repo-check --sandbox read-only --ephemeral -c project_doc_max_bytes=0 -c 'project_doc_fallback_filenames=[]' -c "model_reasoning_effort=$effort" -m "$model" --output-schema "$schema" --output-last-message "$raw" - < "$prompt" 2> "$diagnostic_raw") || rc=$?
@@ -652,6 +724,10 @@ PY
     return 1
   fi
   rm -f "$diagnostic_raw"
+  if [[ "$row_engine" == grok ]]; then
+    local unwrap_error
+    unwrap_error="$(grok_unwrap "$raw" "${raw%.txt}.grok.txt" 2>&1)" || { printf '%s\n' "$unwrap_error" > "$failure"; return 1; }
+  fi
   if [[ "$kind" == breadth ]]; then ingest --lens "$name" --transport "$row_engine-cli" --text "$raw"; else ingest --engine "$name" --transport "$name-cli" --text "$raw"; fi
 }
 finish_cli_leg() {
@@ -710,7 +786,7 @@ run_cli_locked() {
   [[ ! -e "$result" ]] || fail "$name already has an accepted result"
   if ! mkdir "$lock" 2>/dev/null; then fail "$name CLI leg is already running; wait for collect to stop reporting RUNNING"; fi
   chmod 700 "$lock"
-  rm -f "$dir/completion/$leg.done" "$dir/failures/$leg.txt" "$dir/failures/$leg.raw" "$dir/raw-$leg.txt" "$dir/results/gauntlet-failed.json"
+  rm -f "$dir/completion/$leg.done" "$dir/failures/$leg.txt" "$dir/failures/$leg.raw" "$dir/raw-$leg.txt" "$dir/raw-$leg.grok.txt" "$dir/results/gauntlet-failed.json"
   row_engine="$name"; [[ "$kind" == breadth ]] && row_engine="$(breadth_engine "$dir")"
   timeout_seconds="$(provider_timeout "$dir" "$row_engine")"; timeout_source="$(provider_timeout_source "$dir" "$row_engine")"
   printf '%s %s\n' "$timeout_seconds" "$timeout_source" > "$dir/completion/$leg.bound"; chmod 600 "$dir/completion/$leg.bound"
@@ -718,6 +794,8 @@ run_cli_locked() {
     rmdir "$lock" 2>/dev/null || true
     fail 'run-cli requires the stock nohup command; install or restore it, then retry this leg'
   fi
+  # Past every refusal, as in ingest: the leg's result gets its own archive.
+  rm -f "$dir/archive-path"
   if [[ "$kind" == breadth ]]; then
     nohup "$BASH" "$SCRIPT_DIR/doc-gauntlet.sh" run-cli-worker --lens "$name" </dev/null >"$dir/failures/$leg.worker" 2>&1 &
   else
@@ -783,6 +861,7 @@ print_round_state() {
 # copied; the copy lands in a .partial sibling and is renamed into place
 # complete, so an interrupted copy leaves only a partial that the next collect
 # replaces, and a finished archive is never deleted or overwritten by the runner.
+# A breadth-only round (breadth_only_round) is archived the same way.
 archive_run() {
   local dir="$1" root real_root name dest tmp item n created=false
   # A retry works beside the recorded destination, whatever GAUNTLET_ARCHIVE
@@ -825,6 +904,22 @@ PY
   printf 'ARCHIVE: %s\n' "$dest"
 }
 
+# A breadth-only round: every breadth row has finished and no pair leg has
+# started (no sentinel, and no bound from run-cli). The pair does not run while
+# breadth leaves an error open, so this can be all the round has.
+breadth_only_round() {
+  local dir="$1" target kind name
+  ! is_pair_only "$dir" || return 1
+  while IFS= read -r target; do
+    kind="${target%%:*}"; name="${target#*:}"
+    if [[ "$kind" == breadth ]]; then
+      [[ -f "$dir/completion/$kind-$name.done" ]] || return 1
+    elif [[ -e "$dir/completion/$kind-$name.done" || -e "$dir/completion/$kind-$name.bound" ]]; then
+      return 1
+    fi
+  done < <(prepared_targets "$dir")
+}
+
 collect_locked() {
   local dir="$1"; local running=() failed=() target kind name leg
   print_round_state "$dir"
@@ -845,6 +940,7 @@ collect_locked() {
         for kind in breadth adversarial; do [[ -s "$dir/failures/$kind-$name.txt" ]] && printf '%s: %s\n' "$name" "$(tr '\n' ' ' < "$dir/failures/$kind-$name.txt")"; done
       done
     fi
+    if breadth_only_round "$dir"; then archive_run "$dir"; fi
     return 1
   fi
   if [[ -n "${failed[*]-}" ]]; then
