@@ -4,6 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNNER="$SCRIPT_DIR/gauntlet.sh"
 TMP="$(mktemp -d)"
+# The test owns its HOME: a fake Grok login for the legs that need one, and nothing of the real home is read or written.
+unset GROK_HOME; export HOME="$TMP/home"; mkdir -p "$HOME/.grok"; printf '{}\n' > "$HOME/.grok/auth.json"
 trap 'rm -rf "$TMP"' EXIT
 export GAUNTLET_ROUND_RECORD="$TMP/rounds.jsonl"
 export GAUNTLET_ARCHIVE="$TMP/archive"
@@ -39,12 +41,22 @@ chmod +x "$TMP/bin/claude"
 # Desktop command cells terminate their process group as soon as the launcher
 # returns. The macOS launcher must therefore submit the worker to launchd and
 # explicitly carry the run path into that separate environment.
-REAL_LAUNCHCTL="$(command -v launchctl)"
+REAL_LAUNCHCTL="$(command -v launchctl || true)"
 cat > "$TMP/bin/launchctl" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 if [[ "$1" == submit && -n "${FAKE_LAUNCHCTL_SUBMIT:-}" ]]; then printf '%s\n' "$@" > "$FAKE_LAUNCHCTL_SUBMIT"; fi
-exec /bin/launchctl "$@"
+if [[ -x /bin/launchctl ]]; then exec /bin/launchctl "$@"; fi
+# No launchd on this machine (Linux): stand in for it, running a submitted job detached as launchd would.
+if [[ "$1" == submit ]]; then
+  out=/dev/null err=/dev/null; shift
+  while [[ $# -gt 0 && "$1" != -- ]]; do
+    case "$1" in -o) out="$2" ;; -e) err="$2" ;; esac
+    shift 2
+  done
+  shift
+  nohup "$@" </dev/null >"$out" 2>"$err" &
+fi
 EOF
 chmod +x "$TMP/bin/launchctl"
 
@@ -98,7 +110,7 @@ GAUNTLET_DIR="$run" bash "$RUNNER" collect > "$TMP/final.out"
 grep -Fx 'GAUNTLET: APPROVE' "$TMP/final.out"
 # A finished run is archived outside the scratch directory, once, and survives clean.
 archive="$(sed -n 's/^ARCHIVE: //p' "$TMP/final.out")"
-[[ "$archive" == "$TMP/archive/"*-gauntlet-lifecycle-* ]]
+[[ "$archive" == "$TMP/archive/"*-gauntlet-id-lifecycle-* ]]
 test -f "$archive/results/claude.json"
 test -f "$archive/results/codex.json"
 test -f "$archive/rows.json"

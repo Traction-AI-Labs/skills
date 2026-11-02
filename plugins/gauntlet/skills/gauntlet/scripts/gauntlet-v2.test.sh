@@ -5,6 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNNER="$SCRIPT_DIR/gauntlet.sh"
 grep -Fq 'com.gauntlet.cli.{engine}' "$RUNNER"
 TMP="$(mktemp -d)"; trap 'touch "$TMP/release-lifecycle-lock" 2>/dev/null || true; rm -rf "$TMP"' EXIT
+# The test owns its HOME: a fake Grok login for the legs that need one, and nothing of the real home is read or written.
+unset GROK_HOME; export HOME="$TMP/home"; mkdir -p "$HOME/.grok"; printf '{}\n' > "$HOME/.grok/auth.json"
 export GAUNTLET_ROUND_RECORD="$TMP/rounds.jsonl"
 export GAUNTLET_ARCHIVE="$TMP/archive"
 
@@ -45,6 +47,8 @@ for p in claude-cli codex-cli claude-native codex-native; do
   refute grep -Fq 'diff --git' "$TMP/run/prompts/$p.md"
   refute grep -Fq '+changed' "$TMP/run/prompts/$p.md"
   grep -Fq 'Read the whole file before judging' "$TMP/run/prompts/$p.md"
+  grep -Fq 'every existing user of each changed value, function or piece of state, including callers and readers outside the diff' "$TMP/run/prompts/$p.md"
+  grep -Fq 'Report every defect you trace, whatever its severity and whether this diff introduced it' "$TMP/run/prompts/$p.md"
   grep -Eq 'app\.txt +\| +2 ' "$TMP/run/prompts/$p.md"
 done
 for p in claude-cli codex-cli; do
@@ -76,6 +80,27 @@ test "$(cat "$TMP/run/scope/base")" = "$feature_base"
 refute grep -Fq 'target-only' "$TMP/run/scope/diff.patch"
 if GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$TMP/invalid-token" bash "$RUNNER" prepare --authorize-provider --base main --identity tokencheck --claude-model 'bad"model' > /dev/null 2> "$TMP/token.err"; then exit 1; fi
 grep -Fq 'invalid Claude model token' "$TMP/token.err"
+# Several --prior-findings files: prepare snapshots every one, in order, never
+# only the last. A file with no final newline does not run into the next one.
+printf '{"engine":"claude","findings":[{"status":"known","location":"first.txt:1"}]}' > "$TMP/prior-claude.json"
+printf '{"engine":"codex","findings":[{"status":"known","location":"second.txt:2"}]}\n' > "$TMP/prior-codex.json"
+GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$TMP/multi-prior" bash "$RUNNER" prepare --authorize-provider --base main --profile fast --identity multiprior --prior-findings "$TMP/prior-claude.json" --prior-findings "$TMP/prior-codex.json" > /dev/null 2>&1
+test "$(grep -c '^{' "$TMP/multi-prior/scope/prior-findings.snapshot")" = 2
+for p in claude-cli codex-native; do
+  grep -Fq 'first.txt:1' "$TMP/multi-prior/prompts/$p.md"
+  grep -Fq 'second.txt:2' "$TMP/multi-prior/prompts/$p.md"
+done
+GAUNTLET_DIR="$TMP/multi-prior" bash "$RUNNER" clean --force
+# A --prior-findings file named - is read as a file, never as standard input.
+printf '{"engine":"codex","findings":[{"status":"known","location":"dash.txt:3"}]}\n' > "$TMP/-"
+(cd "$TMP" && GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$TMP/dash-prior" bash "$RUNNER" prepare --authorize-provider --base main --profile fast --identity dashprior --prior-findings - < /dev/null > /dev/null 2>&1)
+grep -Fq 'dash.txt:3' "$TMP/dash-prior/scope/prior-findings.snapshot"
+rm -f -- "$TMP/-"
+GAUNTLET_DIR="$TMP/dash-prior" bash "$RUNNER" clean --force
+# Every file is checked, not only the last one given.
+if GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$TMP/multi-prior-missing" bash "$RUNNER" prepare --authorize-provider --base main --profile fast --identity multiprior --prior-findings "$TMP/no-such-findings.json" --prior-findings "$TMP/prior-codex.json" > /dev/null 2> "$TMP/multi-prior-missing.err"; then exit 1; fi
+grep -Fq 'prior findings must be a non-symlink regular file' "$TMP/multi-prior-missing.err"
+test ! -e "$TMP/multi-prior-missing"
 
 claude_prompt="$TMP/run/prompts/claude-native.md"
 scope_sha="$(sed -n 's/^Scope SHA: //p' "$claude_prompt")"
@@ -374,6 +399,94 @@ grep -Fx 'FAILED: claude' "$TMP/timeout-run.collect"
 grep -Fx 'claude: timed out after 5s' "$TMP/timeout-run.collect"
 grep -Fx 'BOUND: claude 5s' "$TMP/timeout-run.collect"
 
+# collect --started-only: the caller started only some prepared legs (a batch prepares Claude and Codex
+# and starts only Codex). A prepared leg with no bound, sentinel or result is recorded as
+# not run and the started legs alone give the verdict. Plain collect still waits for it: a native leg in flight
+# leaves no trace in the run, so it cannot be told from one never started.
+oneleg() { GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$TMP/$1" bash "$RUNNER" "${@:2}"; }
+oneleg one-leg prepare --authorize-provider --base main --profile fast --identity oneleg > /dev/null
+if oneleg one-leg collect --started-only > /dev/null 2> "$TMP/one-leg-none.err"; then exit 1; fi
+grep -Fq 'no prepared leg has started' "$TMP/one-leg-none.err"
+PATH="$TMP/bin3:$PATH" oneleg one-leg run-cli --engine codex > /dev/null
+wait_for_leg "$TMP/one-leg" codex
+oneleg one-leg collect > "$TMP/one-leg-plain.collect" || true
+grep -Fx 'GAUNTLET: RUNNING' "$TMP/one-leg-plain.collect"
+grep -Fx 'RUNNING: claude' "$TMP/one-leg-plain.collect"
+if oneleg one-leg clean > /dev/null 2>&1; then exit 1; fi
+# One leg started and done: the round archives, the other leg recorded as not run and never as approval.
+oneleg one-leg collect --started-only > "$TMP/one-leg.collect"
+grep -Fx 'GAUNTLET: APPROVE' "$TMP/one-leg.collect"
+grep -Fx 'NOT RUN: claude' "$TMP/one-leg.collect"
+one_archive="$(sed -n 's/^ARCHIVE: //p' "$TMP/one-leg.collect")"
+test "$(cat "$one_archive/not-run")" = claude
+test -f "$one_archive/results/codex.json"
+test ! -e "$one_archive/results/claude.json"
+# The leg recorded as not run can still be started; the round then waits for it and archives afresh.
+PATH="$TMP/bin:$PATH" REAL_TIMEOUT="$REAL_TIMEOUT" FAKE_CLAUDE_TIMEOUT="$TMP/one-claude.timeout" FAKE_CLAUDE_ARGS="$TMP/one-claude.args" oneleg one-leg run-cli --engine claude > /dev/null
+test ! -e "$TMP/one-leg/not-run"
+wait_for_leg "$TMP/one-leg" claude
+oneleg one-leg collect > "$TMP/one-leg-both.collect"
+grep -Fx 'GAUNTLET: APPROVE' "$TMP/one-leg-both.collect"
+refute grep -q '^NOT RUN' "$TMP/one-leg-both.collect"
+both_archive="$(sed -n 's/^ARCHIVE: //p' "$TMP/one-leg-both.collect")"
+test "$both_archive" != "$one_archive"
+test ! -e "$both_archive/not-run"
+# One leg started and still running: RUNNING, whatever the flag. Once it finishes, clean needs no --force.
+oneleg one-leg-running prepare --authorize-provider --base main --profile fast --identity onelegrunning > /dev/null
+PATH="$TMP/bin:$PATH" REAL_TIMEOUT="$REAL_TIMEOUT" FAKE_CLAUDE_SLEEP=3 FAKE_CLAUDE_TIMEOUT="$TMP/run-claude.timeout" FAKE_CLAUDE_ARGS="$TMP/run-claude.args" oneleg one-leg-running run-cli --engine claude > /dev/null
+oneleg one-leg-running collect --started-only > "$TMP/one-leg-running.collect" || true
+grep -Fx 'GAUNTLET: RUNNING' "$TMP/one-leg-running.collect"
+grep -Fx 'RUNNING: claude' "$TMP/one-leg-running.collect"
+grep -Fx 'NOT RUN: codex' "$TMP/one-leg-running.collect"
+wait_for_leg "$TMP/one-leg-running" claude
+oneleg one-leg-running collect --started-only > "$TMP/one-leg-running-done.collect"
+grep -Fx 'GAUNTLET: APPROVE' "$TMP/one-leg-running-done.collect"
+# clean takes the lifecycle lock as run-cli and collect do, so a leg started while clean runs cannot lose its
+# run: while another command holds the lock, clean refuses and the run survives.
+( mkdir "$TMP/one-leg-running/locks/lifecycle.lock"; for _ in $(seq 1 500); do [[ -f "$TMP/release-clean-lock" ]] && break; sleep 0.01; done
+  rmdir "$TMP/one-leg-running/locks/lifecycle.lock" ) & clean_holder=$!
+while [[ ! -d "$TMP/one-leg-running/locks/lifecycle.lock" ]]; do sleep 0.01; done
+if oneleg one-leg-running clean > /dev/null 2> "$TMP/clean-locked.err"; then exit 1; fi
+grep -Fq 'run state is being collected or updated' "$TMP/clean-locked.err"
+test -f "$TMP/one-leg-running/rows.json"
+touch "$TMP/release-clean-lock"; wait "$clean_holder"
+oneleg one-leg-running clean
+test ! -e "$TMP/one-leg-running"
+# Both started and one failed: FAILED, as without the flag.
+oneleg one-leg-failed prepare --authorize-provider --base main --profile fast --identity onelegfailed > /dev/null
+PATH="$TMP/bin3:$PATH" oneleg one-leg-failed run-cli --engine codex > /dev/null
+PATH="$TMP/timeout-bin:$PATH" oneleg one-leg-failed run-cli --engine claude > /dev/null
+wait_for_leg "$TMP/one-leg-failed" codex
+wait_for_leg "$TMP/one-leg-failed" claude
+oneleg one-leg-failed collect --started-only > "$TMP/one-leg-failed.collect" || true
+grep -Fx 'GAUNTLET: FAILED' "$TMP/one-leg-failed.collect"
+grep -Fx 'FAILED: claude' "$TMP/one-leg-failed.collect"
+refute grep -q '^NOT RUN' "$TMP/one-leg-failed.collect"
+# The only started leg failed: FAILED, and the failure record names the not-run leg apart from the failed one.
+oneleg one-leg-dead prepare --authorize-provider --base main --profile fast --identity onelegdead > /dev/null
+PATH="$TMP/timeout-bin:$PATH" oneleg one-leg-dead run-cli --engine claude > /dev/null
+wait_for_leg "$TMP/one-leg-dead" claude
+oneleg one-leg-dead collect --started-only > "$TMP/one-leg-dead.collect" || true
+grep -Fx 'GAUNTLET: FAILED' "$TMP/one-leg-dead.collect"
+grep -Fx 'NOT RUN: codex' "$TMP/one-leg-dead.collect"
+python3 -c 'import json, sys; d = json.load(open(sys.argv[1])); assert [l["leg"] for l in d["legs"]] == ["claude"] and d["not_run"] == ["codex"], d' "$TMP/one-leg-dead/results/gauntlet-failed.json"
+# A native leg ingested after the round was archived without it gets its own archive and verdict line too.
+oneleg one-leg-native prepare --authorize-provider --base main --profile fast --identity onelegnative > /dev/null
+PATH="$TMP/bin3:$PATH" oneleg one-leg-native run-cli --engine codex > /dev/null
+wait_for_leg "$TMP/one-leg-native" codex
+oneleg one-leg-native collect --started-only > "$TMP/one-leg-native.collect"
+grep -Fx 'NOT RUN: claude' "$TMP/one-leg-native.collect"
+native_first="$(sed -n 's/^ARCHIVE: //p' "$TMP/one-leg-native.collect")"
+np="$TMP/one-leg-native/prompts/claude-native.md"
+printf '{"engine":"claude","model":"%s","transport":"claude-native","scope_sha":"%s","scope_digest":"%s","verdict":"APPROVE","findings":[]}\n' \
+  "$(sed -n 's/^Requested model: //p' "$np")" "$(sed -n 's/^Scope SHA: //p' "$np")" "$(sed -n 's/^Scope digest: //p' "$np")" > "$TMP/one-leg-native.txt"
+oneleg one-leg-native ingest --engine claude --text "$TMP/one-leg-native.txt"
+test ! -e "$TMP/one-leg-native/not-run"
+oneleg one-leg-native collect > "$TMP/one-leg-native-both.collect"
+grep -Fx 'GAUNTLET: APPROVE' "$TMP/one-leg-native-both.collect"
+refute grep -q '^NOT RUN' "$TMP/one-leg-native-both.collect"
+test "$(sed -n 's/^ARCHIVE: //p' "$TMP/one-leg-native-both.collect")" != "$native_first"
+
 # Pair substitution is exactly two distinct engines; Grok can replace one slot.
 if GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$TMP/three-engines" bash "$RUNNER" prepare --authorize-provider --base main --identity engines --engines claude,codex,grok > /dev/null 2> "$TMP/three.err"; then exit 1; fi
 grep -Fq 'prepare requires exactly two engines' "$TMP/three.err"
@@ -411,9 +524,28 @@ grep -Eq '^read_only = \["[^"]+"\]$' .grok/sandbox.toml
 [[ -s diff.patch ]] || { echo 'missing ./diff.patch' >&2; exit 1; }
 mkdir -p "$GROK_HOME/sessions"; printf '{"session":"fake-grok"}\n' > "$GROK_HOME/sessions/s1.jsonl"
 grep -Eq '^deny = \[' .grok/sandbox.toml
-grep -Fq 'AGENTS.md' .grok/sandbox.toml
+# Instruction files are listed one by one, never by a ** pattern (a pattern can
+# match a symlink, and Grok refuses to start on a symlinked deny entry).
+if grep -Fq '*' .grok/sandbox.toml; then echo 'sandbox carries a pattern' >&2; exit 1; fi
 if grep -Fq '/sessions' .grok/sandbox.toml; then echo 'sandbox names sessions' >&2; exit 1; fi
-grep -Fq '/.gauntlet' .grok/sandbox.toml
+# ~/.gauntlet is denied only where it exists, so the check needs no particular home.
+[[ ! -e "$HOME/.gauntlet" ]] || grep -Fq "\"$HOME/.gauntlet\"" .grok/sandbox.toml
+# Real Grok creates a denied literal path that does not exist, empty, and
+# leaves it there (18 Oct 2026); the fake does the same in the repo.
+python3 - .grok/sandbox.toml <<'PY'
+import json, os, re, sys
+t = open(sys.argv[1]).read()
+repo = json.loads(re.search(r"^read_only = \[(.*)\]$", t, re.M).group(1))
+roots = (repo + "/", os.path.realpath(repo) + "/")
+for p in json.loads("[" + re.search(r"^deny = \[(.*)\]$", t, re.M).group(1) + "]"):
+    # Real Grok refuses to start when a deny entry is a symlink (19 Oct 2026).
+    if os.path.islink(p):
+        sys.exit(f"grok: sandbox deny entry is a symlink: {p}")
+    if "*" not in p and p.startswith(roots) and not os.path.lexists(p):
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        open(p, "w").close()
+PY
+[[ -z "${FAKE_GROK_SANDBOX:-}" ]] || cp .grok/sandbox.toml "$FAKE_GROK_SANDBOX"
 [[ -n "${FAKE_GROK_ENV:-}" ]] && printf '%s %s\n' "${GAUNTLET_DIR-unset}" "${GAUNTLET_WORKER_ENV_FILE-unset}" > "$FAKE_GROK_ENV"
 prompt=""
 prev=""
@@ -424,7 +556,9 @@ done
 p="$(cat "$prompt")"
 model="$(sed -n 's/^Requested model: //p' <<<"$p")"
 sha="$(sed -n 's/^Scope SHA: //p' <<<"$p")"; digest="$(sed -n 's/^Scope digest: //p' <<<"$p")"
-printf '{"engine":"grok","model":"%s","transport":"grok-cli","scope_sha":"%s","scope_digest":"%s","verdict":"APPROVE","findings":[]}\n' "$model" "$sha" "$digest"
+reply="$(printf 'Read diff.patch.\n{"engine":"grok","model":"%s","transport":"grok-cli","scope_sha":"%s","scope_digest":"%s","verdict":"APPROVE","findings":[]}' "$model" "$sha" "$digest")"
+# Grok's --output-format json wrapper: the reply is a string, num_turns counts tool rounds.
+python3 -c 'import json,sys; print(json.dumps({"text": sys.argv[1], "num_turns": int(sys.argv[2])}))' "$reply" "${FAKE_GROK_TURNS:-3}"
 EOF
 chmod +x "$TMP/bin/grok"
 cat > "$TMP/bin/timeout" <<'EOF'
@@ -438,12 +572,24 @@ esac
 exec "$REAL_TIMEOUT" "$@"
 EOF
 chmod +x "$TMP/bin/timeout"
-PATH="$TMP/bin:$PATH" REAL_TIMEOUT="$REAL_TIMEOUT" FAKE_GROK_TIMEOUT="$TMP/grok.timeout" FAKE_CODEX_TIMEOUT="$TMP/grok-codex.timeout" GAUNTLET_TIMEOUT_GROK_SECONDS=31 FAKE_GROK_ARGS="$TMP/grok.args" FAKE_GROK_CWD="$TMP/grok.cwd" FAKE_GROK_ENV="$TMP/grok.env" GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$TMP/grok-run" bash "$RUNNER" run-cli --engine grok
+# An ignored CLAUDE.local.md exists, so the sandbox denies it by its literal
+# path; the absent instruction files are not denied at all.
+printf 'CLAUDE.local.md\n' >> "$TMP/repo/.git/info/exclude"; printf 'local instructions\n' > "$TMP/repo/CLAUDE.local.md"
+# An ignored AGENTS.md links to it: the real Grok refuses a symlinked deny entry,
+# and so does the fake, so this run fails if the runner denies the link itself.
+printf 'AGENTS.md\n' >> "$TMP/repo/.git/info/exclude"; ln -s CLAUDE.local.md "$TMP/repo/AGENTS.md"
+# The leg's home has ~/.claude and ~/.gauntlet but no ~/.agents or ~/.cursor:
+# only the ones that exist are denied, so the sandbox creates no empty files there.
+mkdir -p "$TMP/grokhome/.grok" "$TMP/grokhome/.claude" "$TMP/grokhome/.gauntlet"; printf '{}\n' > "$TMP/grokhome/.grok/auth.json"
+HOME="$TMP/grokhome" PATH="$TMP/bin:$PATH" REAL_TIMEOUT="$REAL_TIMEOUT" FAKE_GROK_TIMEOUT="$TMP/grok.timeout" FAKE_CODEX_TIMEOUT="$TMP/grok-codex.timeout" GAUNTLET_TIMEOUT_GROK_SECONDS=31 FAKE_GROK_ARGS="$TMP/grok.args" FAKE_GROK_CWD="$TMP/grok.cwd" FAKE_GROK_ENV="$TMP/grok.env" FAKE_GROK_SANDBOX="$TMP/grok.sandbox" GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$TMP/grok-run" bash "$RUNNER" run-cli --engine grok
 PATH="$TMP/bin:$PATH" REAL_TIMEOUT="$REAL_TIMEOUT" FAKE_GROK_TIMEOUT="$TMP/grok.timeout" FAKE_CODEX_TIMEOUT="$TMP/grok-codex.timeout" FAKE_CODEX_ARGS="$TMP/grok-codex.args" FAKE_CODEX_ENV="$TMP/grok-codex.env" GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$TMP/grok-run" bash "$RUNNER" run-cli --engine codex
 wait_for_leg "$TMP/grok-run" grok
 wait_for_leg "$TMP/grok-run" codex
 grep -Fq -- '--prompt-file' "$TMP/grok.args"
-grep -Fq -- '--json-schema' "$TMP/grok.args"
+# Forced structured output let Grok answer without reading (15 Oct 2026); the
+# runner asks for the JSON wrapper instead and keeps it beside the reply.
+grep -Fq -- '--output-format json' "$TMP/grok.args"
+refute grep -Fq -- '--json-schema' "$TMP/grok.args"
 grep -Eq -- '--sandbox g[0-9a-f]{16}' "$TMP/grok.args"
 refute grep -Fq -- '--sandbox gauntlet ' "$TMP/grok.args"
 refute grep -Fq -- '--sandbox read-only' "$TMP/grok.args"
@@ -458,6 +604,65 @@ test "$(cat "$TMP/grok.env")" = 'unset unset'
 grok_cwd="$(cat "$TMP/grok.cwd")"
 [[ "$grok_cwd" != "$TMP/grok-run"* ]]
 test ! -e "$grok_cwd"
+# The runner resolves the repo path (macOS: /var is a link to /private/var).
+real_repo="$(cd "$TMP/repo" && pwd -P)"
+grep -Fq "\"$real_repo/CLAUDE.local.md\"" "$TMP/grok.sandbox"
+refute grep -Fq '**' "$TMP/grok.sandbox"
+refute grep -Fq "/repo/CLAUDE.md\"" "$TMP/grok.sandbox"
+grep -Fq "\"$TMP/grokhome/.claude\"" "$TMP/grok.sandbox"
+refute grep -Fq "\"$TMP/grokhome/.agents\"" "$TMP/grok.sandbox"
+refute grep -Fq "\"$TMP/grokhome/.cursor\"" "$TMP/grok.sandbox"
+test -z "$(git -C "$TMP/repo" status --porcelain --untracked-files=all)"
+rm "$TMP/repo/CLAUDE.local.md" "$TMP/repo/AGENTS.md"
+# A repo whose AGENTS.md is a symlink to CLAUDE.md (19 Oct 2026):
+# Grok refuses to start when a deny entry is a symlink, so the profile denies the
+# link's target and never the link, lists every instruction file it finds, top
+# level and nested, uses no ** pattern, and skips a dangling link without
+# creating anything. The writer is run straight from the runner script.
+SYM="$TMP/symlink-agents"
+mkdir -p "$SYM/repo/docs/sub/.claude/rules" "$SYM/repo/.cursor/rules" "$SYM/cwd" "$SYM/run" "$SYM/home"
+printf 'instructions\n' > "$SYM/repo/CLAUDE.md"
+ln -s CLAUDE.md "$SYM/repo/AGENTS.md"
+printf 'nested\n' > "$SYM/repo/docs/sub/CLAUDE.md"
+printf 'nested\n' > "$SYM/repo/docs/AGENTS.md"
+ln -s ../missing.md "$SYM/repo/docs/sub/AGENTS.md"
+printf 'rule\n' > "$SYM/repo/docs/sub/.claude/rules/r.md"
+printf 'readme\n' > "$SYM/repo/README.md"
+# A symlinked .claude directory pointing outside the repo, holding CLAUDE.md and rules/.
+mkdir -p "$SYM/outside/rules"; printf 'linked\n' > "$SYM/outside/CLAUDE.md"; printf 'rule\n' > "$SYM/outside/rules/r.md"
+ln -s ../../outside "$SYM/repo/docs/.claude"
+(
+  eval "$(awk '/^write_grok_sandbox\(\) \{/,/^}$/' "$RUNNER")"
+  HOME="$SYM/home" write_grok_sandbox "$SYM/cwd" "$SYM/repo" "$SYM/run" > /dev/null
+)
+python3 - "$SYM/cwd/.grok/sandbox.toml" "$SYM/repo" <<'PY'
+import os, sys, tomllib
+profile, repo = sys.argv[1:]
+data = tomllib.load(open(profile, "rb"))
+(body,) = data["profiles"].values()
+deny = body["deny"]
+real = os.path.realpath(repo)
+for entry in deny:
+    assert not os.path.islink(entry), f"deny entry is a symlink: {entry}"
+    assert "*" not in entry, f"deny entry is a pattern: {entry}"
+    assert os.path.lexists(entry), f"deny entry does not exist: {entry}"
+must = ["CLAUDE.md", "docs/AGENTS.md", "docs/sub/CLAUDE.md", "docs/sub/.claude/rules", ".cursor/rules"]
+for rel in must:
+    assert any(os.path.realpath(e) == os.path.join(real, rel) for e in deny), f"not denied: {rel}"
+assert f"{repo}/CLAUDE.md" in deny, "AGENTS.md's target is not denied by path"
+assert not any(e.endswith("AGENTS.md") and os.path.realpath(e) == os.path.join(real, "AGENTS.md") for e in deny)
+assert not any(e.endswith("README.md") for e in deny), "README.md is denied"
+outside = os.path.realpath(os.path.join(repo, "..", "outside"))
+for rel in ("CLAUDE.md", "rules"):
+    assert os.path.join(outside, rel) in deny, f"not denied inside the linked .claude: {rel}"
+assert not os.path.lexists(os.path.join(repo, "docs/missing.md")), "dangling target created"
+PY
+test ! -e "$SYM/repo/docs/missing.md"
+# A real untracked file in the review worktree still refuses collect.
+printf 'stray\n' > "$TMP/repo/notes.txt"
+if GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$TMP/grok-run" bash "$RUNNER" collect > /dev/null 2> "$TMP/grok-dirty.err"; then echo 'collect accepted a dirty worktree' >&2; exit 1; fi
+grep -Fq 'prepared scope changed: worktree is dirty' "$TMP/grok-dirty.err"
+rm "$TMP/repo/notes.txt"
 GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$TMP/grok-run" bash "$RUNNER" collect > "$TMP/grok.collect"
 grep -Fx 'GAUNTLET: APPROVE' "$TMP/grok.collect"
 # Grok's session files reach the archive; its copied credentials never do.
@@ -466,6 +671,15 @@ grep -Fq 'fake-grok' "$grok_archive"/raw/grok-cli-*.sessions/s1.jsonl
 test -z "$(find "$grok_archive" -name auth.json -print -quit)"
 test -f "$TMP/grok-run/results/grok.json"
 test ! -e "$TMP/grok-run/results/claude.json"
+grep -Fq '"num_turns": 3' "$grok_archive"/raw/grok-cli-*.grok-output.json
+
+# A one-turn Grok answer opened no file, so it did not read the diff: the leg
+# fails and records no result, and collect does not report an approval.
+GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$TMP/grok-hollow" bash "$RUNNER" prepare --authorize-provider --base main --profile fast --identity grok-hollow --engines grok,codex > /dev/null
+HOME="$TMP/grokhome" PATH="$TMP/bin:$PATH" REAL_TIMEOUT="$REAL_TIMEOUT" FAKE_GROK_TIMEOUT="$TMP/grok.timeout" FAKE_GROK_TURNS=1 FAKE_GROK_ARGS="$TMP/grok-hollow.args" GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$TMP/grok-hollow" bash "$RUNNER" run-cli --engine grok > /dev/null
+wait_for_leg "$TMP/grok-hollow" grok
+test ! -e "$TMP/grok-hollow/results/grok.json"
+grep -Fq 'answered in one turn without opening a file' "$TMP/grok-hollow/failures/grok.txt"
 
 # A tracked public environment template is review scope, while real environment files remain blocked.
 # These branches read and write a record of their own.

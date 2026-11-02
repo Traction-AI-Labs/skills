@@ -12,13 +12,13 @@
       "name": "gauntlet",
       "source": "./plugins/gauntlet",
       "description": "Reviews a committed code diff with two independent engines.",
-      "version": "0.5.1"
+      "version": "0.6.0"
     },
     {
       "name": "doc-gauntlet",
       "source": "./plugins/doc-gauntlet",
       "description": "Reviews a committed plan or requirements document with six breadth lenses and two independent engines, returning a sparring memo and a list of true errors.",
-      "version": "0.5.1"
+      "version": "0.6.0"
     },
     {
       "name": "persona-teardown",
@@ -42,7 +42,7 @@
       "name": "reading-page",
       "source": "./plugins/reading-page",
       "description": "Turns anything longer than a chat message into one polished, self-contained HTML page to read instead of markdown: the bottom line first, a contents rail, callouts, sortable tables, folded evidence, light and dark.",
-      "version": "0.2.0"
+      "version": "0.2.1"
     },
     {
       "name": "humanize-writing",

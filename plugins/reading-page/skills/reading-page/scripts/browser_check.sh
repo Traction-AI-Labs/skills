@@ -3,7 +3,7 @@
 #
 #   browser_check.sh <page.html>
 #
-# Runs agent-browser headless, twice, in fresh sessions:
+# Runs agent-browser headless, three times, in fresh sessions:
 #   JavaScript off (Chrome --blink-settings=scriptEnabled=false), 390 x 844:
 #     <html> keeps class no-js; the contents list is visible and holds a link for every
 #     article h2/h3; the phone bar and the tool buttons are hidden.
@@ -11,6 +11,9 @@
 #     <html> has class js (not no-js); exactly one contents list; every "#" link resolves to an
 #     element; clicking a percent-encoded "#" link navigates; ids are unique; the phone bar
 #     opens the contents; scrollWidth is 390; no page errors and no console errors.
+#   JavaScript on, loaded at 1440 x 900 and resized to 390 x 844 without a reload:
+#     nothing covers the title or standfirst, neither at the moment the window narrows nor
+#     once it settles; then the 390-wide checks above pass on the resized page.
 #
 # Always run it on the overflow fixture too (long URLs and hashes in prose, lists, callouts,
 # table cards, marks and footnotes, plus a percent-encoded link to a Unicode heading):
@@ -42,6 +45,7 @@ esac
 URL="file://$PAGE"
 S_NOJS="reading-page-nojs-$$"
 S_JS="reading-page-js-$$"
+S_RS="reading-page-resize-$$"
 FAILED=0
 
 fail() { echo "FAIL: $*"; FAILED=1; }
@@ -50,6 +54,7 @@ ok() { echo "ok:   $*"; }
 cleanup() {
   "$AB" --session "$S_NOJS" close >/dev/null 2>&1
   "$AB" --session "$S_JS" close >/dev/null 2>&1
+  "$AB" --session "$S_RS" close >/dev/null 2>&1
 }
 trap cleanup EXIT
 
@@ -190,6 +195,62 @@ if "$AB" --session "$S_JS" open "$URL" >/dev/null 2>&1; then
   no_entries "js: no console errors" "$("$AB" --session "$S_JS" console --json 2>&1)" console
 else
   fail "js: could not open $URL"
+fi
+"$AB" --session "$S_JS" close >/dev/null 2>&1
+
+# ---------- Resized from 1440 to 390 wide without a reload ----------
+
+# At 1440 wide: defines rpCovered (what, if anything, sits over the title and standfirst) and
+# records what it finds on every resize that lands in the phone layout with the contents
+# closed, before that frame paints. A headless browser may render no frame between commands, so the resize
+# event can still be pending when JS_RESIZED runs; its own read covers that case.
+JS_ARM='(function () {
+  var d = document, bar = d.querySelector(".bar");
+  if (!bar) return "RPCHECK_FAIL no phone bar";
+  window.rpCovered = function () {
+    var out = [];
+    // The title must be there to probe, or the check would pass on nothing; a page with no intro has no standfirst.
+    [[".masthead h1", "title", true], [".standfirst", "standfirst", false]].forEach(function (p) {
+      var el = d.querySelector(p[0]);
+      if (!el) { if (p[2]) out.push("no " + p[1] + " (" + p[0] + ") to probe"); return; }
+      var b = el.getBoundingClientRect(), y = b.top + Math.min(b.height / 2, 20);
+      if (!b.height || y < 0 || y > window.innerHeight) { if (p[2]) out.push(p[1] + " has no visible box to probe"); return; }
+      var hit = d.elementFromPoint(b.left + b.width / 2, y);
+      if (hit && !el.contains(hit)) out.push(p[1] + " under " + (hit.closest(".rail") ? "the contents rail" : hit.tagName.toLowerCase()));
+    });
+    return out.join(", ");
+  };
+  window.rpResize = [];
+  window.addEventListener("resize", function () {
+    if (getComputedStyle(bar).display === "none" || d.body.classList.contains("toc-open")) return;
+    var s = window.rpCovered(); if (s && window.rpResize.indexOf(s) < 0) window.rpResize.push(s);
+  });
+  if (getComputedStyle(bar).display !== "none") return "RPCHECK_FAIL phone bar is shown at 1440 wide";
+  var now = window.rpCovered();
+  return now ? "RPCHECK_FAIL at 1440 wide: " + now : "RPCHECK_PASS";
+})()'
+
+JS_RESIZED='(function () {
+  if (!window.rpCovered) return "RPCHECK_FAIL page reloaded after the 1440-wide check";
+  var r = window.rpResize.map(function (s) { return "as the window narrowed: " + s; });
+  var now = window.rpCovered();
+  if (now) r.push("after the resize: " + now);
+  return r.length ? "RPCHECK_FAIL " + r.join("; ") : "RPCHECK_PASS";
+})()'
+
+echo "== JavaScript on, 1440 wide resized to 390 without a reload: $URL"
+if "$AB" --session "$S_RS" open "$URL" >/dev/null 2>&1 && "$AB" --session "$S_RS" set viewport 1440 900 >/dev/null 2>&1; then
+  run_js "$S_RS" "resize: desktop layout at 1440 wide, title and standfirst clear" "$JS_ARM"
+  if "$AB" --session "$S_RS" set viewport 390 844 >/dev/null 2>&1 && "$AB" --session "$S_RS" wait 500 >/dev/null 2>&1; then
+    run_js "$S_RS" "resize: title and standfirst stay clear as the window narrows and after" "$JS_RESIZED"
+    run_js "$S_RS" "resize: class, one contents list, # links, unique ids, phone bar, no sideways overflow" "$JS_ON"
+  else
+    fail "resize: could not resize to 390 x 844"
+  fi
+  no_entries "resize: no page errors" "$("$AB" --session "$S_RS" errors --json 2>&1)" errors
+  no_entries "resize: no console errors" "$("$AB" --session "$S_RS" console --json 2>&1)" console
+else
+  fail "resize: could not open $URL at 1440 x 900"
 fi
 
 if [ "$FAILED" -ne 0 ]; then
