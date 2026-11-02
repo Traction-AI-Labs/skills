@@ -10,6 +10,7 @@ Skills for Claude Code, the Claude app, Codex and Grok, published by Traction St
 | **doc-gauntlet** | Reviews a committed plan, spec or requirements document with six breadth lenses, then the same two-engine pair; returns a sparring memo for the author and a short list of true errors | Claude Code, Codex, Grok, or the portable CLI |
 | **persona-teardown** | Walks a prototype, UI kit or live screen with three to five cold persona agents driving `agent-browser`, one session and one report each, with a coverage ledger of every screen, control, state and ground, then consolidates the findings into one amendment prompt for the design tool | Claude Code or Codex (subagents) |
 | **ruling-page** | Turns a complicated decision into a clickable one-file HTML page: a recommendation pre-selected on every card, alternatives as buttons, and one button that copies the answers back into chat | Claude Code, the Claude app |
+| **reading-page** | Turns anything longer than a chat message into one self-contained HTML page to read instead of markdown: the bottom line first, a contents rail, callouts, sortable tables, folded evidence, light and dark | Claude Code, the Claude app, Codex |
 | **call-prep** | Writes a verbatim call script as one interactive HTML page to read live on a second screen: a guard line of what not to say, numbered beats with the exact words, fallbacks for pushback and answers to the hardest questions | Claude Code, the Claude app |
 | **humanize-writing** | Rewrites a draft so it reads like a person wrote it for its reader, adding nothing the draft did not say: removes the templates current models write in, says each point in the writer's own voice, keeps technical text's steps and figures, and checks every edit against the draft | Claude Code, the Claude app, Codex |
 | **go-deeper** | Rewrites a task to be more ambitious before doing it: what a top professional in the field would do that wasn't asked, the rawest material they'd start from, the methods and tools they'd use and an outside judge, then a rewritten prompt. Also covers altitude (the outcome behind the deliverable) and range (methods from other fields) | Claude Code, the Claude app, Codex |
@@ -27,6 +28,7 @@ Each plugin's own README covers set-up and use in more detail.
 /plugin install persona-teardown@traction
 /plugin install ruling-page@traction
 /plugin install call-prep@traction
+/plugin install reading-page@traction
 /plugin install humanize-writing@traction
 /plugin install go-deeper@traction
 ```
@@ -51,11 +53,12 @@ Same copy, destination `~/.grok/skills/<skill>`.
 
 ### The Claude app
 
-ruling-page, call-prep, humanize-writing and go-deeper install as upload zips. Build them from the repository root:
+ruling-page, call-prep, reading-page, humanize-writing and go-deeper install as upload zips. Build them from the repository root:
 
 ```
 bash plugins/ruling-page/scripts/build-zip.sh
 bash plugins/call-prep/scripts/build-zip.sh
+bash plugins/reading-page/scripts/build-zip.sh
 bash plugins/humanize-writing/scripts/build-zip.sh
 bash plugins/go-deeper/scripts/build-zip.sh
 ```
@@ -81,7 +84,8 @@ in the worktree, to those providers.
 The default pair is Claude and Codex. Pass `--engines grok,codex` or `--engines claude,grok` to put Grok
 in one slot. Choose the pair at prepare.
 
-The other plugins need no CLIs or keys. persona-teardown needs `agent-browser` installed.
+The other plugins need no CLIs or keys. persona-teardown needs `agent-browser` installed, and
+reading-page's build script needs [uv](https://docs.astral.sh/uv/).
 
 ## Licence
 
@@ -90,6 +94,18 @@ open-source writing skills; see [NOTICE.md](NOTICE.md).
 
 ## Changelog
 
+- **ruling-page 0.2.0, reading-page 0.2.0 and call-prep 0.2.0** (2 November 2026). One shared look across
+  the three pages, with no one-sided accents: state shows as a tinted fill, a full outline or a label.
+  ruling-page: a new engine with a brief at the top, a progress strip, a contents rail and a status per
+  card; optional downsides and "what would change my pick" lines; cards with several questions, "choose
+  any" options and typed answers; your pick drawn dashed until confirmed; Copy my answers gives one block
+  per card and lists what was left unanswered; answers saved by 0.1 pages carry over. The open-questions
+  variant runs on the same engine. Two static checks for template changes, `edges.py` and `same.py`.
+  reading-page: callouts as tinted panels with a label chip, a link on every heading and footnote
+  previews; the bottom-line box carries on in its paragraph after the bold opening sentence. call-prep:
+  a "What you send" panel with copy buttons, a call clock, beat-done and focus keys, script size, and
+  each beat ends with what comes next; the figures check gets the sources and a value-free list
+  of the figures, never the draft, and runs on any client call whose script quotes a figure.
 - **call-prep 0.1.3** (26 October 2026). A prep is done only when everything the call promises is ready: each
   artefact it sends or shows is written for the counterpart, independently reviewed and send-ready before the call,
   listed in a "What you send" panel at the top, with any part that depends on the call named. Asks are explained in
