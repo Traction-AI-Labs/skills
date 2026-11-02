@@ -1,109 +1,281 @@
 <!doctype html>
 <!--
-  Call-prep template. Copy this file, replace every {{…}}, delete the sections the call does not need.
+  Call-prep template. Copy this file, replace every double-brace placeholder between the PREP markers and in
+  <title>, and delete the sections the call does not need, with their nav links and keys. One self-contained page:
+  no network, works from file://.
 
-  What makes it readable live, keep all of it:
-  - Sticky header: title line with day, date, 24-hour local time with its zone label (and the counterpart's zone if different), the guard line in red, the key legend.
+  Authoring classes (the script does the rest):
+  - Sticky header: .who (title, then day, date, 24-hour local time with its zone label, their zone if different,
+    medium, length, who drives), .job, .guard (what the caller must not say; g hides it), .keys (the key legend: list
+    the real beat count). The clock button's data-start (ISO time with the UTC offset in force on the call's date, so a
+    daylight-saving change is right) and data-mins give "ends HH:MM" once started; a new data-start (part 2 of a call)
+    starts the clock afresh.
     Never screen-share this window; g hides only the guard line, which never makes it safe to share.
-  - Left nav with one link per beat, the current one highlighted as you scroll.
-  - Keyboard: every <section> with data-key="x" is jumped to by pressing x (in a part 2 prep, give the digit
-    keys to tonight's beats, not part 1's); j / k step to the next / previous
-    section. List the keys in the header legend. Digits 1-8 for beats, letters for the rest (d decide, a answers).
-  - Quoted lines in .say (large serif, easy to find mid-sentence); stage directions in .dir (italic, muted).
-  - .ctx: one line on what the beat is for. .g / .b: good-sounds-like / bad-sounds-like pair under a probing beat.
-  - .mustpill on a must-land or must-pass beat, plus class="must" on its section.
-  - Status pills for multi-part calls or a re-run: <span class="st done">DONE</span>, <span class="st now">NOW</span>,
-    <span class="st part">PARTLY</span>; a .note under the heading says what the earlier part covered.
-  - Checkboxes (.tick) for a decision rule or must-pass tally; they persist across reloads where the browser allows storage (localStorage per file; not in sandboxed artifacts;
-    keyed by each checkbox's label text, so adding or reordering boxes in a part 2 does not shift ticks).
-  - Collapses to one column under 900px, dark mode follows the system.
+  - One <section> per beat with class "beat" and data-key (digits 1-8 for beats, in the order they are said; in a
+    part 2 prep give the digits to tonight's beats). Letters for the rest: s send, d decide, a answers.
+    class "must" plus a .mustpill on a beat that must land.
+  - .say quoted lines (large serif; the opening quote hangs when the line starts with one), .dir stage directions (italic, own line), .ctx what the beat is for,
+    .gb > .g / .b good and bad sounds like, .q a question in "Answer if asked", .note under a heading.
+  - Status pills for a multi-part call or a re-run: <span class="st done">Done</span>, <span class="st now">Now</span>,
+    <span class="st part">Partly</span>.
+  - "What you send" panel first (key s): each item, where it goes, the one action the caller takes; text to paste goes in a
+    .copybox (a <pre id> and a .copy button whose data-copy names it). A not-ready item says so with a pill.
+  - .tick checkboxes for a decision rule; they persist across reloads, keyed by their label text.
+  From the script, no authoring: the current beat is marked and j / k move it, x marks it done, f dims the other beats,
+  the minus and equals keys change the script size, t starts the call clock, and each beat ends with what comes next.
+  Without scripts (iOS Quick Look) the page reads top to bottom with the contents list first.
 -->
-<html lang="en-AU">
+<html lang="en-AU" class="tp tp-prep no-js">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{Counterpart}} · {{Ddd DD Mon HH:MM}} {{zone}}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F4F5F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F0F0F" media="(prefers-color-scheme: dark)">
+<title>{{Counterpart}}, {{Ddd D Mon}} {{HH:MM}} {{zone}}</title>
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/, "js");
+  try {
+    var t = localStorage.getItem("reading-page:theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    var z = parseFloat(localStorage.getItem("prep:size")); if (z >= 0.8 && z <= 1.7) document.documentElement.style.setProperty("--say", z);
+  } catch (e) {}
+</script>
 <style>
-:root{--paper:#FAFAF7;--surface:#fff;--surface-2:#F2F2EE;--ink:#1A1D21;--ink-2:#3D4348;--muted:#6E7479;--rule:#DEDED8;--good:#2F6B4F;--good-bg:rgba(47,107,79,.09);--bad:#A0342A;--bad-bg:rgba(160,52,42,.075);--accent:#1F5F86;--warn-bg:rgba(232,197,71,.28);--must:#8A5A00}
-@media (prefers-color-scheme:dark){:root{--paper:#15171A;--surface:#1B1E22;--surface-2:#22262B;--ink:#E6E7E4;--ink-2:#BFC3C4;--muted:#8B9196;--rule:#2B3036;--good:#63B48C;--good-bg:rgba(99,180,140,.10);--bad:#E07B6D;--bad-bg:rgba(224,123,109,.10);--accent:#6FB4DC;--warn-bg:rgba(232,197,71,.14);--must:#E8C547}}
-*{box-sizing:border-box}
-html{scroll-behavior:smooth;scroll-padding-top:70px}
-body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-header{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--rule);padding:8px 16px;font-size:13.5px;display:flex;gap:18px;flex-wrap:wrap;align-items:center}
-header b{font-size:14.5px}
-header .guard{color:var(--bad)}
-.wrap{display:grid;grid-template-columns:210px 1fr;max-width:1240px;margin:0 auto}
-nav{position:sticky;top:48px;align-self:start;height:calc(100vh - 48px);overflow:auto;padding:14px 10px 14px 16px;border-right:1px solid var(--rule);font-size:14px}
-nav a{display:block;color:var(--ink-2);text-decoration:none;padding:5px 8px;border-radius:6px;margin:1px 0}
-nav a small{color:var(--muted);display:block;font-size:12px}
-nav a.on{background:var(--warn-bg);color:var(--ink);font-weight:600}
-nav a.sub{padding-left:20px;font-size:13px}
-nav hr{border:0;border-top:1px solid var(--rule);margin:10px 0}
-main{padding:18px 26px 120px;min-width:0}
-section{background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px 20px;margin:0 0 18px}
-section h2{margin:0 0 4px;font-size:21px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
-.cue{font-size:14px;font-weight:400;font-style:italic;color:var(--muted)}
-.min{font-size:13px;font-weight:600;color:var(--muted);background:var(--surface-2);padding:2px 8px;border-radius:99px}
-.mustpill{font-size:12px;font-weight:700;color:var(--must);border:1px solid var(--must);padding:1px 8px;border-radius:99px}
-h3{font-size:16px;margin:18px 0 6px;color:var(--accent)}
-.say{font-family:Georgia,"Source Serif 4",serif;font-size:19px;line-height:1.5;margin:8px 0;padding:10px 14px;border-left:4px solid var(--accent);background:var(--surface-2);border-radius:0 8px 8px 0}
-.dir{font-style:italic;color:var(--muted);font-size:14.5px;margin:6px 0}
-.gb{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 4px}
-@media (max-width:900px){.gb{grid-template-columns:1fr}.wrap{grid-template-columns:1fr}nav{display:none}}
-.g,.b{padding:9px 12px;border-radius:8px;font-size:14.5px}
-.g{background:var(--good-bg)}.b{background:var(--bad-bg)}
-.g::before{content:"GOOD SOUNDS LIKE";display:block;font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--good);margin-bottom:3px}
-.b::before{content:"BAD SOUNDS LIKE";display:block;font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--bad);margin-bottom:3px}
-.must{border:2px solid var(--must)}
-.decide{background:var(--warn-bg);border-color:transparent}
-table{border-collapse:collapse;width:100%;font-size:14px}
-th,td{border:1px solid var(--rule);padding:6px 9px;text-align:left;vertical-align:top}
-th{background:var(--surface-2)}
-.q{font-weight:700;margin:14px 0 2px}
-.ctx{background:var(--warn-bg);border-radius:8px;padding:8px 12px;font-size:14.5px;margin:6px 0}
-.ctx::before{content:"WHAT THIS IS ABOUT  ";font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--must)}
-code{font:13px ui-monospace,Menlo,monospace;background:var(--surface-2);padding:1px 5px;border-radius:4px}
-.tick{margin:4px 0;font-size:14.5px}
-.tick input{margin-right:8px;transform:scale(1.2)}
-.st{font-size:12px;font-weight:700;padding:1px 8px;border-radius:99px;letter-spacing:.03em}
-.st.done{color:var(--good);border:1px solid var(--good)}
-.st.now{color:#fff;background:var(--bad)}
-.st.part{color:var(--must);border:1px solid var(--must)}
-.note{font-size:14px;color:var(--ink-2);background:var(--surface-2);border-radius:8px;padding:6px 10px;margin:4px 0 8px}
+@layer tp {
+  :where(.tp) {
+    color-scheme: light;
+    --tp-paper:#F4F5F2; --tp-surface:#FFFFFF; --tp-surface-2:#ECEEE9;
+    --tp-ink:#1C232B; --tp-ink-2:#38424D; --tp-muted:#5B6570; --tp-faint:#7D868E;
+    --tp-rule:#D9DED7; --tp-rule-2:#E8EBE6;
+    --tp-accent:#0B6E63; --tp-accent-ink:#0A5A51; --tp-accent-tint:#E3F1EE; --tp-accent-line:#9CCBC3;
+    --tp-amber:#8A5A0B; --tp-amber-tint:#F6EFD9; --tp-good:#2A6B3C; --tp-good-tint:#E3F1E6; --tp-bad:#A2333B; --tp-bad-tint:#F8E8E8;
+    --tp-guard:#A8322A; --tp-action:#FF6F61; --tp-on-action:#0F0F0F; --tp-focus:#B83A2E;
+    --tp-serif:"Charter","Bitstream Charter","Iowan Old Style","Sitka Text",Cambria,Georgia,serif;
+    --tp-sans:"Avenir Next","Avenir","Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
+    --tp-mono:"SF Mono",ui-monospace,Menlo,Consolas,"Liberation Mono",monospace;
+    --tp-r-tag:6px; --tp-r-code:10px; --tp-r-btn:12px; --tp-r-card:16px; --tp-r-pill:999px;
+    --say:1; --hh:64px; --dim:.42;
+  }
+  @media (prefers-color-scheme: dark) { :where(.tp):not([data-theme="light"]) {
+    color-scheme: dark;
+    --tp-paper:#0F0F0F; --tp-surface:#161616; --tp-surface-2:#1F1F1F;
+    --tp-ink:#EDEDED; --tp-ink-2:#C4C4C4; --tp-muted:#A8A8A8; --tp-faint:#8A8A8A;
+    --tp-rule:rgba(255,255,255,.14); --tp-rule-2:rgba(255,255,255,.08);
+    --tp-accent:#12A594; --tp-accent-ink:#5CC9B9; --tp-accent-tint:#0C2B28; --tp-accent-line:#1F6158;
+    --tp-amber:#E5C56B; --tp-amber-tint:#2A2414; --tp-good:#8FD3A0; --tp-good-tint:#16271B; --tp-bad:#F09AA0; --tp-bad-tint:#2D1B1E;
+    --tp-guard:#FF8A7E; --tp-focus:#FF6F61; --dim:.38;
+  } }
+  :where(.tp)[data-theme="dark"] {
+    color-scheme: dark;
+    --tp-paper:#0F0F0F; --tp-surface:#161616; --tp-surface-2:#1F1F1F;
+    --tp-ink:#EDEDED; --tp-ink-2:#C4C4C4; --tp-muted:#A8A8A8; --tp-faint:#8A8A8A;
+    --tp-rule:rgba(255,255,255,.14); --tp-rule-2:rgba(255,255,255,.08);
+    --tp-accent:#12A594; --tp-accent-ink:#5CC9B9; --tp-accent-tint:#0C2B28; --tp-accent-line:#1F6158;
+    --tp-amber:#E5C56B; --tp-amber-tint:#2A2414; --tp-good:#8FD3A0; --tp-good-tint:#16271B; --tp-bad:#F09AA0; --tp-bad-tint:#2D1B1E;
+    --tp-guard:#FF8A7E; --tp-focus:#FF6F61; --dim:.38;
+  }
+
+  .tp, .tp *, .tp *::before, .tp *::after { box-sizing:border-box; }
+  .tp { background:var(--tp-paper); color:var(--tp-ink); font:16px/1.5 var(--tp-sans); -webkit-text-size-adjust:100%; text-size-adjust:100%;
+        -webkit-font-smoothing:antialiased; scroll-padding-top:calc(var(--hh) + 16px); }
+  .tp body { margin:0; }
+  .tp :focus-visible { outline:2px solid var(--tp-focus); outline-offset:2px; }
+  .tp a { color:var(--tp-accent-ink); text-decoration-color:var(--tp-accent-line); text-underline-offset:.18em; }
+  .tp button { font:inherit; color:inherit; }
+  .tp code, .tp kbd { font:600 .8em var(--tp-mono); background:var(--tp-surface-2); padding:1px 5px; border-radius:4px; border:0; }
+
+  /* Header: who, when, the job, the guard line. Sticky on wider screens; on a phone it scrolls away (look ruling L8). */
+  .tp header.top { position:sticky; top:0; z-index:20; background:var(--tp-surface); border-bottom:1px solid var(--tp-rule); }
+  .tp .top-in { max-width:1240px; margin:0 auto; padding:10px 24px 10px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 20px; align-items:start; }
+  .tp .who { margin:0; font:650 1.05rem/1.3 var(--tp-sans); }
+  .tp .who small { display:block; font-weight:500; color:var(--tp-ink-2); font-size:.92rem; }
+  .tp .job { margin:0; grid-column:1; font:400 1rem/1.45 var(--tp-serif); color:var(--tp-ink-2); }
+  .tp .guard { margin:2px 0 0; grid-column:1 / -1; font:italic 500 .95rem/1.45 var(--tp-sans); color:var(--tp-guard); }
+  .tp .guard b { font-style:normal; }
+  .tp .keys { margin:2px 0 0; grid-column:1 / -1; font-size:.8rem; color:var(--tp-muted); }
+  .tp .tools { grid-column:2; grid-row:1 / span 2; display:flex; gap:6px; align-items:center; justify-self:end; }
+  .tp .tool { min-height:40px; min-width:40px; padding:0 12px; border-radius:var(--tp-r-btn); border:1px solid var(--tp-rule); background:var(--tp-surface); cursor:pointer;
+              font:600 .84rem/1 var(--tp-sans); color:var(--tp-ink-2); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .tp .tool:hover { border-color:var(--tp-accent-line); color:var(--tp-accent-ink); }
+  .tp .tool[aria-pressed="true"] { background:var(--tp-accent-tint); border-color:var(--tp-accent); color:var(--tp-accent-ink); }
+  .tp .clock { min-width:9.5em; }
+  .tp .clock.is-on { background:var(--tp-ink); color:var(--tp-paper); border-color:var(--tp-ink); }
+  .tp.no-js .tools, .tp.no-js .keys { display:none; }
+
+  /* Layout: the beats on the left, the script in one column. */
+  .tp .wrap { display:grid; grid-template-columns:230px minmax(0,1fr); gap:0 40px; max-width:1240px; margin:0 auto; padding:0 24px; }
+  .tp nav#nav { position:sticky; top:var(--hh); align-self:start; max-height:calc(100vh - var(--hh)); overflow:auto; padding:20px 0 24px; font-size:.9rem; scrollbar-width:thin; }
+  .tp nav#nav a { display:grid; grid-template-columns:1.6em minmax(0,1fr) auto; gap:2px 6px; align-items:baseline; padding:7px 10px; border-radius:8px; color:var(--tp-ink-2); text-decoration:none; line-height:1.3; }
+  .tp nav#nav a small { grid-column:2 / -1; color:var(--tp-muted); font-size:.78rem; }
+  .tp nav#nav a .k { font:700 .78rem var(--tp-sans); color:var(--tp-muted); }
+  .tp nav#nav a.sub { padding-left:28px; font-size:.84rem; }
+  .tp nav#nav a:hover { background:var(--tp-surface); color:var(--tp-ink); }
+  /* Where you are: the whole item tinted and outlined, its key filled in. */
+  .tp nav#nav a.on { background:var(--tp-accent-tint); color:var(--tp-ink); font-weight:650; box-shadow:inset 0 0 0 1px var(--tp-accent-line); }
+  .tp nav#nav a.on .k { display:inline-grid; place-items:center; width:1.55em; height:1.55em; margin:-.2em 0; border-radius:50%; background:var(--tp-ink); color:var(--tp-paper); }
+  .tp nav#nav a.is-done { color:var(--tp-muted); }
+  .tp nav#nav a.is-done::after { content:"✓"; grid-column:3; grid-row:1; color:var(--tp-good); font-weight:700; }
+  .tp nav#nav hr { border:0; border-top:1px solid var(--tp-rule); margin:10px 6px; }
+  .tp nav#nav .navh { margin:14px 10px 4px; font:650 .76rem var(--tp-sans); color:var(--tp-muted); }
+  .tp main { min-width:0; max-width:780px; padding:22px 0 50vh; }
+
+  /* Sections */
+  .tp section { margin:0 0 18px; padding:18px 24px 14px; background:var(--tp-surface); border:1px solid var(--tp-rule); border-radius:var(--tp-r-card);
+                transition:opacity .12s, border-color .12s; }
+  .tp section h2 { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; margin:0 0 6px; font:650 1.22rem/1.3 var(--tp-sans); }
+  .tp section h2 .cue { font:italic 400 .95rem/1.4 var(--tp-sans); color:var(--tp-muted); }
+  .tp section.beat h2 { font-size:1.3rem; }
+  .tp .scripthead { margin:6px 0 14px; font:400 1.5rem/1.2 var(--tp-serif); }
+  .tp .scripthead small { font:italic 400 .95rem var(--tp-sans); color:var(--tp-muted); margin-left:8px; }
+  .tp h3 { margin:18px 0 6px; font:700 1.02rem/1.35 var(--tp-sans); color:var(--tp-ink); }
+  /* The lines the caller reads aloud: big, serif, nothing else competing. */
+  /* No rule beside them: the size, the serif and the opening quote (hung outside the text column) carry them. */
+  /* The quote hangs only on a line the script found opening with one (.tp-hang); any other line starts flush. */
+  .tp .say { margin:10px 0; padding:2px 0; font:400 calc(1.36rem * var(--say))/1.5 var(--tp-serif); color:var(--tp-ink); max-width:29em; text-wrap:pretty; }
+  .tp .say.tp-hang { padding-left:.45em; text-indent:-.45em; }
+  /* Directions to the caller: small italic sans, so the eye skips them when it is looking for the next line. */
+  .tp .dir { margin:6px 0 6px 10px; font:italic 400 .95rem/1.45 var(--tp-sans); color:var(--tp-muted); max-width:60ch; }
+  .tp .ctx { margin:4px 0 10px; font:400 .92rem/1.45 var(--tp-sans); color:var(--tp-ink-2); }
+  .tp .ctx::before { content:"What this beat is for. "; font-weight:700; color:var(--tp-amber); }
+  .tp .gb { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0 4px 10px; }
+  .tp .g, .tp .b { padding:9px 12px; border-radius:var(--tp-r-code); font-size:.9rem; line-height:1.45; }
+  .tp .g { background:var(--tp-good-tint); } .tp .b { background:var(--tp-bad-tint); }
+  .tp .g::before, .tp .b::before { display:block; font-weight:700; font-size:.76rem; margin-bottom:2px; }
+  .tp .g::before { content:"Good answer sounds like"; color:var(--tp-good); }
+  .tp .b::before { content:"Bad answer sounds like"; color:var(--tp-bad); }
+  .tp .must { border:2px solid var(--tp-amber); }
+  .tp .mustpill, .tp .st { font:700 .72rem/1 var(--tp-sans); padding:4px 9px; border-radius:var(--tp-r-pill); white-space:nowrap; }
+  .tp .mustpill { color:var(--tp-amber); box-shadow:inset 0 0 0 1px var(--tp-amber); }
+  .tp .st.done { color:var(--tp-good); box-shadow:inset 0 0 0 1px var(--tp-good); }
+  .tp .st.now { color:var(--tp-on-action); background:var(--tp-action); }
+  .tp .st.part { color:var(--tp-amber); box-shadow:inset 0 0 0 1px var(--tp-amber); }
+  .tp .note { font-size:.9rem; color:var(--tp-ink-2); background:var(--tp-surface-2); border-radius:var(--tp-r-code); padding:7px 11px; margin:4px 0 8px; }
+  .tp .q { margin:16px 0 2px; font:700 1rem/1.4 var(--tp-sans); }
+  .tp .decide { background:var(--tp-amber-tint); border-color:transparent; }
+  .tp .tick { margin:6px 0; font-size:.98rem; }
+  .tp .tick label { display:flex; gap:10px; align-items:flex-start; cursor:pointer; min-height:32px; }
+  .tp .tick input { width:20px; height:20px; margin:1px 0 0; accent-color:var(--tp-accent); flex:none; }
+  .tp table { border-collapse:collapse; width:100%; font-size:.94rem; }
+  .tp th, .tp td { border-bottom:1px solid var(--tp-rule); padding:8px 10px; text-align:left; vertical-align:top; }
+  .tp th { font-size:.8rem; color:var(--tp-muted); }
+  .tp td:last-child { font-family:var(--tp-serif); font-size:1.02rem; }
+  .tp .send { border:2px solid var(--tp-accent); }
+  .tp .send ol { margin:6px 0 0; padding-left:22px; }
+  .tp .send li { margin:0 0 12px; }
+  .tp .copybox { display:flex; gap:8px; align-items:flex-start; margin:6px 0; }
+  .tp .copybox pre { flex:1; min-width:0; margin:0; white-space:pre-wrap; overflow-wrap:anywhere; font:400 .98rem/1.5 var(--tp-serif); background:var(--tp-paper); border:1px solid var(--tp-rule); padding:9px 12px; border-radius:var(--tp-r-code); }
+  .tp .copy { min-height:40px; padding:0 14px; border-radius:var(--tp-r-btn); border:1px solid var(--tp-accent); background:var(--tp-surface); color:var(--tp-accent-ink); cursor:pointer; font:600 .86rem var(--tp-sans); white-space:nowrap; }
+  .tp .copy.ok { background:var(--tp-accent); color:var(--tp-surface); }
+  .tp.no-js .copy { display:none; }
+  .tp ul { padding-left:1.3em; } .tp li { margin:0 0 .35em; }
+
+  /* Live helpers (scripts only): where you are, what is next, what is done. */
+  /* The current beat: a 2px outline all the way round, plus the "Now" flag in its title. */
+  .tp .beat.is-now { border-color:var(--tp-accent); box-shadow:0 0 0 1px var(--tp-accent); }
+  .tp .beat.is-done:not(.is-now) { border-style:dashed; }
+  .tp .beat .tp-flag { font:700 .72rem/1 var(--tp-sans); padding:4px 9px; border-radius:var(--tp-r-pill); }
+  .tp .beat.is-now .tp-flag-now { color:var(--tp-on-action); background:var(--tp-action); }
+  .tp .tp-flag-done { color:var(--tp-good); box-shadow:inset 0 0 0 1px var(--tp-good); }
+  .tp .tp-next { margin:14px 0 0; padding-top:10px; border-top:1px dashed var(--tp-rule); font:500 .86rem/1.4 var(--tp-sans); color:var(--tp-muted); }
+  .tp .tp-next b { color:var(--tp-ink-2); }
+  .tp.is-focus main > section:not(.is-now) { opacity:var(--dim); }
+  .tp.is-focus main > section:not(.is-now):hover { opacity:1; }
+
+  /* Medium: a narrower beat list. Narrow: one column with no beat list; digits, j and k still move between beats. */
+  @media (min-width:900px) and (max-width:1099px) {
+    .tp .wrap { grid-template-columns:190px minmax(0,1fr); gap:0 24px; padding:0 18px; }
+  }
+  @media (max-width:899px) {
+    .tp .wrap { grid-template-columns:minmax(0,1fr); }
+    .tp nav#nav { display:none; }
+    .tp main { margin:0 auto; width:100%; }
+  }
+  @media (max-width:719px) {
+    .tp header.top { position:static; }
+    .tp .top-in { padding:8px 14px; grid-template-columns:minmax(0,1fr); }
+    .tp .tools { grid-column:1; grid-row:auto; justify-self:start; flex-wrap:wrap; }
+    .tp .keys { display:none; }
+    .tp .wrap { padding:0 12px; }
+    .tp section { padding:14px 14px 12px; border-radius:12px; }
+    .tp .say { font-size:calc(1.16rem * var(--say)); }
+    .tp .dir, .tp .gb { margin-left:8px; }
+    .tp .gb { grid-template-columns:1fr; }
+    .tp .tool { min-height:44px; }
+    .tp .tool-wide { display:none; }
+  }
+  /* Without scripts (iOS Quick Look): the contents list sits above the script; nothing sticky. */
+  .tp.no-js header.top { position:static; }
+  @media (max-width:899px) {
+    .tp.no-js nav#nav { display:block; position:static; max-height:none; padding:14px 0 4px; border-bottom:1px solid var(--tp-rule); margin-bottom:8px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .tp *, .tp *::before { transition:none !important; scroll-behavior:auto !important; } }
+  @media print {
+    .tp { background:#fff; }
+    .tp header.top { position:static; }
+    .tp .tools, .tp .keys, .tp nav#nav, .tp .copy, .tp .tp-next, .tp .guard { display:none !important; }
+    .tp .wrap { display:block; padding:0; }
+    .tp main { padding:0; max-width:none; }
+    .tp section { break-inside:avoid; border-color:#999; opacity:1 !important; }
+  }
+}
 </style>
 </head>
 <body>
-<header>
-<b>{{Title}} · {{Ddd DD Mon}} {{HH:MM}} {{zone}} ({{their zone}}) · {{medium}} · {{who drives}}</b>
-<span>{{One sentence: the job of the call.}}</span>
-<span class="guard"><b>Don't:</b> {{everything the caller must not say, named once}}</span>
-<span>Keys: <code>1</code>–<code>3</code> beats · <code>d</code> decide · <code>a</code> answers · <code>j</code>/<code>k</code> next/prev · <code>g</code> hide guard</span>
+<!-- PREP: replace every double-brace placeholder from here to END PREP, plus the <title>. Delete the sections the call does not use, with their nav links and keys. -->
+<header class="top">
+  <div class="top-in">
+    <p class="who"><b>{{Title}}</b> <small>{{Ddd D Mon}}, {{HH:MM}} {{zone}} ({{their zone}}), {{medium}}, {{length}}, {{who drives}}</small></p>
+    <p class="job">{{One sentence: the job of the call.}}</p>
+    <p class="guard"><b>Don't:</b> {{everything the caller must not say, named once}}</p>
+    <p class="keys">Keys: <kbd>j</kbd> <kbd>k</kbd> next and back, <kbd>x</kbd> beat done, <kbd>1</kbd> to <kbd>3</kbd> beats, <kbd>s</kbd> send, <kbd>d</kbd> decide, <kbd>a</kbd> answers, <kbd>f</kbd> focus, <kbd>-</kbd> <kbd>=</kbd> size, <kbd>t</kbd> clock, <kbd>g</kbd> hide the guard</p>
+    <div class="tools" role="group" aria-label="Call tools">
+      <button class="tool clock" type="button" id="tp-clock" data-start="{{YYYY-MM-DDTHH:MM:00+HH:MM, the UTC offset on the call's date}}" data-mins="{{minutes}}" aria-label="Start the call clock">Start clock</button>
+      <button class="tool" type="button" id="tp-smaller" aria-label="Smaller script">A−</button>
+      <button class="tool" type="button" id="tp-bigger" aria-label="Bigger script">A+</button>
+      <button class="tool" type="button" id="tp-focus" aria-pressed="false">Focus</button>
+      <button class="tool tool-wide" type="button" id="tp-theme">Dark</button>
+    </div>
+  </div>
 </header>
 <div class="wrap">
-<nav id="nav">
-<a href="#b1">1. {{Beat}}<small>{{cue}}</small></a>
-<a href="#b2">2. {{Beat}}<small>{{must land}}</small></a>
-<a class="sub" href="#b2a">2a. {{Sub-item}}</a>
-<a class="sub" href="#b2b">2b. {{Sub-item}}</a>
-<a href="#b3">3. Close</a>
+<nav id="nav" aria-label="Beats and sections">
+<a href="#send"><span class="k">s</span><b>What you send</b><small>{{items}}</small></a>
 <hr>
-<a href="#decide"><b>Decide</b><small>{{rule}}</small></a>
-<a href="#answers">Answer if asked</a>
-<a href="#ifthey">If they…</a>
-<a href="#bg">Where things stand</a>
-<a href="#after">After the call</a>
+<p class="navh">Script</p>
+<a href="#b1"><span class="k">1</span>{{Beat}}<small>{{cue}}</small></a>
+<a href="#b2"><span class="k">2</span>{{Beat}}<small>Must land</small></a>
+<a class="sub" href="#b2a"><span class="k"></span>2a. {{Sub-item}}</a>
+<a class="sub" href="#b2b"><span class="k"></span>2b. {{Sub-item}}</a>
+<a href="#b3"><span class="k">3</span>Close</a>
+<hr>
+<a href="#decide"><span class="k">d</span><b>Decide</b><small>{{rule}}</small></a>
+<a href="#answers"><span class="k">a</span>Answer if asked</a>
+<a href="#ifthey"><span class="k"></span>If they…</a>
+<a href="#bg"><span class="k"></span>Where things stand</a>
+<a href="#after"><span class="k"></span>After the call</a>
 </nav>
 <main>
 
-<!-- Per-person lines (more than one counterpart): a section before b1 with one line each. -->
+<section id="send" data-key="s" class="send"><h2>What you send</h2>
+<ol>
+<li><b>{{When and where}}:</b> {{what it is; the one action you take}}
+<div class="copybox"><pre id="c-1">{{text you paste}}</pre><button class="copy" type="button" data-copy="c-1">Copy</button></div></li>
+<li><b>{{After the call}}:</b> {{item}} <span class="st part">Not ready</span> {{why, and when it will be}}</li>
+</ol>
+<!-- Nothing to send: one line saying so. -->
+</section>
 
-<section id="b1" data-key="1"><h2>1. {{Beat}} <span class="cue">({{why, who to look at}})</span></h2>
+<!-- Per-person lines (more than one counterpart): a section before the script with one line each. -->
+
+<h2 class="scripthead">Script <small>read the quoted lines; italics are for you</small></h2>
+
+<section id="b1" data-key="1" class="beat"><h2>1. {{Beat}} <span class="cue">({{why, who to look at}})</span></h2>
 <div class="ctx">{{What this beat is for, one line.}}</div>
 <p class="say">"{{Exact line, spoken English, the caller's register.}}"</p>
 <p class="dir">{{Stage direction.}}</p>
 </section>
 
-<section id="b2" data-key="2" class="must"><h2>2. {{Beat}} <span class="mustpill">MUST LAND</span></h2>
+<section id="b2" data-key="2" class="beat must"><h2>2. {{Beat}} <span class="mustpill">Must land</span></h2>
 <p class="dir">2a {{…}} · 2b {{…}}</p>
 <h3 id="b2a">2a. {{Sub-item}}</h3>
 <p class="say">"{{Line.}}"</p>
@@ -113,7 +285,7 @@ code{font:13px ui-monospace,Menlo,monospace;background:var(--surface-2);padding:
 <div class="gb"><div class="g">{{A good answer sounds like…}}</div><div class="b">{{A bad answer sounds like…}}</div></div>
 </section>
 
-<section id="b3" data-key="3"><h2>3. Close</h2>
+<section id="b3" data-key="3" class="beat"><h2>3. Close</h2>
 <p class="say">"{{What I'll do, what I need from you, dated. Anything I've missed?}}"</p>
 </section>
 
@@ -136,26 +308,140 @@ code{font:13px ui-monospace,Menlo,monospace;background:var(--surface-2);padding:
 </section>
 
 <section id="after"><h2>After the call</h2>
-<ul><li>{{What the caller does after, dated.}}</li></ul>
+<ul><li>{{What you do after, dated.}}</li></ul>
 <p class="dir">Sources: {{paths, message ids}}. Review: {{what ran, or why none}}.</p>
 </section>
 </main>
 </div>
+<!-- END PREP -->
 <script>
-const links=[...document.querySelectorAll('nav a[href^="#"]')];
-const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting)links.forEach(l=>l.classList.toggle('on',l.getAttribute('href')==='#'+e.target.id));})},{rootMargin:'-60px 0px -70% 0px'});
-links.forEach(a=>{const s=document.querySelector(a.getAttribute('href'));if(s)io.observe(s);});
-const secs=[...document.querySelectorAll('main section')];
-const cur=()=>{let i=0;secs.forEach((s,j)=>{if(s.getBoundingClientRect().top<=90)i=j;});return i;};
-document.addEventListener('keydown',e=>{
-  if(e.metaKey||e.ctrlKey||e.altKey||/INPUT|TEXTAREA/.test(e.target.tagName))return;
-  if(e.key==='g'){document.querySelectorAll('.guard').forEach(g=>g.hidden=!g.hidden);return;}
-  if(e.key==='j'||e.key==='k'){const i=cur()+(e.key==='j'?1:-1);if(secs[i])secs[i].scrollIntoView();return;}
-  const s=document.querySelector(`section[data-key="${e.key}"]`);if(s)s.scrollIntoView();
-});
-const KEY='prep:'+location.pathname;let saved={};try{saved=JSON.parse(localStorage.getItem(KEY)||'{}');}catch(e){saved={};}
-const boxes=[...document.querySelectorAll('.tick input')];const label=b=>b.closest('label').textContent.trim();
-boxes.forEach(b=>{b.checked=!!saved[label(b)];b.addEventListener('change',()=>{const m={};boxes.forEach(x=>m[label(x)]=x.checked);try{localStorage.setItem(KEY,JSON.stringify(m));}catch(e){}});});
+(function () {
+  "use strict";
+  var doc = document, root = doc.documentElement, hd = doc.querySelector("header.top");
+  var secs = [].slice.call(doc.querySelectorAll("main section"));
+  var beats = secs.filter(function (s) { return s.classList.contains("beat"); });
+  var links = [].slice.call(doc.querySelectorAll('nav#nav a[href^="#"]'));
+  var KEY = "prep:" + location.pathname, UI = KEY + ":ui";
+  var ui = {}; try { ui = JSON.parse(localStorage.getItem(UI) || "{}") || {}; } catch (e) { ui = {}; }
+  if (!ui.done || typeof ui.done !== "object") ui.done = {};
+  function save() { try { localStorage.setItem(UI, JSON.stringify(ui)); } catch (e) {} }
+
+  /* Hang the opening quote (straight or curly) only on a spoken line that starts with one. */
+  [].forEach.call(doc.querySelectorAll(".say"), function (s) {
+    if (/^["'\u201C\u201D\u2018\u2019]/.test(s.textContent.replace(/^\s+/, ""))) s.classList.add("tp-hang");
+  });
+
+  /* The header's real height drives the sticky nav and the jump offset. */
+  /* On a phone the header scrolls away (it would take a third of the screen), so the offset is 0 there. */
+  function hh() { return getComputedStyle(hd).position === "sticky" ? hd.offsetHeight : 0; }
+  function setH() { root.style.setProperty("--hh", hh() + "px"); }
+  setH(); addEventListener("resize", setH);
+
+  /* Each beat ends with what comes next, so the eye never has to hunt for it. */
+  beats.forEach(function (b, i) {
+    var next = beats[i + 1], p = doc.createElement("p"); p.className = "tp-next";
+    var h = next ? next.querySelector("h2") : null, label = h ? h.firstChild.textContent.trim() : "";
+    if (next) { p.appendChild(doc.createTextNode("Next: ")); var bb = doc.createElement("b"); bb.textContent = label; p.appendChild(bb); }
+    else p.textContent = doc.querySelector('section[data-key="d"]') ? "Last beat. Decide is on d." : "Last beat.";
+    b.appendChild(p);
+    var flag = doc.createElement("span"); flag.className = "tp-flag"; b.querySelector("h2").appendChild(flag); b._flag = flag;
+  });
+
+  /* The current beat: follows the scroll, and j / k move it on purpose. */
+  var now = null;
+  function linkFor(s) { return links.filter(function (a) { return a.getAttribute("href") === "#" + s.id; })[0]; }
+  function paint() {
+    secs.forEach(function (s) {
+      var on = s === now, done = !!ui.done[s.id];
+      s.classList.toggle("is-now", on); s.classList.toggle("is-done", done);
+      if (s._flag) { s._flag.textContent = on ? "Now" : done ? "Done" : ""; s._flag.className = "tp-flag" + (on ? " tp-flag-now" : done ? " tp-flag-done" : ""); }
+      var a = linkFor(s); if (a) { a.classList.toggle("on", on); a.classList.toggle("is-done", done); if (on) a.setAttribute("aria-current", "step"); else a.removeAttribute("aria-current"); }
+    });
+  }
+  function setNow(s, scroll) { now = s; paint(); if (scroll && s) s.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }
+  var lock = 0;
+  function spy() {
+    if (Date.now() < lock) return;
+    var line = hh() + 60, cur = secs[0];
+    secs.forEach(function (s) { if (s.getBoundingClientRect().top <= line) cur = s; });
+    if (cur !== now) { now = cur; paint(); }
+  }
+  addEventListener("scroll", function () { requestAnimationFrame(spy); }, { passive: true });
+  spy();
+  function step(n) {
+    var i = secs.indexOf(now) + n; if (i < 0 || i >= secs.length) return;
+    lock = Date.now() + 900; setNow(secs[i], true);
+  }
+
+  /* Focus: dims everything but the current beat. Size: the quoted lines grow or shrink. Both are remembered. */
+  var focusBtn = doc.getElementById("tp-focus");
+  function setFocus(on) { ui.focus = on; root.classList.toggle("is-focus", on); focusBtn.setAttribute("aria-pressed", on ? "true" : "false"); save(); }
+  /* Focus is off whenever the page opens (look ruling L7, 2 Nov 2026); f turns it on. */
+  setFocus(false);
+  focusBtn.addEventListener("click", function () { setFocus(!ui.focus); });
+  function size(d) {
+    var z = parseFloat(getComputedStyle(root).getPropertyValue("--say")) || 1; z = Math.max(0.8, Math.min(1.7, Math.round((z + d) * 100) / 100));
+    root.style.setProperty("--say", z); try { localStorage.setItem("prep:size", z); } catch (e) {}
+  }
+  doc.getElementById("tp-smaller").addEventListener("click", function () { size(-0.1); });
+  doc.getElementById("tp-bigger").addEventListener("click", function () { size(0.1); });
+
+  /* The call clock: elapsed time once started, and when the call is booked to end. */
+  var clock = doc.getElementById("tp-clock"), tick = null;
+  var mins = parseInt(clock.dataset.mins, 10) || 0, start = clock.dataset.start ? new Date(clock.dataset.start) : null;
+  var ends = start && mins ? new Date(start.getTime() + mins * 60000) : null;
+  function hhmm(d) { return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2); }
+  /* The end time is shown in the browser's local time. */
+  function paintClock() {
+    if (!ui.clock) { clock.textContent = "Start clock"; clock.classList.remove("is-on"); clock.setAttribute("aria-label", "Start the call clock"); return; }
+    var s = Math.max(0, Math.floor((Date.now() - ui.clock) / 1000)), m = Math.floor(s / 60);
+    clock.textContent = m + ":" + ("0" + (s % 60)).slice(-2) + (ends ? ", ends " + hhmm(ends) : "");
+    clock.classList.add("is-on"); clock.setAttribute("aria-label", "Call clock: " + m + " minutes in. Press to stop.");
+  }
+  function setClock(on) { ui.clock = on ? Date.now() : 0; ui.clockFor = clock.dataset.start || ""; save(); clearInterval(tick); if (on) tick = setInterval(paintClock, 1000); paintClock(); }
+  /* A clock started for another booking (the page reused for part 2 with a new data-start) starts afresh. */
+  if (ui.clock && ui.clockFor !== (clock.dataset.start || "")) { ui.clock = 0; save(); }
+  if (ui.clock) tick = setInterval(paintClock, 1000);
+  paintClock();
+  clock.addEventListener("click", function () { setClock(!ui.clock); });
+
+  /* Theme, shared with the reading and ruling pages. */
+  var themeBtn = doc.getElementById("tp-theme");
+  function isDark() { var t = root.dataset.theme; return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; }
+  function paintTheme() { themeBtn.textContent = isDark() ? "Light" : "Dark"; }
+  themeBtn.addEventListener("click", function () { var t = isDark() ? "light" : "dark"; root.dataset.theme = t; try { localStorage.setItem("reading-page:theme", t); } catch (e) {} paintTheme(); });
+  paintTheme();
+
+  /* Keys. Never while typing, and never with a modifier held. */
+  doc.addEventListener("keydown", function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    var k = e.key;
+    if (k === "g") { doc.querySelectorAll(".guard").forEach(function (g) { g.hidden = !g.hidden; }); setH(); return; }
+    if (k === "j" || k === "k") { step(k === "j" ? 1 : -1); return; }
+    if (k === "x" && now) { ui.done[now.id] = !ui.done[now.id]; save(); paint(); return; }
+    if (k === "f") { setFocus(!ui.focus); return; }
+    if (k === "t") { setClock(!ui.clock); return; }
+    if (k === "-" || k === "_") { size(-0.1); return; }
+    if (k === "=" || k === "+") { size(0.1); return; }
+    var s = doc.querySelector('section[data-key="' + (k.length === 1 ? k.replace(/["\\]/g, "") : "") + '"]');
+    if (s) { lock = Date.now() + 900; setNow(s, true); }
+  });
+
+  /* Decide ticks persist by label text, so adding or reordering boxes never shifts them. */
+  var saved = {}; try { saved = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { saved = {}; }
+  var boxes = [].slice.call(doc.querySelectorAll(".tick input")), label = function (b) { return b.closest("label").textContent.trim(); };
+  boxes.forEach(function (b) { b.checked = !!saved[label(b)]; b.addEventListener("change", function () { var m = {}; boxes.forEach(function (x) { m[label(x)] = x.checked; }); try { localStorage.setItem(KEY, JSON.stringify(m)); } catch (e) {} }); });
+
+  /* Copy buttons in "What you send". */
+  doc.querySelectorAll(".copy").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var t = doc.getElementById(b.dataset.copy).textContent;
+      function done(ok) { b.classList.toggle("ok", ok); b.textContent = ok ? "Copied" : "Select and copy"; setTimeout(function () { b.classList.remove("ok"); b.textContent = "Copy"; }, 1500); }
+      function fallback() { var a = doc.createElement("textarea"); a.value = t; doc.body.appendChild(a); a.select(); var ok = false; try { ok = doc.execCommand("copy"); } catch (e) {} a.remove(); done(ok); }
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function () { done(true); }, fallback); else fallback();
+    });
+  });
+})();
 </script>
 </body>
 </html>
