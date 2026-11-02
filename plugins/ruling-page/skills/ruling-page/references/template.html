@@ -1,169 +1,999 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-AU" class="tp tp-ruling no-js">
 <head>
-<!-- Ruling-page template (skill: ruling-page). Copy this file, replace only the D array (and the h1), open it in a browser (or show it as an HTML artifact). Fields: id, group (optional, shown as a section heading), title, q, opts [[label, one-line effect], ...], pick (index of your recommendation), why, ev. -->
+<!--
+  Ruling page. One self-contained file: inline CSS and JS, no network, works from file://.
+
+  Authors edit only the data script below the header comment: RULER, BRIEF (optional), D, and the <h1>.
+  Card fields: id, group, title, q, opts [[label, effect, downside?], ...], pick, why, ev,
+    text / textLabel / textOpen, frames [{src, cap}]
+  Optional:
+    chip     a short flag beside the title ("Can wait")
+    context  background in plain text: blank line between paragraphs, "- " bullets, **bold**, `code`
+    flip     what would change my pick (shown under the why)
+    multi    true for "choose any": pick becomes an array of indexes
+    input    "text" for a typed answer instead of options
+    parts    [{id, q, opts, pick, why, flip, multi, input, placeholder}]: one card, several questions
+  BRIEF = {date, lede, body, decided: [[title, detail], ...], source: [label, href]}
+  RULING_BRIDGE = {origin, id}: only when a host page embeds this page in a frame and collects the answers; leave it out everywhere else.
+
+  The page treats a card as answered only once the ruler touches it. My pick is pre-selected on every card,
+  drawn dashed until confirmed; "Accept all picks" confirms it on every card not yet answered and never
+  overwrites an answer or a card with a note. Answers saved by the old template carry over on first load.
+  The sample below shows each kind of card once; replace all of it.
+-->
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Decisions for today</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F4F5F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F0F0F" media="(prefers-color-scheme: dark)">
+<title>Rulings</title>
+<script>
+  document.documentElement.classList.replace("no-js", "js");
+  try { var t = localStorage.getItem("reading-page:theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
 <style>
-  :root { --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --bg:#f1f5f9; --card:#ffffff; --pick:#4f46e5; --pickbg:#eef2ff; --ok:#059669; --warn:#b45309; }
-  * { box-sizing:border-box; }
-  body { margin:0; font:16px/1.55 "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; color:var(--ink);
-         background:radial-gradient(1200px 600px at 10% -10%, #e0e7ff 0%, transparent 60%), radial-gradient(900px 500px at 110% 0%, #dcfce7 0%, transparent 55%), var(--bg); min-height:100vh; }
-  header { position:sticky; top:0; z-index:5; backdrop-filter:saturate(180%) blur(12px); background:rgba(255,255,255,.82); border-bottom:1px solid var(--line); }
-  /* Header: row one is the title with both buttons on the right; row two is status plus the instruction. */
-  .bar { max-width:900px; margin:0 auto; padding:16px 20px 14px; display:flex; gap:10px 16px; align-items:center; flex-wrap:wrap; }
-  header h1 { font-size:20px; letter-spacing:-.01em; margin:0; flex:1 1 280px; }
-  header .actions { display:flex; gap:10px; flex:none; flex-wrap:wrap; }
-  header .sub { width:100%; display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; color:var(--muted); font-size:14px; }
-  @media (max-width:640px) { header { position:static; } }
-  .count { font-size:13px; font-weight:600; color:var(--pick); background:var(--pickbg); border-radius:999px; padding:4px 10px; }
-  .count.changed { color:var(--warn); background:#fef3c7; }
-  button { font:inherit; cursor:pointer; border-radius:999px; border:1px solid var(--line); background:#fff; padding:9px 16px; transition:all .15s ease; }
-  button:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(15,23,42,.08); }
-  button.primary { background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; border:0; font-weight:600; box-shadow:0 6px 16px rgba(79,70,229,.28); }
-  main { max-width:900px; margin:28px auto 90px; padding:0 20px; }
-  .card { overflow-wrap:anywhere; background:var(--card); border:1px solid var(--line); border-radius:18px; padding:22px 24px; margin:0 0 18px; box-shadow:0 1px 2px rgba(15,23,42,.04), 0 8px 24px rgba(15,23,42,.05); }
-  .card h2 { font-size:18px; letter-spacing:-.01em; margin:0 0 8px; display:flex; align-items:center; gap:10px; }
-  .tag { font-size:12px; font-weight:700; color:#fff; background:linear-gradient(135deg,#4f46e5,#7c3aed); border-radius:8px; padding:3px 8px; }
-  .q { margin:0 0 14px; font-size:16px; }
-  /* Options: a grid of equal-height cards, content pinned to the top. Every inner element has its own
-     class; never style ".opt span", which also matches the MY PICK badge and wrecks the layout. */
-  .opts { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin:14px 0 16px; align-items:stretch; }
-  .opt { min-width:0; position:relative; display:flex; flex-direction:column; justify-content:flex-start; gap:6px; text-align:left; color:var(--ink);
-         padding:16px 16px 14px; border-radius:14px; border:1.5px solid var(--line); background:#fff; }
-  .opt:hover { transform:none; border-color:#c7d2fe; box-shadow:0 4px 14px rgba(15,23,42,.06); }
-  .opt .head { display:flex; align-items:flex-start; gap:10px; }
-  .opt .radio { flex:none; width:18px; height:18px; margin-top:2px; border-radius:999px; border:1.5px solid #cbd5e1; background:#fff;
-                display:inline-flex; align-items:center; justify-content:center; color:#fff; font-size:11px; font-weight:700; line-height:1; }
-  .opt .lbl { flex:1 1 auto; min-width:0; font-size:15px; font-weight:650; line-height:1.35; }
-  .opt .desc { display:block; padding-left:28px; color:var(--muted); font-size:13.5px; line-height:1.45; }
-  .opt.sel { border-color:var(--pick); background:var(--pickbg); box-shadow:0 0 0 3px rgba(79,70,229,.12); }
-  .opt.sel .radio { background:var(--pick); border-color:var(--pick); }
-  .opt.sel .radio::before { content:"✓"; }
-  .rec { position:absolute; top:-10px; right:12px; white-space:nowrap; font-size:10.5px; font-weight:700; letter-spacing:.06em; line-height:1;
-         color:#fff; background:linear-gradient(135deg,#4f46e5,#7c3aed); border-radius:999px; padding:5px 9px; box-shadow:0 2px 6px rgba(79,70,229,.3); }
-  .why { font-size:14px; background:#f8fafc; border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin:0 0 8px; }
-  .ev { font-size:12.5px; color:var(--muted); margin:0 0 12px; }
-  textarea { width:100%; min-height:42px; font:inherit; font-size:14px; border:1px solid var(--line); border-radius:12px; padding:10px 12px; resize:vertical; background:#fcfdfe; }
-  textarea:focus, button:focus { outline:3px solid rgba(79,70,229,.25); outline-offset:1px; }
-  .toast { position:fixed; left:50%; bottom:28px; transform:translateX(-50%); background:var(--ok); color:#fff; padding:12px 18px; border-radius:999px; display:none; font-weight:600; box-shadow:0 8px 24px rgba(5,150,105,.35); }
-  .savedflag { font-size:12px; color:var(--ok); }
-  .savedflag.unsaved { color:var(--warn); font-weight:600; }
-  h3.group { font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:28px 4px 12px; }
-  pre#out { white-space:pre-wrap; background:#0f172a; color:#e2e8f0; border-radius:14px; padding:14px 16px; font-size:13px; display:none; }
+@layer tp {
+  /* House tokens. A host page overrides any of them by setting the same name on .tp. */
+  :where(.tp) {
+    color-scheme: light;
+    --tp-paper:#F4F5F2; --tp-surface:#FFFFFF; --tp-surface-2:#ECEEE9;
+    --tp-ink:#1C232B; --tp-ink-2:#38424D; --tp-muted:#5B6570; --tp-faint:#7D868E;
+    --tp-rule:#D9DED7; --tp-rule-2:#E8EBE6;
+    --tp-accent:#0B6E63; --tp-accent-ink:#0A5A51; --tp-accent-tint:#E3F1EE; --tp-accent-line:#9CCBC3;
+    --tp-amber:#8A5A0B; --tp-amber-tint:#F6EFD9; --tp-amber-line:#D9BF84;
+    --tp-action:#FF6F61; --tp-action-hover:#FF8679; --tp-on-action:#0F0F0F; --tp-focus:#B83A2E;
+    --tp-scrim:rgba(15,15,15,.72);
+    --tp-serif:"Charter","Bitstream Charter","Iowan Old Style","Sitka Text",Cambria,Georgia,serif;
+    --tp-sans:"Avenir Next","Avenir","Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
+    --tp-mono:"SF Mono",ui-monospace,Menlo,Consolas,"Liberation Mono",monospace;
+    --tp-r-tag:6px; --tp-r-code:10px; --tp-r-btn:12px; --tp-r-card:16px; --tp-r-pill:999px;
+    --tp-fade:120ms; --tp-bar-h:64px;
+  }
+  @media (prefers-color-scheme: dark) { :where(.tp):not([data-theme="light"]) {
+    color-scheme: dark;
+    --tp-paper:#0F0F0F; --tp-surface:#161616; --tp-surface-2:#1F1F1F;
+    --tp-ink:#EDEDED; --tp-ink-2:#C4C4C4; --tp-muted:#A8A8A8; --tp-faint:#8A8A8A;
+    --tp-rule:rgba(255,255,255,.14); --tp-rule-2:rgba(255,255,255,.08);
+    --tp-accent:#12A594; --tp-accent-ink:#5CC9B9; --tp-accent-tint:#0C2B28; --tp-accent-line:#1F6158;
+    --tp-amber:#E5C56B; --tp-amber-tint:#2A2414; --tp-amber-line:#6B5A2A;
+    --tp-focus:#FF6F61; --tp-scrim:rgba(0,0,0,.8);
+  } }
+  :where(.tp)[data-theme="dark"] {
+    color-scheme: dark;
+    --tp-paper:#0F0F0F; --tp-surface:#161616; --tp-surface-2:#1F1F1F;
+    --tp-ink:#EDEDED; --tp-ink-2:#C4C4C4; --tp-muted:#A8A8A8; --tp-faint:#8A8A8A;
+    --tp-rule:rgba(255,255,255,.14); --tp-rule-2:rgba(255,255,255,.08);
+    --tp-accent:#12A594; --tp-accent-ink:#5CC9B9; --tp-accent-tint:#0C2B28; --tp-accent-line:#1F6158;
+    --tp-amber:#E5C56B; --tp-amber-tint:#2A2414; --tp-amber-line:#6B5A2A;
+    --tp-focus:#FF6F61; --tp-scrim:rgba(0,0,0,.8);
+  }
+
+  .tp, .tp *, .tp *::before, .tp *::after { box-sizing:border-box; }
+  .tp { background:var(--tp-paper); color:var(--tp-ink); font:16px/1.55 var(--tp-sans); -webkit-text-size-adjust:100%; text-size-adjust:100%;
+        -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; scroll-padding-top:calc(var(--tp-bar-h) + 16px); }
+  .tp body { margin:0; }
+  .tp :focus-visible { outline:2px solid var(--tp-focus); outline-offset:2px; }
+  .tp a { color:var(--tp-accent-ink); text-decoration-color:var(--tp-accent-line); text-underline-offset:.18em; }
+  .tp a:hover { text-decoration-color:currentColor; }
+  .tp button, .tp textarea, .tp input { font:inherit; color:inherit; }
+  .tp code { font-family:var(--tp-mono); font-size:.86em; background:var(--tp-surface-2); padding:.05em .3em; border-radius:4px; overflow-wrap:anywhere; }
+  .tp .tp-vh { position:absolute !important; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; }
+  .tp [hidden] { display:none !important; }
+
+  /* Buttons */
+  .tp .tp-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:0 16px; border-radius:var(--tp-r-btn);
+                border:1px solid var(--tp-rule); background:var(--tp-surface); color:var(--tp-ink); font:600 .9rem/1.1 var(--tp-sans); cursor:pointer; white-space:nowrap;
+                transition:border-color var(--tp-fade), background var(--tp-fade), color var(--tp-fade); }
+  .tp .tp-btn:hover { border-color:var(--tp-accent-line); color:var(--tp-accent-ink); }
+  .tp .tp-btn--go { background:var(--tp-action); border-color:var(--tp-action); color:var(--tp-on-action); }
+  .tp .tp-btn--go:hover { background:var(--tp-action-hover); border-color:var(--tp-action-hover); color:var(--tp-on-action); }
+  .tp .tp-btn--quiet { background:transparent; }
+  .tp .tp-btn.is-armed { border-color:var(--tp-focus); color:var(--tp-focus); }
+  .tp .tp-link { background:none; border:0; padding:6px 2px; min-height:44px; color:var(--tp-accent-ink); font:600 .86rem var(--tp-sans); cursor:pointer;
+                 text-decoration:underline; text-decoration-color:var(--tp-accent-line); text-underline-offset:.2em; }
+
+  /* The bar: progress strip, tally and the two actions, always in reach. */
+  .tp .tp-bar { position:sticky; top:0; z-index:20; background:color-mix(in srgb, var(--tp-paper) 88%, transparent);
+                -webkit-backdrop-filter:saturate(150%) blur(10px); backdrop-filter:saturate(150%) blur(10px); border-bottom:1px solid var(--tp-rule); }
+  .tp .tp-bar-in { position:relative; max-width:1180px; margin:0 auto; min-height:var(--tp-bar-h); padding:10px 24px; display:flex; align-items:center; gap:12px; }
+  .tp .tp-bar-title { flex:0 1 250px; min-width:0; font:400 1.05rem/1.2 var(--tp-serif); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tp .tp-strip { flex:1 1 auto; min-width:120px; max-width:440px; display:flex; align-items:center; gap:3px; height:28px; }
+  .tp .tp-seg { flex:1 1 0; height:12px; border-radius:3px; cursor:pointer; box-shadow:inset 0 0 0 1.5px var(--tp-faint); transition:background var(--tp-fade); }
+  .tp .tp-seg.tp-seg--gap { margin-left:9px; }
+  .tp .tp-seg[data-st="part"] { background:linear-gradient(90deg, var(--tp-accent) 50%, transparent 50%); box-shadow:inset 0 0 0 1.5px var(--tp-accent); }
+  .tp .tp-seg[data-st="done"] { background:var(--tp-accent); box-shadow:none; }
+  .tp .tp-seg[data-ch="1"][data-st="done"] { background:var(--tp-amber); }
+  .tp .tp-seg[data-ch="1"][data-st="part"] { background:linear-gradient(90deg, var(--tp-amber) 50%, transparent 50%); box-shadow:inset 0 0 0 1.5px var(--tp-amber); }
+  .tp .tp-seg.is-here { outline:2px solid var(--tp-ink); outline-offset:2px; }
+  .tp .tp-tally { flex:none; min-height:44px; padding:0 8px; background:none; border:0; border-radius:var(--tp-r-btn); cursor:pointer; font:500 .92rem/1.1 var(--tp-sans);
+                  color:var(--tp-ink-2); font-variant-numeric:tabular-nums lining-nums; white-space:nowrap; }
+  .tp .tp-tally b { color:var(--tp-ink); font-weight:700; font-size:1.06rem; }
+  .tp .tp-tally:hover { background:var(--tp-surface); }
+  .tp .tp-notpick { flex:none; font:600 .8rem/1 var(--tp-sans); color:var(--tp-amber); background:var(--tp-amber-tint); border-radius:var(--tp-r-pill); padding:6px 10px; white-space:nowrap; }
+  .tp .tp-bar-acts { display:flex; gap:8px; margin-left:auto; flex:none; }
+
+  /* Layout: a reading column, and a list of decisions in the margin on wide screens. */
+  .tp .tp-layout { max-width:1180px; margin:0 auto; padding:0 24px; display:grid; grid-template-columns:minmax(0,1fr); }
+  .tp .tp-main { min-width:0; max-width:780px; width:100%; margin:0 auto; padding-bottom:120px; }
+  .tp .tp-rail { display:none; }
+  @media (min-width:1100px) {
+    .tp .tp-layout { grid-template-columns:240px minmax(0,780px); gap:0 56px; justify-content:center; }
+    .tp .tp-main { grid-column:2; grid-row:1; margin:0; }
+    .tp .tp-rail { display:block; grid-column:1; grid-row:1; position:sticky; top:calc(var(--tp-bar-h) + 1px); align-self:start;
+                   max-height:calc(100vh - var(--tp-bar-h) - 1px); overflow:auto; overscroll-behavior:contain; padding:40px 4px 32px 0; scrollbar-width:thin; }
+  }
+  .tp .tp-rail-g { display:flex; justify-content:space-between; gap:8px; font:600 .78rem/1.3 var(--tp-sans); color:var(--tp-muted); margin:22px 0 6px 8px; }
+  .tp .tp-rail-g:first-child { margin-top:0; }
+  .tp .tp-rail ol { list-style:none; margin:0; padding:0; }
+  .tp .tp-rail a { display:grid; grid-template-columns:12px 1.9em minmax(0,1fr); gap:8px; align-items:start; min-height:32px; padding:4px 8px; border-radius:8px;
+                   color:var(--tp-ink-2); text-decoration:none; font-size:.86rem; line-height:1.25; }
+  .tp .tp-rail a:hover { background:var(--tp-surface); color:var(--tp-ink); }
+  .tp .tp-rail a.is-here { background:var(--tp-accent-tint); color:var(--tp-ink); font-weight:600; box-shadow:inset 0 0 0 1px var(--tp-accent-line); }
+  .tp .tp-rid { font:700 .76rem var(--tp-sans); color:var(--tp-muted); }
+  .tp .tp-rt { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+  .tp .tp-rail .tp-dot, .tp .tp-rail .tp-rid { margin-top:3px; }
+  .tp .tp-dot { width:12px; height:12px; border-radius:50%; box-shadow:inset 0 0 0 1.5px var(--tp-faint); }
+  .tp .tp-dot[data-st="part"] { background:linear-gradient(90deg, var(--tp-accent) 50%, transparent 50%); box-shadow:inset 0 0 0 1.5px var(--tp-accent); }
+  .tp .tp-dot[data-st="done"] { background:var(--tp-accent); box-shadow:none; }
+  .tp .tp-dot[data-ch="1"] { border-radius:2px; transform:rotate(45deg) scale(.86); }
+  .tp .tp-dot[data-ch="1"][data-st="done"] { background:var(--tp-amber); }
+  .tp .tp-dot[data-ch="1"][data-st="part"] { background:linear-gradient(90deg, var(--tp-amber) 50%, transparent 50%); box-shadow:inset 0 0 0 1.5px var(--tp-amber); }
+
+  /* Opening: who it is for, the title, the brief. */
+  .tp .tp-hero { padding:48px 0 4px; }
+  .tp .tp-kicker { margin:0 0 12px; font:500 .92rem var(--tp-sans); color:var(--tp-muted); }
+  .tp .tp-h1 { margin:0 0 16px; font:400 clamp(2.1rem, 1.4rem + 2.4vw, 3.05rem)/1.06 var(--tp-serif); letter-spacing:-.016em; max-width:20ch; text-wrap:balance; }
+  .tp .tp-lede { margin:0 0 22px; font:400 1.22rem/1.5 var(--tp-serif); color:var(--tp-ink-2); max-width:58ch; text-wrap:pretty; }
+  .tp .tp-how { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px 20px; align-items:start; padding:16px 0; border-top:1px solid var(--tp-rule); border-bottom:1px solid var(--tp-rule); }
+  .tp .tp-how p { margin:0; font-size:.95rem; color:var(--tp-ink-2); max-width:62ch; }
+  .tp .tp-how-tools { display:flex; align-items:center; gap:12px; }
+  .tp .tp-saved { font:500 .84rem var(--tp-sans); color:var(--tp-muted); }
+  .tp .tp-saved.is-unsaved { color:var(--tp-focus); font-weight:600; max-width:15em; line-height:1.35; }
+  .tp .tp-brief { padding:22px 0 0; }
+  .tp .tp-brief h2, .tp .tp-decided summary { font:650 1rem/1.3 var(--tp-sans); margin:0 0 8px; }
+  .tp .tp-brief-body { font:400 1.04rem/1.6 var(--tp-serif); color:var(--tp-ink); max-width:64ch; }
+  .tp .tp-brief-body p, .tp .tp-ctx p { margin:0 0 .8em; }
+  .tp .tp-brief-body ul, .tp .tp-ctx ul { margin:0 0 .8em; padding-left:1.25em; }
+  .tp .tp-brief-body li, .tp .tp-ctx li { margin:0 0 .3em; }
+  .tp .tp-source { margin:4px 0 0; font-size:.92rem; }
+  .tp .tp-decided { margin:20px 0 0; background:var(--tp-surface); border:1px solid var(--tp-rule); border-radius:var(--tp-r-card); }
+  .tp .tp-decided > summary { list-style:none; cursor:pointer; margin:0; padding:14px 18px; display:flex; gap:12px; align-items:baseline; min-height:44px; }
+  .tp .tp-decided > summary::-webkit-details-marker { display:none; }
+  .tp .tp-decided > summary::before { content:""; flex:none; width:8px; height:8px; border-right:2px solid var(--tp-accent); border-bottom:2px solid var(--tp-accent);
+                                      transform:translateY(-2px) rotate(-45deg); transition:transform var(--tp-fade); }
+  .tp .tp-decided[open] > summary::before { transform:translateY(-3px) rotate(45deg); }
+  .tp .tp-decided-sub { font-weight:500; color:var(--tp-muted); }
+  .tp .tp-decided-body { padding:0 18px 16px 38px; }
+  .tp .tp-decided ul { margin:0 0 12px; padding:0; list-style:none; display:grid; gap:8px; }
+  .tp .tp-decided li { display:grid; grid-template-columns:minmax(0,13em) minmax(0,1fr); gap:2px 16px; font-size:.92rem; }
+  .tp .tp-decided li b { font-weight:600; color:var(--tp-ink); }
+  .tp .tp-decided li span { color:var(--tp-ink-2); overflow-wrap:anywhere; }
+
+  /* Groups */
+  .tp .tp-group { margin:56px 0 0; }
+  .tp .tp-group-head { display:flex; align-items:baseline; justify-content:space-between; gap:16px; padding:0 0 10px; margin:0 0 18px; border-bottom:2px solid var(--tp-ink); }
+  .tp .tp-group-head h2 { margin:0; font:400 1.7rem/1.15 var(--tp-serif); letter-spacing:-.01em; }
+  .tp .tp-group-count { font:600 .84rem var(--tp-sans); color:var(--tp-muted); white-space:nowrap; font-variant-numeric:tabular-nums; }
+
+  /* Cards */
+  .tp .tp-card { position:relative; margin:0 0 18px; padding:22px 24px 18px 24px; background:var(--tp-surface); border:1px solid var(--tp-rule); border-radius:var(--tp-r-card); }
+  .tp .tp-card:focus { outline:none; }
+  .tp .tp-card:focus-visible { outline:2px solid var(--tp-focus); outline-offset:2px; }
+  /* A card's state is the word in its pill (outlined, then filled once answered); the whole outline follows it. */
+  .tp .tp-card { transition:border-color var(--tp-fade); }
+  .tp .tp-card[data-st="part"], .tp .tp-card[data-st="done"] { border-color:var(--tp-accent-line); }
+  .tp .tp-card[data-ch="1"] { border-color:color-mix(in srgb, var(--tp-amber) 50%, var(--tp-rule)); }
+  .tp .tp-card-head { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:6px 12px; align-items:baseline; }
+  .tp .tp-id { font:700 .8rem/1 var(--tp-sans); font-variant-numeric:lining-nums; color:var(--tp-accent-ink); background:var(--tp-accent-tint); border-radius:var(--tp-r-tag); padding:5px 7px; white-space:nowrap; }
+  .tp .tp-card-title { margin:0; font:650 1.12rem/1.32 var(--tp-sans); letter-spacing:-.005em; overflow-wrap:break-word; }
+  .tp .tp-flag { display:inline-block; margin-left:6px; font:600 .74rem/1 var(--tp-sans); color:var(--tp-muted); border:1px solid var(--tp-rule); border-radius:var(--tp-r-pill); padding:4px 8px; vertical-align:2px; }
+  .tp .tp-state { font:600 .76rem/1 var(--tp-sans); border-radius:var(--tp-r-pill); padding:6px 10px; white-space:nowrap; color:var(--tp-muted); box-shadow:inset 0 0 0 1px var(--tp-rule); }
+  .tp .tp-state[data-st="part"] { color:var(--tp-accent-ink); box-shadow:inset 0 0 0 1px var(--tp-accent-line); }
+  .tp .tp-state[data-st="done"] { color:var(--tp-accent-ink); background:var(--tp-accent-tint); box-shadow:none; }
+  .tp .tp-state[data-ch="1"] { color:var(--tp-amber); background:var(--tp-amber-tint); box-shadow:none; }
+  .tp .tp-q { margin:12px 0 14px; font:400 1.15rem/1.5 var(--tp-serif); color:var(--tp-ink); max-width:62ch; overflow-wrap:break-word; text-wrap:pretty; }
+  .tp .tp-ctx { margin:0 0 14px; font:400 1rem/1.58 var(--tp-serif); color:var(--tp-ink-2); max-width:62ch; }
+  .tp details.tp-more { margin:0 0 14px; }
+  .tp details.tp-more > summary { cursor:pointer; display:inline-flex; align-items:center; gap:8px; min-height:36px; font:600 .88rem var(--tp-sans); color:var(--tp-accent-ink); list-style:none; }
+  .tp details.tp-more > summary::-webkit-details-marker { display:none; }
+  .tp details.tp-more > summary::before { content:""; width:7px; height:7px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(-45deg); transition:transform var(--tp-fade); }
+  .tp details.tp-more[open] > summary::before { transform:rotate(45deg); }
+  .tp details.tp-more > .tp-ctx, .tp details.tp-more > .tp-textbody { margin-top:8px; }
+  .tp .tp-textbody { white-space:pre-wrap; overflow-wrap:anywhere; font:400 1rem/1.6 var(--tp-serif); background:var(--tp-paper); border:1px solid var(--tp-rule); border-radius:var(--tp-r-code); padding:12px 14px; }
+
+  /* Thread cards (open questions): what was asked, the answer, what is owed. */
+  .tp .tp-asked { margin:12px 0 10px; padding:10px 14px; background:var(--tp-surface-2); border-radius:var(--tp-r-code); font:italic 400 1.05rem/1.5 var(--tp-serif); color:var(--tp-ink-2); }
+  .tp .tp-asked small, .tp .tp-answer small { display:block; font:600 .76rem/1.4 var(--tp-sans); font-style:normal; color:var(--tp-muted); margin-bottom:2px; }
+  .tp .tp-answer { margin:0 0 12px; font:400 1.08rem/1.55 var(--tp-serif); max-width:62ch; }
+  .tp .tp-owed { margin:0 0 12px; padding:10px 14px; border-radius:var(--tp-r-code); background:var(--tp-amber-tint); color:var(--tp-ink); font-size:.94rem; }
+  .tp .tp-owed b { color:var(--tp-amber); }
+  .tp .tp-ack { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:4px 0 6px; }
+  .tp .tp-ackbtn[aria-pressed="true"] { background:var(--tp-accent-tint); border-color:var(--tp-accent); color:var(--tp-accent-ink); }
+  .tp .tp-ackbtn[aria-pressed="true"]::before { content:""; width:10px; height:5px; border-left:2px solid currentColor; border-bottom:2px solid currentColor; transform:translateY(-2px) rotate(-45deg); }
+  .tp .tp-ack span { font-size:.88rem; color:var(--tp-muted); }
+
+  /* Pictures */
+  .tp .tp-frames { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; margin:0 0 14px; }
+  .tp .tp-frame { margin:0; padding:0; border:1px solid var(--tp-rule); border-radius:var(--tp-r-code); background:var(--tp-paper); overflow:hidden; cursor:zoom-in; text-align:left; }
+  .tp .tp-frame img { display:block; width:100%; height:110px; object-fit:cover; }
+  .tp .tp-frame span { display:block; padding:6px 10px 8px; font-size:.8rem; color:var(--tp-ink-2); }
+
+  /* Questions inside a card, and their options. */
+  .tp .tp-part { margin:0 0 6px; padding:0; border:0; min-width:0; }
+  .tp .tp-part + .tp-part { margin-top:18px; padding-top:16px; border-top:1px solid var(--tp-rule-2); }
+  .tp .tp-part-q { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; padding:0; margin:0 0 10px; font:400 1.06rem/1.45 var(--tp-serif); color:var(--tp-ink); }
+  .tp .tp-pid { font:700 .78rem/1 var(--tp-sans); color:var(--tp-muted); }
+  .tp .tp-hint { font:600 .76rem var(--tp-sans); color:var(--tp-muted); }
+  .tp .tp-opts { display:grid; gap:8px; }
+  .tp .tp-opts--compact { grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); }
+  .tp .tp-opt { position:relative; display:grid; grid-template-columns:22px minmax(0,1fr); gap:0 12px; align-items:start; padding:12px 14px; min-height:48px;
+                border:1px solid var(--tp-rule); border-radius:var(--tp-r-btn); background:var(--tp-surface); cursor:pointer;
+                transition:border-color var(--tp-fade), background var(--tp-fade), box-shadow var(--tp-fade); }
+  .tp .tp-opt:hover { border-color:var(--tp-accent-line); }
+  .tp .tp-opt input { position:absolute; left:0; top:0; width:1px; height:1px; opacity:0; margin:0; pointer-events:none; }
+  .tp .tp-opt:has(input:focus-visible) { outline:2px solid var(--tp-focus); outline-offset:2px; }
+  .tp .tp-mark { width:20px; height:20px; margin-top:1px; border-radius:50%; border:1.5px solid var(--tp-faint); background:var(--tp-surface); display:grid; place-items:center; }
+  .tp .tp-opt--multi .tp-mark { border-radius:5px; }
+  .tp .tp-opt-body { min-width:0; display:grid; gap:3px; }
+  .tp .tp-opt-top { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; }
+  .tp .tp-opt-label { font:650 1rem/1.35 var(--tp-sans); color:var(--tp-ink); overflow-wrap:break-word; }
+  .tp .tp-badge { font:700 .72rem/1 var(--tp-sans); color:var(--tp-accent-ink); border:1px solid var(--tp-accent-line); border-radius:var(--tp-r-pill); padding:4px 8px; white-space:nowrap; }
+  .tp .tp-opt-desc { font-size:.93rem; line-height:1.5; color:var(--tp-ink-2); overflow-wrap:break-word; }
+  .tp .tp-opt-down { font-size:.88rem; line-height:1.45; color:var(--tp-muted); overflow-wrap:break-word; }
+  .tp .tp-opt-down b { font-weight:600; color:var(--tp-ink-2); }
+  .tp .tp-why { margin:8px 0 2px; padding:10px 12px 11px; border-radius:var(--tp-r-code); background:var(--tp-surface); border:1px solid var(--tp-accent-line);
+                font:400 .98rem/1.52 var(--tp-serif); color:var(--tp-ink); overflow-wrap:break-word; }
+  .tp .tp-why b { display:block; margin:0 0 2px; font:700 .76rem/1.3 var(--tp-sans); color:var(--tp-accent-ink); }
+  .tp .tp-why .tp-flip { display:block; margin-top:6px; font-size:.92rem; color:var(--tp-ink-2); }
+  .tp .tp-why .tp-flip b { display:inline; }
+  .tp .tp-part > .tp-why { margin-top:10px; }
+  /* Chosen, and confirmed by the ruler. */
+  .tp .tp-opt:has(input:checked) { border-color:var(--tp-accent); background:var(--tp-accent-tint); box-shadow:inset 0 0 0 1px var(--tp-accent); }
+  .tp .tp-opt:has(input:checked) .tp-mark { background:var(--tp-accent); border-color:var(--tp-accent); }
+  .tp .tp-opt:has(input[type="radio"]:checked) .tp-mark::after { content:""; width:8px; height:8px; border-radius:50%; background:var(--tp-surface); }
+  .tp .tp-opt:has(input[type="checkbox"]:checked) .tp-mark::after { content:""; width:10px; height:5px; border-left:2px solid var(--tp-surface); border-bottom:2px solid var(--tp-surface); transform:translateY(-1px) rotate(-45deg); }
+  /* My pick, pre-selected but not yet confirmed: dashed, hollow mark. */
+  .tp .tp-part.is-suggest .tp-opt:has(input:checked) { border-style:dashed; box-shadow:none; background:color-mix(in srgb, var(--tp-accent-tint) 45%, var(--tp-surface)); }
+  .tp .tp-part.is-suggest .tp-opt:has(input:checked) .tp-mark { background:var(--tp-surface); }
+  .tp .tp-part.is-suggest .tp-opt:has(input[type="radio"]:checked) .tp-mark::after { background:var(--tp-accent); }
+  .tp .tp-part.is-suggest .tp-opt:has(input[type="checkbox"]:checked) .tp-mark::after { border-color:var(--tp-accent); }
+  .tp .tp-keep { margin-top:4px; }
+  .tp .tp-input, .tp .tp-note textarea, .tp .tp-pagenote textarea, .tp .tp-decided textarea {
+    display:block; width:100%; min-height:46px; field-sizing:content; max-height:60vh; resize:vertical; padding:11px 13px; border:1px solid var(--tp-rule); border-radius:var(--tp-r-code);
+    background:var(--tp-paper); color:var(--tp-ink); font:400 1rem/1.5 var(--tp-serif); }
+  .tp .tp-input::placeholder, .tp textarea::placeholder { color:var(--tp-muted); opacity:1; }
+  .tp .tp-input:focus, .tp textarea:focus { border-color:var(--tp-accent); }
+  .tp .tp-note { display:block; margin:14px 0 0; }
+  .tp .tp-ev { margin:14px 0 0; font-size:.86rem; line-height:1.5; color:var(--tp-muted); overflow-wrap:anywhere; }
+  .tp .tp-ev b { color:var(--tp-ink-2); font-weight:600; }
+  .tp .tp-foot { display:flex; justify-content:flex-end; margin:4px 0 -8px; }
+
+  /* Finish */
+  .tp .tp-finish { margin:64px 0 0; padding:26px 28px 24px; background:var(--tp-surface); border:1px solid var(--tp-rule); border-radius:var(--tp-r-card); scroll-margin-top:calc(var(--tp-bar-h) + 16px); }
+  .tp .tp-finish h2 { margin:0 0 6px; font:400 1.7rem/1.15 var(--tp-serif); }
+  .tp .tp-finish-sum { margin:0 0 16px; color:var(--tp-ink-2); max-width:62ch; }
+  .tp .tp-jumps { margin:0 0 14px; }
+  .tp .tp-jumps h3 { margin:0 0 6px; font:650 .9rem var(--tp-sans); }
+  .tp .tp-jumps ul { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:6px; }
+  .tp .tp-jumps a { display:inline-flex; gap:6px; align-items:center; min-height:36px; padding:4px 11px; border-radius:var(--tp-r-pill); border:1px solid var(--tp-rule);
+                    background:var(--tp-paper); color:var(--tp-ink); text-decoration:none; font-size:.86rem; max-width:100%; }
+  .tp .tp-jumps li { min-width:0; max-width:100%; }
+  .tp .tp-jumps a { max-width:100%; }
+  .tp .tp-jumps a span:last-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tp .tp-jumps a:hover { border-color:var(--tp-accent-line); }
+  .tp .tp-pagenote { display:block; margin:18px 0 16px; }
+  .tp .tp-pagenote > span { display:block; font:650 .9rem var(--tp-sans); margin:0 0 6px; }
+  .tp .tp-finish-acts { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .tp .tp-finish-acts .tp-btn--quiet { margin-left:auto; }
+  .tp .tp-out { margin:16px 0 0; padding:14px 16px; background:var(--tp-paper); border:1px solid var(--tp-rule); border-radius:var(--tp-r-code);
+                font:13px/1.6 var(--tp-mono); white-space:pre-wrap; overflow-wrap:anywhere; max-height:420px; overflow:auto; }
+
+  .tp .tp-toast { position:fixed; left:50%; bottom:24px; z-index:40; transform:translateX(-50%); max-width:min(560px, calc(100vw - 32px)); padding:12px 18px; border-radius:var(--tp-r-btn);
+                  background:var(--tp-ink); color:var(--tp-paper); font:600 .92rem/1.4 var(--tp-sans); box-shadow:0 12px 40px -12px rgba(0,0,0,.5); }
+  .tp .tp-toast:empty { display:none; }
+
+  .tp dialog.tp-lb { border:0; padding:0; max-width:min(1000px, 94vw); background:var(--tp-surface); color:var(--tp-ink); border-radius:var(--tp-r-card); }
+  .tp dialog.tp-lb::backdrop { background:var(--tp-scrim); }
+  .tp .tp-lb figure { margin:0; }
+  .tp .tp-lb img { display:block; max-width:100%; max-height:76vh; margin:0 auto; background:var(--tp-paper); }
+  .tp .tp-lb figcaption { padding:10px 16px 0; font-size:.9rem; color:var(--tp-ink-2); }
+  .tp .tp-lb-acts { display:flex; gap:8px; justify-content:flex-end; padding:12px 16px 16px; }
+
+  /* Scripts off (a preview such as Quick Look): only the message shows; buttons that cannot work are hidden. */
+  .tp.no-js .tp-bar, .tp.no-js .tp-how, .tp.no-js .tp-finish, .tp.no-js .tp-rail { display:none; }
+  .tp .tp-noscript { max-width:640px; margin:48px auto; padding:0 24px; font:400 1.1rem/1.5 var(--tp-serif); }
+
+  /* Between phone and desktop */
+  @media (max-width:1099px) { .tp .tp-bar-title { flex-basis:200px; } }
+  @media (max-width:860px) { .tp .tp-bar-title { display:none; } .tp .tp-notpick { display:none; } }
+  /* Phone */
+  @media (max-width:719px) {
+    .tp { --tp-bar-h:60px; }
+    .tp .tp-bar-in { padding:6px 12px 12px; gap:6px; }
+    .tp .tp-strip { position:absolute; left:12px; right:12px; bottom:4px; height:5px; max-width:none; gap:2px; pointer-events:none; }
+    .tp .tp-seg { height:5px; border-radius:2px; box-shadow:inset 0 0 0 1px var(--tp-faint); }
+    .tp .tp-seg.tp-seg--gap { margin-left:5px; }
+    .tp .tp-seg.is-here { outline:0; }
+    .tp .tp-tally { padding:0 4px; font-size:.86rem; }
+    .tp .tp-btn { padding:0 12px; font-size:.86rem; }
+    .tp .tp-wide { display:none; }
+    .tp .tp-layout { padding:0 16px; }
+    .tp .tp-hero { padding-top:28px; }
+    .tp .tp-lede { font-size:1.1rem; }
+    .tp .tp-how { grid-template-columns:minmax(0,1fr); }
+    .tp .tp-decided-body { padding:0 14px 14px; }
+    /* Already decided, folded: the label on one line, the count under it. */
+    .tp .tp-decided > summary { display:grid; grid-template-columns:auto minmax(0,1fr); gap:2px 12px; align-items:center; padding:12px 14px; }
+    .tp .tp-decided > summary::before { grid-row:1; }
+    .tp .tp-decided-sub { grid-column:2; font-size:.88rem; line-height:1.35; }
+    .tp .tp-decided li { grid-template-columns:minmax(0,1fr); }
+    .tp .tp-group { margin-top:40px; }
+    .tp .tp-group-head h2 { font-size:1.45rem; }
+    .tp .tp-card { padding:16px 14px 14px 18px; border-radius:12px; }
+    .tp .tp-card-head { grid-template-columns:auto minmax(0,1fr); grid-template-areas:"id state" "title title"; }
+    .tp .tp-card-head .tp-id { grid-area:id; justify-self:start; }
+    .tp .tp-card-head .tp-state { grid-area:state; justify-self:end; }
+    .tp .tp-card-head .tp-card-title { grid-area:title; }
+    .tp .tp-q { font-size:1.08rem; }
+    .tp .tp-opt { padding:12px; gap:0 10px; }
+    .tp .tp-finish { padding:20px 16px; }
+    .tp .tp-finish-acts .tp-btn { flex:1 1 auto; }
+    .tp .tp-finish-acts .tp-btn--quiet { margin-left:0; }
+  }
+  @media (prefers-reduced-motion: reduce) { .tp *, .tp *::before { transition:none !important; scroll-behavior:auto !important; } }
+  @media print {
+    .tp { background:#fff; color:#000; }
+    .tp .tp-bar, .tp .tp-rail, .tp .tp-btn, .tp .tp-link, .tp .tp-toast, .tp .tp-how-tools, .tp .tp-finish-acts, .tp .tp-strip { display:none !important; }
+    .tp .tp-layout { display:block; padding:0; max-width:none; }
+    .tp .tp-card, .tp .tp-opt { break-inside:avoid; }
+    .tp .tp-group-head { break-after:avoid; }
+    .tp textarea { border:1px solid #999; }
+  }
+}
 </style>
 </head>
 <body>
-<header><div class="bar">
-  <h1>Decisions for today · 6 cards</h1>
-  <div class="actions"><button id="acceptAll">Accept all picks</button><button class="primary" id="copy">Copy my answers</button></div>
-  <div class="sub"><span class="count" id="count"></span><span class="savedflag" id="saved">Answers save as you go</span><span>My pick is already selected on every card. Change any you disagree with, then press <b>Copy my answers</b> and paste it into the chat.</span></div>
-</div></header>
-<main id="cards"></main>
-<main style="margin-top:-60px"><pre id="out"></pre></main>
-<div class="toast" id="toast">Copied. Paste it into the chat.</div>
+<noscript><div class="tp-noscript"><p>This ruling page records answers with a script, which this preview does not run. Open the file in a browser to answer.</p></div></noscript>
+
+<!-- DATA: authors edit from here to the end of this script, plus the <h1> below. -->
 <script>
-const D = [
- { id:"R1", group:"Release (Platform)", title:"When the new billing service goes live",
-   q:"Which day should the new billing service take over from the old one?",
-   opts:[["Thursday","Two quiet weekdays in production before the month-end peak."],["Next Monday","Waits for one more full load test. Four days later."]],
-   pick:0, why:"The extra load test was a planning agent's suggestion, not a requirement. Thursday gives two live weekdays before the peak, with an instant rollback on any wrong charge.",
-   ev:"Load test at 3x peak passed; plan doc section 1." },
- { id:"R2", group:"Release (Platform)", title:"Instant rollback on a defined trigger",
-   q:"If any of these happen, can the on-call agent switch the old service back at once and tell you in the same minute: a wrong charge, a duplicate charge, the service down for 10 minutes?",
-   opts:[["Yes","Rollback in minutes, without waiting for you."],["No","It stops and waits for your go."]],
-   pick:0, why:"Each trigger costs money or trust every minute it runs.", ev:"Rollback rehearsed twice in staging." },
- { id:"R3", group:"Release (Platform)", title:"Strongest model on the money path",
-   q:"Should the strongest model build the four pieces that move money from the first review round, not only from the second?",
-   opts:[["Yes","Money-path pieces get the strongest model from the start."],["No","They start on the cheaper builder like everything else."]],
-   pick:0, why:"They run one after another on the critical path, and a wrong line there is a wrong charge.", ev:"Critical-path list in the plan." },
- { id:"R4", group:"Release (Platform)", title:"Cloud budget alarm",
-   q:"Raise the cloud budget alarm from USD 500 to USD 700 a month?",
-   opts:[["Yes","The alarm fires only above the approved spend."],["No","Keep USD 500; it keeps firing."]],
-   pick:0, why:"Actual spend is USD 604 with a USD 675 forecast, inside the approved increase, so the current alarm is always on and means nothing.", ev:"Budget dashboard." },
- { id:"R5", group:"Current system (Support)", title:"Legacy fix",
-   q:"Should we keep working on the fix for the old service, which is being replaced this week?",
-   opts:[["Park it until the switch","Keep today's behaviour; the new service doesn't have the bug."],["Keep fixing","More review rounds on code that retires this week."]],
-   pick:0, why:"Three review rounds; each fix traded one risk for another.", ev:"The fix's pull request." },
- { id:"R6", group:"Current system (Support)", title:"Send the customer the analysis",
-   q:"Should the updated analysis go to the customer now, as promised on Friday?",
-   opts:[["Yes, after the two-reviewer check","The agent drafts it; you send it."],["Not yet","It stays a draft."],["Ask me again tomorrow","Nothing goes out today."]],
-   pick:0, why:"It was promised three days ago and answers the question they asked.", ev:"Draft in the customer folder, marked draft." }
-];
-const RULING_KEY = "ruling-page:" + location.pathname;
-let saved = {};
-try { saved = JSON.parse(localStorage.getItem(RULING_KEY) || "{}"); } catch (e) { saved = {}; }
-const state = {};
-let storageOK = true;
-try { localStorage.setItem("__ruling_probe", "1"); localStorage.removeItem("__ruling_probe"); } catch (e) { storageOK = false; }
-// Where storage is blocked (a sandboxed artifact, some file:// setups) the page must not claim answers are saved.
-function markUnsaved(){ const el=document.getElementById("saved"); if (el) { el.textContent="Not saved in this window: copy your answers before you close it"; el.classList.add("unsaved"); } }
-function persist(){ if (!storageOK) { markUnsaved(); return; } try { localStorage.setItem(RULING_KEY, JSON.stringify(state)); const el=document.getElementById("saved"); if (el) { el.textContent="Saved"; clearTimeout(persist.t); persist.t=setTimeout(()=>el.textContent="Answers save as you go", 1200); } } catch (e) { storageOK = false; markUnsaved(); } }
-if (!storageOK) markUnsaved();
-const cards = document.getElementById("cards");
-function render(){
-  cards.innerHTML = "";
-  let lastGroup = null;
-  D.forEach(d => {
-    const g = d.group || lastGroup;
-    if (g && g !== lastGroup) { const h = document.createElement("h3"); h.className="group"; h.textContent = g; cards.appendChild(h); lastGroup = g; }
-    if (!(d.id in state)) {
-      const sv = saved[d.id];
-      state[d.id] = (sv && Number.isInteger(sv.choice) && sv.choice >= 0 && sv.choice < d.opts.length)
-        ? { choice: sv.choice, other: typeof sv.other === "string" ? sv.other : "" }
-        : { choice: d.pick, other: (sv && typeof sv.other === "string") ? sv.other : "" };
-    }
-    const c = document.createElement("section"); c.className="card";
-    // Card text is data, not markup: every field is set with textContent so pasted source text cannot inject HTML.
-    const h2 = document.createElement("h2"); const tag = document.createElement("span"); tag.className="tag"; tag.textContent = d.id;
-    h2.append(tag, document.createTextNode(d.title)); c.appendChild(h2);
-    const q = document.createElement("p"); q.className="q"; q.textContent = d.q; c.appendChild(q);
-    const opts = document.createElement("div"); opts.className="opts";
-    d.opts.forEach((o,i) => {
-      const b = document.createElement("button"); b.className="opt"+(state[d.id].choice===i?" sel":"");
-      if (i===d.pick) { const rec = document.createElement("span"); rec.className="rec"; rec.textContent="MY PICK"; b.appendChild(rec); }
-      const head = document.createElement("span"); head.className="head";
-      const radio = document.createElement("span"); radio.className="radio";
-      const lbl = document.createElement("span"); lbl.className="lbl"; lbl.textContent = o[0];
-      head.append(radio, lbl);
-      const desc = document.createElement("span"); desc.className="desc"; desc.textContent = o[1];
-      b.append(head, desc);
-      b.onclick = () => { state[d.id].choice=i; persist(); render(); };
-      opts.appendChild(b);
-    });
-    c.appendChild(opts);
-    const why = document.createElement("div"); why.className="why"; const wb = document.createElement("b"); wb.textContent = "Why my pick:"; why.append(wb, document.createTextNode(" "+d.why)); c.appendChild(why);
-    const ev = document.createElement("div"); ev.className="ev"; ev.textContent = "Evidence: "+d.ev; c.appendChild(ev);
-    const t = document.createElement("textarea"); t.placeholder="Anything else? Type it here (optional)"; t.value=state[d.id].other;
-    t.oninput = e => { state[d.id].other = e.target.value; persist(); };
-    c.appendChild(t);
-    cards.appendChild(c);
-  });
-  if (typeof count==='function') count();
-}
-render();
-function count(){ const kept=D.filter(d=>state[d.id].choice===d.pick).length; const el=document.getElementById('count'); el.textContent = kept===D.length ? 'All '+D.length+' on my pick' : (D.length-kept)+' changed from my pick'; el.className='count'+(kept===D.length?'':' changed'); }
-count();
-document.getElementById("acceptAll").onclick = () => { D.forEach(d => { state[d.id].choice=d.pick; }); persist(); render(); };
-document.getElementById("copy").onclick = async () => {
-  const lines = ["Rulings:"];
-  D.forEach(d => {
-    const s = state[d.id]; const o = d.opts[s.choice][0];
-    let line = `${d.id} ${d.title}: ${o}${s.choice===d.pick?" (your pick)":" (NOT your pick)"}`;
-    if (s.other.trim()) line += ` | note: ${s.other.trim()}`;
-    lines.push(line);
-  });
-  const text = lines.join("\n");
-  const out = document.getElementById("out"); out.textContent = text; out.style.display="block";
-  // Clipboard access is blocked in some hosts (sandboxed artifacts, file:// in some browsers).
-  // Only claim "Copied" when it worked; otherwise leave the text selected on the page to copy by hand.
-  let ok = false;
-  try { await navigator.clipboard.writeText(text); ok = true; } catch(e) {
-    try { const r = document.createRange(); r.selectNodeContents(out); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); ok = document.execCommand("copy"); } catch(e2) { ok = false; }
-  }
-  const t = document.getElementById("toast"); t.textContent = ok ? "Copied. Paste it into the chat." : "Could not copy automatically. The answers are selected below: copy them by hand."; t.style.display = "block"; if (!ok) out.scrollIntoView({block:"center"}); setTimeout(()=>t.style.display="none", ok ? 2500 : 6000);
+const RULER = "";
+const BRIEF = {
+  date: "2 November 2026",
+  lede: "Seven choices on the new support desk and the website relaunch. My pick is already selected on each one, so most take a single click.",
+  body: "Support emails now arrive in five people's own inboxes, and two customers waited over a week for a reply last month. The website relaunch is designed and waiting on a date.\n\nThis is the sample the template ships with: replace RULER, BRIEF, D and the title with your own. It shows each kind of card once: several questions on one card (W1), a typed answer (S4), pictures (W2) and a draft to approve (W3).",
+  decided: [
+    ["The support address stays the same", "Customers keep writing to the address they already know."],
+    ["Replies are signed with a first name", "Every reply says who wrote it."],
+    ["Old help pages redirect to the new ones", "No link in an old email stops working."]
+  ],
+  source: ["Read the full plan", "plan.html"]
 };
+const svg = s => "data:image/svg+xml," + encodeURIComponent(s);
+const D = [
+  {"id": "S1", "group": "Support desk", "title": "Where customer emails land", "q": "Where should customer emails go once the support desk is running?", "opts": [["A shared inbox", "Everyone on the team sees every email; nothing new to learn."], ["A help-desk tool", "Each email becomes a ticket with an owner and a status.", "A monthly fee per person, and a week to set it up."], ["Each person's own inbox", "As today."]], "pick": 0, "why": "A shared inbox fixes the lost emails at no cost, and about 40 emails a day doesn't need a ticket system.", "ev": "Last month: 1,180 support emails across five inboxes; 23 were answered twice and 2 waited over a week."},
+  {"id": "S2", "group": "Support desk", "title": "How fast we promise to reply", "q": "What reply time should the website promise customers?", "opts": [["One working day", "Easy to keep with the team we have."], ["Four working hours", "Faster than most of our competitors.", "Someone has to watch the inbox all day."], ["No promise", "As today."]], "pick": 0, "why": "We answer 9 in 10 emails within a working day already, so the promise is one we can keep from the first week.", "flip": "a second person joins the support team.", "ev": "Median first reply last month: 5 working hours; 91% inside one working day."},
+  {"id": "S3", "group": "Support desk", "title": "Weekend cover", "q": "Should anyone answer support emails at the weekend?", "opts": [["Nobody at the weekend", "The website says replies resume on Monday."], ["One person on call", "Urgent emails get an answer within the day.", "A weekend roster to run and pay for."]], "pick": 0, "why": "Weekend emails are 4% of the total, and none last month was urgent.", "ev": "Weekend emails last month: 47 of 1,180."},
+  {"id": "S4", "group": "Support desk", "title": "The questions customers ask most", "q": "Which three questions do customers ask most often? They go at the top of the new help page.", "input": "text", "placeholder": "One per line. Leave it empty and I'll use last month's top three.", "ev": "Last month's top three by count: delivery times, refunds, changing an order."},
+  {"id": "W1", "group": "Website", "title": "When the new website goes live", "chip": "Can wait",
+   "q": "The new website is designed and built. When should it go live, and with which pages?",
+   "context": "The launch needs three things in place first:\n- the support desk running, so new questions have somewhere to go\n- every old help page redirected\n- **nothing** changed in the checkout until after launch",
+   "parts": [
+     {"id": "W1a", "q": "Which pages go live first?", "multi": true, "opts": [["Home", "The page most customers land on."], ["Pricing", "Changes the most often."], ["Help", "Needs the support desk first."]], "pick": [0], "why": "The home page is ready and carries no risk to orders."},
+     {"id": "W1b", "q": "When should it go live?", "opts": [["End of the month", "Before the busy season starts."], ["After the support desk is running", "New questions have somewhere to go.", "Holds the launch for another month."]], "pick": 0, "why": "The home page doesn't depend on the support desk, so it needn't wait.", "flip": "the support desk slips past the end of the month."},
+     {"id": "W1c", "q": "Anything the launch must include?", "input": "text", "placeholder": "Optional. For example, a page you want checked on the first day."}
+   ],
+   "ev": "Launch checklist. A long path to test wrapping on a phone: plans/website-relaunch/launch-checklist-with-a-deliberately-long-file-name-for-wrapping.md#before-launch"},
+  {"id": "W2", "group": "Website", "title": "The home page layout",
+   "q": "Which layout should the new home page use?",
+   "frames": [
+     {"src": svg('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200"><rect width="320" height="200" fill="#f4f5f2"/><rect x="60" y="16" width="200" height="40" rx="6" fill="#0b6e63"/><g fill="#d9ded7"><rect x="60" y="70" width="200" height="8" rx="4"/><rect x="60" y="86" width="170" height="8" rx="4"/><rect x="60" y="110" width="200" height="34" rx="6"/><rect x="60" y="154" width="200" height="34" rx="6"/></g></svg>'), "cap": "Layout A: one column (a drawing)"},
+     {"src": svg('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200"><rect width="320" height="200" fill="#f4f5f2"/><rect x="20" y="16" width="280" height="40" rx="6" fill="#0b6e63"/><g fill="#d9ded7"><rect x="20" y="70" width="134" height="118" rx="6"/><rect x="166" y="70" width="134" height="54" rx="6"/><rect x="166" y="134" width="134" height="54" rx="6"/></g></svg>'), "cap": "Layout B: two columns (a drawing)"}
+   ],
+   "opts": [["Layout A, one column", "Reads the same on a phone and a laptop."], ["Layout B, two columns", "More on screen at once on a laptop.", "Turns into a long single column on a phone."]],
+   "pick": 0, "why": "Most visitors arrive on a phone, and one column reads best there.", "ev": "Last month: 68% of visits were on a phone. The pictures are small drawings inside the file, so the page stays one file."},
+  {"id": "W3", "group": "Website", "title": "Tell the team about the launch",
+   "q": "Should the launch plan go to the whole team as the message below?",
+   "text": "The new website goes live at the end of the month, starting with the home page. Help and pricing follow once the support desk is running. Questions to me before Friday, please.",
+   "textLabel": "Show the message that goes out",
+   "opts": [["Yes, send it", "Everyone knows the date and what changes.", "A public date to hit."], ["Send it after launch", "Only the result goes out.", "Nobody hears about it until the day."], ["Don't send it", "The plan stays with this group."]],
+   "pick": 0, "why": "A dated message lets the team plan around the launch at no cost.", "flip": "the launch date moves before the message would go out.",
+   "ev": "Draft written from the launch checklist."}
+];
+</script>
+<!-- END DATA -->
+
+<div class="tp-bar" role="region" aria-label="Progress and actions">
+  <div class="tp-bar-in">
+    <span class="tp-bar-title" id="tp-bar-title" aria-hidden="true"></span>
+    <div class="tp-strip" id="tp-strip" aria-hidden="true"></div>
+    <button class="tp-tally" id="tp-tally" type="button"></button>
+    <span class="tp-notpick" id="tp-notpick" hidden></span>
+    <div class="tp-bar-acts">
+      <button class="tp-btn" id="acceptAll" type="button">Accept all picks</button>
+      <button class="tp-btn tp-btn--go" id="copy" type="button"><span>Copy<span class="tp-wide"> my answers</span></span></button>
+    </div>
+  </div>
+</div>
+
+<div class="tp-layout">
+  <main class="tp-main" id="tp-main">
+    <header class="tp-hero">
+      <p class="tp-kicker" id="tp-kicker"></p>
+      <h1 class="tp-h1" id="tp-title">Support desk and website relaunch</h1>
+      <p class="tp-lede" id="tp-lede" hidden></p>
+      <div class="tp-how">
+        <p id="tp-how">My pick is selected on every card, dashed until you click it. Click to agree or choose another, then press Copy my answers and paste it into the chat. Anything you skip is listed as not answered.</p>
+        <div class="tp-how-tools"><span class="tp-saved" id="saved">Answers save in this browser</span><button class="tp-btn tp-btn--quiet" id="tp-theme" type="button">Dark</button></div>
+      </div>
+      <div class="tp-brief" id="tp-brief" hidden></div>
+    </header>
+    <div id="tp-cards"></div>
+    <section class="tp-finish" id="tp-finish" aria-labelledby="tp-finish-h">
+      <h2 id="tp-finish-h">Send your answers</h2>
+      <p class="tp-finish-sum" id="tp-sum"></p>
+      <div id="tp-jumps"></div>
+      <label class="tp-pagenote"><span>Anything else?</span><textarea id="tp-pagenote" rows="2" placeholder="Optional. A note about the whole page."></textarea></label>
+      <div class="tp-finish-acts">
+        <button class="tp-btn tp-btn--go" id="tp-copy2" type="button">Copy my answers</button>
+        <button class="tp-btn" id="tp-show" type="button" aria-expanded="false" aria-controls="out">Show the text</button>
+        <button class="tp-btn tp-btn--quiet" id="tp-clear" type="button">Clear my answers</button>
+      </div>
+      <pre class="tp-out" id="out" hidden></pre>
+    </section>
+  </main>
+  <nav class="tp-rail" id="tp-rail" aria-label="Decisions on this page"></nav>
+</div>
+<div class="tp-toast" id="toast" role="status" aria-live="polite"></div>
+<dialog class="tp-lb" id="tp-lb" aria-labelledby="tp-lb-cap">
+  <figure><img id="tp-lb-img" alt=""><figcaption id="tp-lb-cap"></figcaption></figure>
+  <div class="tp-lb-acts"><button class="tp-btn" id="tp-lb-prev" type="button">Previous</button><button class="tp-btn" id="tp-lb-next" type="button">Next</button><button class="tp-btn" id="tp-lb-close" type="button">Close</button></div>
+</dialog>
+
+<script>
+/* Ruling page engine. Authors never edit below this line. */
+(function () {
+  "use strict";
+  var doc = document, root = doc.documentElement;
+  var THREADS = typeof T !== "undefined" && Array.isArray(T);
+  var SRC = THREADS ? T : (typeof D !== "undefined" && Array.isArray(D) ? D : []);
+  var WHO = typeof RULER === "string" ? RULER.trim() : "";
+  var INFO = (typeof BRIEF === "object" && BRIEF) ? BRIEF : {};
+  /* Only when the page is embedded in a host page that collects answers: they are posted to the host at its exact origin, never "*". */
+  var BRIDGE = null;
+  if (typeof RULING_BRIDGE === "object" && RULING_BRIDGE) {
+    if (typeof RULING_BRIDGE.origin === "string" && /^https?:\/\/[^\/\s*?#]+$/.test(RULING_BRIDGE.origin)) BRIDGE = RULING_BRIDGE;
+    else console.error("Ruling page: RULING_BRIDGE.origin must be the host page's exact origin, such as https://host.example; nothing is posted.");
+  }
+  var KEY = "ruling-page:" + location.pathname;
+
+  function $(id) { return doc.getElementById(id); }
+  function el(tag, cls, text) { var e = doc.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = String(text); return e; }
+  /* DOM-safe and collision-free: letters, digits and underscore stay; anything else becomes -<hex>- (A.1 and A-1 differ). */
+  function sid(s) { return String(s).replace(/[^A-Za-z0-9_]/g, function (ch) { return "-" + ch.charCodeAt(0).toString(16) + "-"; }); }
+  /* Card text is data, never markup: only **bold** and `code` become elements, built node by node. */
+  function inline(parent, text) {
+    String(text).split(/(\*\*[^*\n]+\*\*|`[^`\n]+`)/).forEach(function (bit) {
+      if (!bit) return;
+      if (/^\*\*[^*]+\*\*$/.test(bit)) parent.appendChild(el("strong", null, bit.slice(2, -2)));
+      else if (/^`[^`]+`$/.test(bit)) parent.appendChild(el("code", null, bit.slice(1, -1)));
+      else parent.appendChild(doc.createTextNode(bit));
+    });
+  }
+  function prose(parent, text) {
+    String(text || "").split(/\n\s*\n/).forEach(function (block) {
+      var lines = block.split("\n").filter(function (l) { return l.trim(); }), para = [], list = null;
+      function flush() { if (para.length) { var p = el("p"); inline(p, para.join(" ")); parent.appendChild(p); para = []; } }
+      lines.forEach(function (l) {
+        var m = l.match(/^\s*[-*]\s+(.*)$/);
+        if (m) { flush(); if (!list) { list = el("ul"); parent.appendChild(list); } var li = el("li"); inline(li, m[1]); list.appendChild(li); }
+        else { list = null; para.push(l.trim()); }
+      });
+      flush();
+    });
+  }
+  function safeHref(h) { h = String(h || ""); return /^(https?:|file:|mailto:|#|\.{0,2}\/|[A-Za-z0-9_][^:]*$)/.test(h) ? h : ""; }
+
+  /* The model: every card becomes a list of parts. A plain card is one part keyed "_". */
+  function okPick(opts, i) { return Number.isInteger(i) && i >= 0 && i < opts.length; }
+  function mkPart(src, key, label, solo) {
+    var opts = Array.isArray(src.opts) ? src.opts.filter(function (o) { return Array.isArray(o) && o.length; }) : [];
+    var kind = src.kind === "ack" ? "ack" : src.input === "text" ? "text" : src.multi ? "multi" : "single";
+    if ((kind === "single" || kind === "multi") && !opts.length) kind = "text";
+    var pick = kind === "multi" ? (Array.isArray(src.pick) ? src.pick : [src.pick]).filter(function (i) { return okPick(opts, i); })
+             : (kind === "single" && okPick(opts, src.pick)) ? src.pick : -1;
+    return { key: key, id: label, kind: kind, solo: !!solo, q: solo ? "" : String(src.q || ""), opts: opts, pick: pick,
+             why: String(src.why || ""), flip: String(src.flip || ""), placeholder: String(src.placeholder || ""), ownNote: !!src.ownNote };
+  }
+  /* Ids are unique: a card (or a part within a card) that repeats an id, or uses "__proto__", is left out, loudly. */
+  function freshId(seen, id, what) {
+    if (id === "__proto__" || seen[id]) { console.error("Ruling page: the " + what + " id \"" + id + "\" is used twice or reserved; that " + what + " is left out."); return false; }
+    return (seen[id] = true);
+  }
+  var lastGroup, seenCards = Object.create(null);
+  var CARDS = SRC.filter(function (d) { return d && d.id != null && freshId(seenCards, String(d.id), "card"); }).map(function (d) {
+    var seenParts = Object.create(null);
+    var c = { d: d, id: String(d.id), dom: "card-" + sid(d.id), title: String(d.title || ""), parts: [] };
+    c.group = d.group || lastGroup; lastGroup = c.group;
+    if (THREADS) {
+      c.thread = { asked: d.asked, when: d.when, answer: d.answer, owed: d.owed };
+      c.parts.push(mkPart({ kind: "ack" }, "ack", c.id, false));
+      (d.branches || []).forEach(function (b) { if (!b || !freshId(seenParts, String(b.id), "branch")) return; var p = mkPart(b, "b:" + b.id, String(b.id), false); p.ownNote = true; c.parts.push(p); });
+    } else if (Array.isArray(d.parts) && d.parts.length) {
+      d.parts.forEach(function (p, i) { if (!p) return; var pid = String(p.id || (c.id + String.fromCharCode(97 + i))); if (freshId(seenParts, pid, "part")) c.parts.push(mkPart(p, "p:" + pid, pid, false)); });
+    } else c.parts.push(mkPart(d, "_", c.id, true));
+    return c;
+  });
+  var isChoice = function (p) { return p.kind === "single" || p.kind === "multi"; };
+
+  /* State: saved per page path and card id, so a reload or a card added later never loses an answer. */
+  var storageOK = true;
+  try { localStorage.setItem("__ruling_probe", "1"); localStorage.removeItem("__ruling_probe"); } catch (e) { storageOK = false; }
+  var raw = {};
+  if (storageOK) { try { raw = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { raw = {}; } }
+  var S = (raw.__v === 2 && raw.cards && typeof raw.cards === "object") ? raw : { __v: 2, cards: {}, page: {}, legacy: raw };
+  if (!S.page || typeof S.page !== "object") S.page = {};
+  CARDS.forEach(function (c) {
+    var s = S.cards[c.id], fresh = !s || typeof s !== "object";
+    if (fresh) s = S.cards[c.id] = { a: {}, n: {} };
+    if (!s.a || typeof s.a !== "object") s.a = {};
+    if (!s.n || typeof s.n !== "object") s.n = {};
+    if (fresh && S.legacy && typeof S.legacy === "object") migrate(c, s, S.legacy);
+    Object.keys(s.a).forEach(function (k) {
+      var p = c.parts.filter(function (x) { return x.key === k; })[0]; if (!p) return;
+      var v = s.a[k], ok = p.kind === "single" ? okPick(p.opts, v)
+        : p.kind === "multi" ? Array.isArray(v) && v.every(function (i) { return okPick(p.opts, i); })
+        : p.kind === "text" ? typeof v === "string" : v === true;
+      if (!ok) delete s.a[k];
+    });
+  });
+  /* Write the new shape once, quietly, so an old page's answers are kept in the new format from now on. */
+  if (raw.__v !== 2 && Object.keys(raw).length && storageOK) { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+  /* Pages made with the old template saved {choice, other} per card (or per branch, plus "id:ack"). Every saved
+     choice carries over as an answer, the pick included: the old page copied it that way. */
+  function migrate(c, s, L) {
+    function take(p, o, noteKey) {
+      if (!o || typeof o !== "object") return;
+      var note = typeof o.other === "string" ? o.other : "";
+      if (Number.isInteger(o.choice) && okPick(p.opts, o.choice)) s.a[p.key] = o.choice;
+      if (note) s.n[noteKey] = note;
+    }
+    if (THREADS) {
+      var ak = L[c.id + ":ack"];
+      if (ak && typeof ak === "object") { if (ak.ack) s.a.ack = true; if (typeof ak.other === "string" && ak.other) s.n._ = ak.other; }
+      c.parts.forEach(function (p) { if (p.kind === "single") take(p, L[p.id], p.key); });
+    } else if (c.parts[0].kind === "single" && c.parts[0].solo) take(c.parts[0], L[c.id], "_");
+  }
+  function persist() {
+    if (!storageOK) return;
+    try { localStorage.setItem(KEY, JSON.stringify(S)); flashSaved(); } catch (e) { storageOK = false; markUnsaved(); }
+  }
+  function markUnsaved() {
+    clearTimeout(flashSaved.t);
+    ["saved"].forEach(function (id) { var e = $(id); if (e) { e.textContent = "Not saved in this window: copy your answers before you close it"; e.classList.add("is-unsaved"); } });
+  }
+  function flashSaved() { var e = $("saved"); e.textContent = "Saved"; clearTimeout(flashSaved.t); flashSaved.t = setTimeout(function () { e.textContent = "Answers save in this browser"; }, 1200); }
+  if (!storageOK) markUnsaved();
+
+  /* Status of a card: open (untouched), part (some answered, or only a note), done (every choice answered). */
+  function differs(p, v) {
+    if (p.kind === "single") return p.pick !== -1 && v !== p.pick;
+    if (p.kind === "multi") return p.pick.length > 0 && v.slice().sort().join() !== p.pick.slice().sort().join();
+    return false;
+  }
+  function hasText(v) { return typeof v === "string" && v.trim() !== ""; }
+  function status(c) {
+    var s = S.cards[c.id], choice = c.parts.filter(function (p) { return isChoice(p) || p.kind === "ack"; });
+    var touched = 0, changed = false, typed = false, noted = Object.keys(s.n).some(function (k) { return hasText(s.n[k]); });
+    c.parts.forEach(function (p) {
+      if (!(p.key in s.a)) return;
+      if (p.kind === "text") { if (hasText(s.a[p.key])) typed = true; return; }
+      touched++; if (differs(p, s.a[p.key])) changed = true;
+    });
+    var st = !choice.length ? (typed ? "done" : noted ? "part" : "open")
+           : touched === choice.length ? "done" : (touched || typed || noted) ? "part" : "open";
+    return { st: st, changed: changed };
+  }
+  function counts() {
+    var r = { done: 0, part: 0, open: 0, changed: 0, read: 0, dec: 0, decDone: 0, decChanged: 0 };
+    CARDS.forEach(function (c) {
+      var st = status(c), s = S.cards[c.id]; r[st.st]++; if (st.changed) r.changed++;
+      if (s.a.ack) r.read++;
+      c.parts.forEach(function (p) { if (!isChoice(p)) return; r.dec++; if (p.key in s.a) { r.decDone++; if (differs(p, s.a[p.key])) r.decChanged++; } });
+    });
+    return r;
+  }
+
+  /* Rendering: built once, then kept in step by sync(); nothing is rebuilt on a click. */
+  var cardsBox = $("tp-cards"), groups = [];
+  function whyBlock(p, label) {
+    var w = el("div", "tp-why");
+    w.appendChild(el("b", null, label));
+    if (p.why) w.appendChild(doc.createTextNode(p.why));
+    if (p.flip) { var f = el("span", "tp-flip"); f.appendChild(el("b", null, "I'd change it if ")); f.appendChild(doc.createTextNode(p.flip)); w.appendChild(f); }
+    return w;
+  }
+  function renderPart(c, p) {
+    var s = S.cards[c.id], name = "tp-" + sid(c.id) + "-" + sid(p.key);
+    if (p.kind === "ack") {
+      var row = el("div", "tp-ack"), b = el("button", "tp-btn tp-ackbtn", "Got it");
+      b.type = "button"; b.addEventListener("click", function () { if (s.a.ack) delete s.a.ack; else s.a.ack = true; syncPart(c, p); changed(c); });
+      row.appendChild(b); row.appendChild(el("span", null, "Press it once you've read the answer."));
+      p.el = row; p.btn = b; return row;
+    }
+    var fs = el("fieldset", "tp-part tp-part--" + p.kind), lg = el("legend", p.solo ? "tp-vh" : "tp-part-q");
+    lg.id = name + "-q";
+    if (p.solo) lg.textContent = c.id + ": " + (c.d.q || c.title);
+    else {
+      lg.appendChild(el("span", "tp-pid", p.id)); lg.appendChild(el("span", null, p.q));
+      if (p.kind === "multi") lg.appendChild(el("span", "tp-hint", "Choose any"));
+      if (p.kind === "text") lg.appendChild(el("span", "tp-hint", "Optional"));
+    }
+    fs.appendChild(lg);
+    if (p.kind === "text") {
+      var ta = el("textarea", "tp-input"); ta.name = name; ta.rows = 2; ta.setAttribute("aria-labelledby", lg.id);
+      ta.placeholder = p.placeholder || "Type your answer (optional)"; ta.value = typeof s.a[p.key] === "string" ? s.a[p.key] : "";
+      ta.addEventListener("input", function () { if (ta.value.trim()) s.a[p.key] = ta.value; else delete s.a[p.key]; changed(c, true); });
+      fs.appendChild(ta); p.el = fs; p.input = ta; return fs;
+    }
+    var box = el("div", "tp-opts" + (p.opts.some(function (o) { return o[1]; }) ? "" : " tp-opts--compact"));
+    p.inputs = [];
+    p.opts.forEach(function (o, i) {
+      var oid = name + "-o" + i, isPick = p.kind === "multi" ? p.pick.indexOf(i) !== -1 : i === p.pick;
+      var lab = el("label", "tp-opt" + (p.kind === "multi" ? " tp-opt--multi" : ""));
+      var inp = el("input"); inp.type = p.kind === "multi" ? "checkbox" : "radio"; inp.name = name; inp.value = String(i); inp.id = oid;
+      var mark = el("span", "tp-mark"); mark.setAttribute("aria-hidden", "true");
+      var body = el("span", "tp-opt-body"), top = el("span", "tp-opt-top"), lt = el("span", "tp-opt-label", o[0]);
+      lt.id = oid + "-l"; top.appendChild(lt);
+      var named = [lt.id], described = [];
+      if (isPick) { var bd = el("span", "tp-badge", "My pick"); bd.id = oid + "-b"; top.appendChild(bd); named.push(bd.id); }
+      body.appendChild(top);
+      if (o[1]) { var ds = el("span", "tp-opt-desc", o[1]); ds.id = oid + "-d"; body.appendChild(ds); described.push(ds.id); }
+      if (o[2]) { var dn = el("span", "tp-opt-down"); dn.id = oid + "-x"; dn.appendChild(el("b", null, "Downside: ")); dn.appendChild(doc.createTextNode(o[2])); body.appendChild(dn); described.push(dn.id); }
+      if (isPick && p.kind === "single" && (p.why || p.flip)) { var w = whyBlock(p, "Why my pick"); w.id = oid + "-w"; body.appendChild(w); described.push(w.id); }
+      inp.setAttribute("aria-labelledby", named.join(" "));
+      if (described.length) inp.setAttribute("aria-describedby", described.join(" "));
+      lab.appendChild(inp); lab.appendChild(mark); lab.appendChild(body); box.appendChild(lab); p.inputs.push(inp);
+    });
+    fs.appendChild(box);
+    if ((p.kind === "multi" || p.pick === -1) && (p.why || p.flip)) fs.appendChild(whyBlock(p, p.kind === "multi" ? (p.pick.length > 1 ? "Why my picks" : p.pick.length ? "Why my pick" : "Why") : p.pick === -1 ? "Why" : "Why my pick"));
+    if (p.kind === "multi" && p.pick.length) {
+      p.keep = el("button", "tp-link tp-keep", p.pick.length > 1 ? "Keep my picks" : "Keep my pick"); p.keep.type = "button";
+      p.keep.addEventListener("click", function () { s.a[p.key] = p.pick.slice(); syncPart(c, p); changed(c); });
+      fs.appendChild(p.keep);
+    }
+    /* A click on the radio already chosen still counts: it confirms my pick. */
+    function pickRadio(e) { var t = e.target; if (t.tagName === "INPUT" && t.type === "radio" && t.checked) { s.a[p.key] = Number(t.value); syncPart(c, p); changed(c); } }
+    fs.addEventListener("click", pickRadio);
+    /* Space or Enter on the option already chosen confirms it too (browsers send no click for a radio already on). */
+    fs.addEventListener("keydown", function (e) {
+      var t = e.target; if ((e.key !== " " && e.key !== "Enter") || t.tagName !== "INPUT" || t.type !== "radio" || !t.checked) return;
+      if (e.key === "Enter") e.preventDefault();
+      pickRadio(e);
+    });
+    fs.addEventListener("change", function (e) {
+      var t = e.target; if (t.tagName !== "INPUT") return;
+      if (t.type === "radio") return pickRadio(e);
+      s.a[p.key] = p.inputs.filter(function (x) { return x.checked; }).map(function (x) { return Number(x.value); });
+      syncPart(c, p); changed(c);
+    });
+    if (p.ownNote) fs.appendChild(noteBox(c, p.key, "Anything else about " + p.id + "? (optional)", "Note on " + p.id));
+    p.el = fs; return fs;
+  }
+  function noteBox(c, key, placeholder, label) {
+    var s = S.cards[c.id], wrap = el("label", "tp-note"), ta = el("textarea");
+    wrap.appendChild(el("span", "tp-vh", label)); ta.rows = 1; ta.placeholder = placeholder; ta.value = typeof s.n[key] === "string" ? s.n[key] : "";
+    ta.addEventListener("input", function () { if (ta.value) s.n[key] = ta.value; else delete s.n[key]; changed(c, true); });
+    wrap.appendChild(ta); (c.notes = c.notes || []).push(ta); return wrap;
+  }
+  function renderCard(c) {
+    var sec = el("section", "tp-card card"); sec.id = c.dom; sec.tabIndex = -1; sec.setAttribute("aria-labelledby", c.dom + "-t");
+    var head = el("div", "tp-card-head"), h = el("h3", "tp-card-title", c.title);
+    h.id = c.dom + "-t"; head.appendChild(el("span", "tp-id", c.id));
+    if (c.d.chip) h.appendChild(el("span", "tp-flag", c.d.chip));
+    head.appendChild(h); c.chip = el("span", "tp-state"); head.appendChild(c.chip); sec.appendChild(head);
+    if (c.thread) {
+      if (c.thread.asked) { var a = el("blockquote", "tp-asked"); a.appendChild(el("small", null, "You asked" + (c.thread.when ? ", " + c.thread.when : ""))); a.appendChild(doc.createTextNode("“" + c.thread.asked + "”")); sec.appendChild(a); }
+      if (c.thread.answer) { var an = el("div", "tp-answer"); an.appendChild(el("small", null, "Answer")); var ap = el("div"); prose(ap, c.thread.answer); an.appendChild(ap); sec.appendChild(an); }
+      if (c.thread.owed) { var ow = el("p", "tp-owed"); ow.appendChild(el("b", null, "Still owed: ")); ow.appendChild(doc.createTextNode(c.thread.owed)); sec.appendChild(ow); }
+    } else if (c.d.q) sec.appendChild(el("p", "tp-q", c.d.q));
+    if (c.d.context) {
+      var long = String(c.d.context).length > 280, holder = long ? el("details", "tp-more") : sec, ctx = el("div", "tp-ctx");
+      if (long) { holder.appendChild(el("summary", null, "Background")); sec.appendChild(holder); }
+      prose(ctx, c.d.context); holder.appendChild(ctx);
+    }
+    if (c.d.text) {
+      var det = el("details", "tp-more"); det.open = !!c.d.textOpen;
+      det.appendChild(el("summary", null, c.d.textLabel || "Show the text that goes out"));
+      det.appendChild(el("div", "tp-textbody", c.d.text)); sec.appendChild(det);
+    }
+    if (Array.isArray(c.d.frames) && c.d.frames.length) {
+      /* Pictures only from data:image URIs or paths beside this file, so the page stays self-contained. */
+      /* A relative path has no colon, backslash, control character or leading slash or space, so the URL parser cannot
+         turn it into a scheme or a //host address. */
+      var set = c.d.frames.filter(function (f) { return f && typeof f.src === "string" && (/^data:image\//i.test(f.src) || /^[^\x00-\x20\\\/:][^\x00-\x1f\\:]*$/.test(f.src)); });
+      if (set.length) {
+        var fr = el("div", "tp-frames");
+        set.forEach(function (f, i) {
+          var b = el("button", "tp-frame"); b.type = "button"; b.setAttribute("aria-label", "Open picture: " + (f.cap || "picture " + (i + 1)));
+          var im = el("img"); im.src = f.src; im.alt = ""; im.loading = "lazy"; b.appendChild(im); if (f.cap) b.appendChild(el("span", null, f.cap));
+          b.addEventListener("click", function () { openFrame(set, i, b); }); fr.appendChild(b);
+        });
+        sec.appendChild(fr);
+      }
+    }
+    c.parts.forEach(function (p) { sec.appendChild(renderPart(c, p)); });
+    if (c.d.ev) { var ev = el("p", "tp-ev"); ev.appendChild(el("b", null, "Evidence: ")); ev.appendChild(doc.createTextNode(c.d.ev)); sec.appendChild(ev); }
+    sec.appendChild(noteBox(c, "_", THREADS ? "Anything about this answer? (optional)" : "Add a note (optional)", "Note on " + c.id));
+    var foot = el("div", "tp-foot"); c.clear = el("button", "tp-link", THREADS ? "Clear this card" : "Clear my choice"); c.clear.type = "button";
+    c.clear.addEventListener("click", function () {
+      var s = S.cards[c.id];
+      c.parts.forEach(function (p) { delete s.a[p.key]; if (p.input) p.input.value = ""; syncPart(c, p); });
+      changed(c);
+    });
+    foot.appendChild(c.clear); sec.appendChild(foot);
+    c.el = sec; return sec;
+  }
+  function syncPart(c, p) {
+    var s = S.cards[c.id], has = p.key in s.a, v = s.a[p.key];
+    if (p.kind === "ack") { p.btn.setAttribute("aria-pressed", s.a.ack ? "true" : "false"); return; }
+    if (p.kind === "single") p.inputs.forEach(function (x, i) { x.checked = has ? v === i : i === p.pick; });
+    if (p.kind === "multi") p.inputs.forEach(function (x, i) { x.checked = (has ? v : p.pick).indexOf(i) !== -1; });
+    p.el.classList.toggle("is-suggest", isChoice(p) && !has);
+    if (p.keep) p.keep.hidden = has;
+  }
+
+  var strip = $("tp-strip"), rail = $("tp-rail");
+  function renderAll() {
+    cardsBox.textContent = ""; strip.textContent = ""; rail.textContent = ""; groups = [];
+    var run = null;
+    var prevGroup = null, holder = cardsBox, railList = null, first = true;
+    CARDS.forEach(function (c) {
+      if (c.group && c.group !== prevGroup) {
+        var g = run = { cards: [] }, gs = el("section", "tp-group"), gh = el("div", "tp-group-head"); groups.push(g);
+        gh.appendChild(el("h2", null, c.group)); g.count = el("span", "tp-group-count"); gh.appendChild(g.count); gs.appendChild(gh); cardsBox.appendChild(gs); holder = gs;
+        var rg = el("p", "tp-rail-g"); rg.appendChild(el("span", null, c.group)); g.rcount = el("span"); rg.appendChild(g.rcount); rail.appendChild(rg);
+        railList = el("ol"); rail.appendChild(railList);
+        if (!first) c.gapBefore = true;
+      }
+      if (!railList) { railList = el("ol"); rail.appendChild(railList); }
+      prevGroup = c.group; first = false;
+      if (c.group && run) run.cards.push(c);
+      holder.appendChild(renderCard(c));
+      var li = el("li"), a = el("a"); a.href = "#" + c.dom; c.dot = el("span", "tp-dot"); c.dot.setAttribute("aria-hidden", "true");
+      a.appendChild(c.dot); a.appendChild(el("span", "tp-rid", c.id)); a.appendChild(el("span", "tp-rt", c.title)); c.rstate = el("span", "tp-vh"); a.appendChild(c.rstate);
+      li.appendChild(a); railList.appendChild(li); c.rlink = a;
+      c.seg = el("span", "tp-seg" + (c.gapBefore ? " tp-seg--gap" : "")); c.seg.addEventListener("click", function () { goCard(c); }); strip.appendChild(c.seg);
+      c.parts.forEach(function (p) { syncPart(c, p); });
+    });
+    CARDS.forEach(function (c) { sync(c); });
+    syncAll(); watch();
+  }
+  var WORDS = { open: "Not answered", part: "Partly answered", done: "Answered" };
+  function sync(c) {
+    var st = status(c), word = st.st === "done" && st.changed ? "Not my pick" : WORDS[st.st];
+    [c.el, c.chip, c.seg, c.dot].forEach(function (e) { e.dataset.st = st.st; e.dataset.ch = st.changed ? "1" : "0"; });
+    c.chip.textContent = word; c.rstate.textContent = ", " + word + (st.changed && st.st !== "done" ? ", not my pick" : "");
+    c.seg.title = c.id + " " + c.title + ": " + word;
+    var s = S.cards[c.id]; c.clear.hidden = !Object.keys(s.a).length;
+  }
+  function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
+  function fillable(c) {
+    var s = S.cards[c.id]; if (!THREADS && hasText(s.n._)) return [];
+    return c.parts.filter(function (p) { return isChoice(p) && !(p.key in s.a) && !hasText(s.n[p.key]) && (p.kind === "multi" ? p.pick.length : p.pick !== -1); });
+  }
+  function syncAll() {
+    var r = counts(), n = CARDS.length;
+    var tally = $("tp-tally"); tally.textContent = "";
+    tally.appendChild(el("b", null, r.done)); tally.appendChild(doc.createTextNode(" of " + n)); tally.appendChild(el("span", "tp-wide", " answered"));
+    tally.setAttribute("aria-label", r.done + " of " + n + " answered. Go to the next card not answered.");
+    var np = $("tp-notpick"); np.hidden = !r.changed; np.textContent = plural(r.changed, "not my pick", "not my pick");
+    /* Cards with a choice to make; a typed-answer card has no pick to accept. */
+    var fill = CARDS.filter(function (c) { return fillable(c).length; }).length, acc = $("acceptAll");
+    var withPick = CARDS.filter(function (c) { return c.parts.some(function (p) { return isChoice(p) && (p.kind === "multi" ? p.pick.length : p.pick !== -1); }); }).length;
+    acc.hidden = !fill; acc.textContent = "";
+    var aw = el("span"); acc.appendChild(aw);
+    if (fill === withPick) aw.textContent = "Accept all picks";
+    else if (fill === 1) { aw.appendChild(doc.createTextNode("Accept ")); aw.appendChild(el("span", "tp-wide", "my pick for ")); aw.appendChild(doc.createTextNode("the last one")); }
+    else { aw.appendChild(doc.createTextNode("Accept ")); aw.appendChild(el("span", "tp-wide", "my picks for the ")); aw.appendChild(doc.createTextNode("other " + fill)); }
+    acc.setAttribute("aria-label", fill === withPick ? "Accept all picks" : "Accept my picks on the " + plural(fill, "card", "cards") + " not answered yet");
+    groups.forEach(function (g) {
+      var d = g.cards.filter(function (c) { return status(c).st === "done"; }).length;
+      g.count.textContent = d + " of " + g.cards.length + " answered"; g.rcount.textContent = d + "/" + g.cards.length;
+    });
+    var sum = r.done + " of " + plural(n, "card", "cards") + " answered" + (r.changed ? ", " + r.changed + " not my pick" : "") + ".";
+    if (THREADS) sum = r.read + " of " + plural(n, "answer", "answers") + " read, " + r.decDone + " of " + plural(r.dec, "decision", "decisions") + " answered" + (r.decChanged ? ", " + r.decChanged + " not my pick" : "") + ".";
+    sum += r.done < n ? " You can copy now and finish later: anything not answered is listed at the end of what you copy." : " Everything is answered. Copy it and paste it into the chat.";
+    $("tp-sum").textContent = sum;
+    var jumps = $("tp-jumps"); jumps.textContent = "";
+    [["Not answered", function (c) { return status(c).st === "open"; }], ["Partly answered", function (c) { return status(c).st === "part"; }], ["Not my pick", function (c) { return status(c).changed; }]].forEach(function (row) {
+      var list = CARDS.filter(row[1]); if (!list.length) return;
+      var box = el("div", "tp-jumps"), ul = el("ul"); box.appendChild(el("h3", null, row[0] + " (" + list.length + ")"));
+      list.forEach(function (c) { var li = el("li"), a = el("a"); a.href = "#" + c.dom; a.appendChild(el("span", "tp-rid", c.id)); a.appendChild(el("span", null, c.title)); li.appendChild(a); ul.appendChild(li); });
+      box.appendChild(ul); jumps.appendChild(box);
+    });
+    if (!$("out").hidden) $("out").textContent = buildText();
+  }
+  /* The host gets {ruling_id, card_id, choice_id, text} for each card changed (card_id "" for the page's own notes);
+     typing is sent after a short pause, and anything still waiting is sent when the page is left. */
+  var pending = Object.create(null), postT;
+  function flushPosts() {
+    clearTimeout(postT); var ids = Object.keys(pending); pending = Object.create(null);
+    ids.forEach(function (id) {
+      try { window.parent.postMessage({ ruling_id: String(BRIDGE.id || ""), card_id: id, choice_id: id ? JSON.stringify(S.cards[id].a) : "", text: buildText() }, BRIDGE.origin); } catch (e) {}
+    });
+  }
+  function post(id, typing) {
+    if (!BRIDGE || window.parent === window) return;
+    pending[id] = true; clearTimeout(postT);
+    if (typing) postT = setTimeout(flushPosts, 600); else flushPosts();
+  }
+  window.addEventListener("pagehide", function () { if (BRIDGE) flushPosts(); });
+  function changed(c, typing) { sync(c); syncAll(); persist(); post(c.id, typing); }
+
+  /* Copy my answers: one block per card, led by its id and title. */
+  function noteText(t) { return String(t).trim().replace(/\s*\n\s*/g, "\n    "); }
+  function pickText(p) { return p.kind === "multi" ? p.pick.map(function (i) { return p.opts[i][0]; }).join("; ") : p.opts[p.pick][0]; }
+  function answerText(p, s) {
+    var has = p.key in s.a, v = s.a[p.key];
+    if (p.kind === "text") return has ? noteText(v) : "not answered";
+    if (!has) return (p.kind === "multi" ? p.pick.length : p.pick !== -1) ? "not answered (your pick was " + pickText(p) + ")" : "not answered";
+    if (p.kind === "single") return p.opts[v][0] + (p.pick === -1 ? "" : v === p.pick ? " (your pick)" : " (NOT your pick)");
+    return (v.length ? v.slice().sort().map(function (i) { return p.opts[i][0]; }).join("; ") : "none of these") + (!p.pick.length ? "" : differs(p, v) ? " (NOT your pick)" : " (your pick)");
+  }
+  function buildText() {
+    var r = counts(), L = [];
+    if (THREADS) L.push("Open questions: " + r.read + " of " + CARDS.length + " answers read, " + r.decDone + " of " + r.dec + " decisions answered" + (r.decChanged ? ", " + r.decChanged + " not your pick" : ""));
+    else L.push((WHO ? "Rulings (" + WHO + "): " : "Rulings: ") + r.done + " of " + CARDS.length + " answered" + (r.changed ? ", " + r.changed + " not your pick" : ""));
+    CARDS.forEach(function (c) {
+      var s = S.cards[c.id], cn = hasText(s.n._) ? " | note: " + noteText(s.n._) : "";
+      if (c.parts.length === 1 && c.parts[0].solo) { L.push(c.id + " " + c.title + ": " + answerText(c.parts[0], s) + cn); return; }
+      L.push(c.id + " " + c.title + ":" + (THREADS ? " " + (s.a.ack ? "got it" : "not read yet") + cn : ""));
+      c.parts.forEach(function (p) {
+        if (p.kind === "ack" || (p.kind === "text" && !(p.key in s.a))) return;
+        L.push("  " + p.id + " " + p.q + " -> " + answerText(p, s) + (hasText(s.n[p.key]) ? " | note: " + noteText(s.n[p.key]) : ""));
+      });
+      if (!THREADS && cn) L.push("  note: " + noteText(s.n._));
+    });
+    if (hasText(S.page.decided)) L.push("Already decided | note: " + noteText(S.page.decided));
+    if (hasText(S.page.note)) L.push("Anything else: " + noteText(S.page.note));
+    var part = CARDS.filter(function (c) { return status(c).st === "part"; }), open = CARDS.filter(function (c) { return status(c).st === "open"; });
+    if (part.length) L.push("Partly answered: " + part.map(function (c) { return c.id; }).join(", "));
+    if (open.length) L.push((THREADS ? "Not answered: " : "Not answered: ") + open.map(function (c) { return c.id; }).join(", "));
+    return L.join("\n");
+  }
+  var toastT;
+  function toast(msg, ms) { var t = $("toast"); t.textContent = msg; clearTimeout(toastT); toastT = setTimeout(function () { t.textContent = ""; }, ms || 2600); }
+  function copyOut() {
+    var text = buildText(), out = $("out"); out.textContent = text; out.hidden = false; $("tp-show").setAttribute("aria-expanded", "true"); $("tp-show").textContent = "Hide the text";
+    function fallback() {
+      var ok = false;
+      try { var rg = doc.createRange(); rg.selectNodeContents(out); var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(rg); ok = doc.execCommand("copy"); } catch (e) { ok = false; }
+      done(ok);
+    }
+    function done(ok) {
+      if (ok) toast("Copied. Paste it into the chat.");
+      else { toast("Could not copy automatically. The text is selected at the end of the page: copy it by hand.", 6000); out.scrollIntoView({ block: "center" }); }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { done(true); }, fallback); else fallback();
+  }
+  $("copy").addEventListener("click", copyOut);
+  $("tp-copy2").addEventListener("click", copyOut);
+  $("tp-show").addEventListener("click", function () {
+    var out = $("out"), show = out.hidden; out.hidden = !show; if (show) out.textContent = buildText();
+    this.setAttribute("aria-expanded", show ? "true" : "false"); this.textContent = show ? "Hide the text" : "Show the text";
+  });
+  $("acceptAll").addEventListener("click", function () {
+    var n = 0;
+    CARDS.forEach(function (c) {
+      var list = fillable(c); if (!list.length) return; n++;
+      list.forEach(function (p) { S.cards[c.id].a[p.key] = p.kind === "multi" ? p.pick.slice() : p.pick; syncPart(c, p); });
+      sync(c); post(c.id);
+    });
+    syncAll(); persist();
+    toast("My pick is now your answer on " + plural(n, "card", "cards") + ". Change any you disagree with.");
+  });
+  var armT;
+  $("tp-clear").addEventListener("click", function () {
+    var b = this;
+    if (!b.classList.contains("is-armed")) { b.classList.add("is-armed"); b.textContent = "Press again to clear everything"; clearTimeout(armT); armT = setTimeout(function () { b.classList.remove("is-armed"); b.textContent = "Clear my answers"; }, 4000); return; }
+    clearTimeout(armT); b.classList.remove("is-armed"); b.textContent = "Clear my answers";
+    S = { __v: 2, cards: {}, page: {} };
+    CARDS.forEach(function (c) { S.cards[c.id] = { a: {}, n: {} }; });
+    $("tp-pagenote").value = ""; var dn = $("tp-decided-note"); if (dn) dn.value = "";
+    here = null; renderAll(); persist(); toast("Cleared. My picks are shown again, none of them answered.");
+    CARDS.forEach(function (c) { post(c.id); }); post("");
+  });
+  var pn = $("tp-pagenote"); pn.value = typeof S.page.note === "string" ? S.page.note : "";
+  pn.addEventListener("input", function () { S.page.note = pn.value; syncAll(); persist(); post("", true); });
+
+  /* Navigation: the tally jumps to the next card not answered; the strip and the margin list show where you are. */
+  function goCard(c) {
+    c.el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    c.el.focus({ preventScroll: true });
+  }
+  var here = null;
+  $("tp-tally").addEventListener("click", function () {
+    var start = here ? CARDS.indexOf(here) : -1;
+    for (var k = 1; k <= CARDS.length; k++) { var c = CARDS[(start + k) % CARDS.length]; if (status(c).st !== "done") return goCard(c); }
+    var f = $("tp-finish"); f.scrollIntoView({ block: "start" });
+  });
+  var io;
+  function watch() {
+    if (io) io.disconnect();
+    if (!("IntersectionObserver" in window)) return;
+    var vis = new Set();
+    io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) vis.add(e.target); else vis.delete(e.target); });
+      var top = null; CARDS.forEach(function (c) { if (!top && vis.has(c.el)) top = c; });
+      if (top === here) return;
+      if (here) { here.seg.classList.remove("is-here"); here.rlink.classList.remove("is-here"); here.rlink.removeAttribute("aria-current"); }
+      here = top;
+      if (here) { here.seg.classList.add("is-here"); here.rlink.classList.add("is-here"); here.rlink.setAttribute("aria-current", "true"); }
+    }, { rootMargin: "-80px 0px -55% 0px" });
+    CARDS.forEach(function (c) { io.observe(c.el); });
+  }
+
+  /* Pictures open in a dialog: arrows step, Escape closes, focus returns to the picture. */
+  var lb = $("tp-lb"), lbSet = null, lbIdx = 0, lbFrom = null;
+  function showFrame() {
+    var f = lbSet[lbIdx]; $("tp-lb-img").src = f.src; $("tp-lb-img").alt = f.cap || "";
+    $("tp-lb-cap").textContent = (f.cap || "Picture") + (lbSet.length > 1 ? " (" + (lbIdx + 1) + " of " + lbSet.length + ")" : "");
+    $("tp-lb-prev").hidden = $("tp-lb-next").hidden = lbSet.length < 2;
+  }
+  function openFrame(set, i, from) { lbSet = set; lbIdx = i; lbFrom = from; showFrame(); if (lb.showModal) lb.showModal(); else lb.setAttribute("open", ""); $("tp-lb-close").focus(); }
+  function step(n) { if (!lbSet) return; lbIdx = (lbIdx + n + lbSet.length) % lbSet.length; showFrame(); }
+  $("tp-lb-close").addEventListener("click", function () { lb.close ? lb.close() : lb.removeAttribute("open"); });
+  $("tp-lb-prev").addEventListener("click", function () { step(-1); });
+  $("tp-lb-next").addEventListener("click", function () { step(1); });
+  lb.addEventListener("close", function () { lbSet = null; if (lbFrom) lbFrom.focus(); });
+  lb.addEventListener("click", function (e) { if (e.target === lb) lb.close(); });
+  lb.addEventListener("keydown", function (e) { if (e.key === "ArrowRight") step(1); else if (e.key === "ArrowLeft") step(-1); });
+
+  /* Theme: follows the system until switched; the choice is shared with the reading and call-prep pages. */
+  var themeBtn = $("tp-theme");
+  function isDark() { var t = root.dataset.theme; return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; }
+  function paintTheme() { var next = isDark() ? "Light" : "Dark"; themeBtn.textContent = next; themeBtn.setAttribute("aria-label", "Switch to the " + next.toLowerCase() + " theme"); }
+  themeBtn.addEventListener("click", function () { var t = isDark() ? "light" : "dark"; root.dataset.theme = t; try { localStorage.setItem("reading-page:theme", t); } catch (e) {} paintTheme(); });
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", paintTheme);
+  paintTheme();
+
+  /* Opening: title, who and when, the brief, what is already decided. */
+  var title = $("tp-title").textContent.trim();
+  $("tp-bar-title").textContent = title;
+  doc.title = (THREADS ? "Open questions: " : "Rulings: ") + title;
+  $("tp-kicker").textContent = (THREADS ? "Open questions" : "Decisions") + (WHO ? " for " + WHO : "") + (INFO.date ? ", " + INFO.date : "");
+  if (INFO.lede) { $("tp-lede").textContent = INFO.lede; $("tp-lede").hidden = false; }
+  if (THREADS) $("tp-how").textContent = "Each card is a question you asked that isn't closed yet: what you asked, the answer, and what's still owed. Press Got it once you've read an answer, answer the decisions under it (my pick is shown dashed until you click it), then Copy my answers and paste it into the chat. Anything you skip is listed as not answered.";
+  var brief = $("tp-brief");
+  if (INFO.body || (INFO.decided && INFO.decided.length) || INFO.source) {
+    brief.hidden = false;
+    if (INFO.body) { brief.appendChild(el("h2", null, "Background")); var bb = el("div", "tp-brief-body"); prose(bb, INFO.body); brief.appendChild(bb); }
+    if (Array.isArray(INFO.source) && safeHref(INFO.source[1])) { var sp = el("p", "tp-source"), sa = el("a", null, INFO.source[0] || "The full report"); sa.href = safeHref(INFO.source[1]); sp.appendChild(sa); brief.appendChild(sp); }
+    if (Array.isArray(INFO.decided) && INFO.decided.length) {
+      var det = el("details", "tp-decided"), sm = el("summary");
+      sm.appendChild(el("span", null, "Already decided")); sm.appendChild(el("span", "tp-decided-sub", plural(INFO.decided.length, "item", "items") + ", no answer needed unless you disagree"));
+      det.appendChild(sm); var body = el("div", "tp-decided-body"), ul = el("ul");
+      INFO.decided.forEach(function (it) { var li = el("li"); li.appendChild(el("b", null, Array.isArray(it) ? it[0] : it)); if (Array.isArray(it) && it[1]) li.appendChild(el("span", null, it[1])); ul.appendChild(li); });
+      body.appendChild(ul);
+      var nl = el("label"), nt = el("textarea"); nl.appendChild(el("span", "tp-vh", "Note on what is already decided"));
+      nt.id = "tp-decided-note"; nt.rows = 1; nt.placeholder = "Disagree with any of these? Say which (optional)"; nt.value = typeof S.page.decided === "string" ? S.page.decided : "";
+      nt.addEventListener("input", function () { S.page.decided = nt.value; syncAll(); persist(); post("", true); });
+      nl.appendChild(nt); body.appendChild(nl); det.appendChild(body); brief.appendChild(det);
+    }
+  }
+
+  /* Text boxes grow with what is typed where the browser cannot do it in CSS. */
+  if (!(window.CSS && CSS.supports && CSS.supports("field-sizing", "content"))) {
+    doc.addEventListener("input", function (e) { var t = e.target; if (t.tagName === "TEXTAREA") { t.style.height = "auto"; t.style.height = t.scrollHeight + 2 + "px"; } });
+  }
+
+  renderAll();
+  if (location.hash.length > 1) { var target = $(decodeURIComponent(location.hash.slice(1))); if (target) setTimeout(function () { target.scrollIntoView(); }, 0); }
+  /* For headless checks: the text Copy my answers would put on the clipboard. */
+  window.rulingText = buildText;
+})();
 </script>
 </body>
 </html>
