@@ -10,12 +10,19 @@ plus short italic stage directions. The caller reads it live, on the call, off a
 "points to cover" list makes them compose sentences while talking and sort what to say from what not
 to say in the moment, which is exactly when they can't.
 
-**Format: one interactive HTML page per call.** Copy `references/prep-template.html` and fill it: a
-sticky header with the guard line and key legend (update the legend to the real beat count), a left
-nav that highlights the current beat, single-key jumps (digits for beats, `d` decide, `a` answers,
-`j`/`k` next and previous, `g` hides the guard line), large quoted lines, checkboxes for a decision
-rule, and status pills for a multi-part call. Delete the sections the call does not use, with their nav links and keys. In Claude Code, write the file and open it for the
-caller. **In the Claude app**, show the filled template as an HTML artifact. The HTML is the only copy:
+**Format: one interactive HTML page per call.** Copy `references/prep-template.html` and replace every
+`{{…}}` between its PREP markers and in `<title>` (the comment at its top lists the classes): a sticky
+header with the guard line and key legend (update it to the real beat count), the clock's `data-start`
+(an ISO time with the UTC offset in force on the call's date) and `data-mins`, one section per beat.
+The page's script marks the current beat in the nav and gives single keys: digits for beats, `s` send,
+`d` decide, `a` answers, `j`/`k` next and back, `x` beat done, `f` focus (dims the other beats),
+`-`/`=` script size, `t` call clock, `g` hides the guard line. Large serif quoted lines, persistent
+checkboxes for a decision rule, status pills for a multi-part call. Delete the sections the call does
+not use, with their nav links and keys. Before handing it over, no `{{` may be left in the file
+(`grep -c '{{' <prep>.html` prints 0). The look is shared with `ruling-page` and `reading-page`: no
+one-sided accents (never a border, shadow or bar down one side of a box); after a template change, run
+the checks in `ruling-page` ("Changing the templates"). In Claude Code, write the file and open it for
+the caller. **In the Claude app**, show the filled template as an HTML artifact. The HTML is the only copy:
 no markdown mirror, because mirrors drift.
 
 **The prep window is never screen-shared.** The guard line names what the counterpart must not see.
@@ -90,7 +97,7 @@ else's to give. Named in full once here, never repeated beat by beat; at most a 
 **The script comes next, before any backing detail.** Heading: "Script (read the quoted lines;
 italics are for you)". Then the beats:
 
-- **Five to seven beats for twenty minutes or less, eight for anything longer, never more.** Done beats
+- **Five to seven beats for twenty minutes or less, at most eight for anything longer.** Done beats
   kept on a part-2 page do not count. If there are more, the call is overloaded; cut, or move the rest to "Answer if asked".
 - **A beat is a few sentences.** Past about a minute spoken, split it or move the back half to "Answer
   if asked". The caller has to find their place while someone is talking to them.
@@ -176,12 +183,21 @@ settle it now rather than after I send it."*
 ## Review
 
 A client negotiation, a pricing conversation, or anything where a wrong number costs money, gets one
-review round by two fresh reviewers with no access to your drafting conversation. The first gets the
-draft and the source files and checks every number in a quoted line against them. The second gets the
-script alone and reads it cold as the person about to take the call, naming any line they couldn't say
-as written and any instruction that has leaked into a quoted line. Apply what they find and note it on
-the sources line. A call inside the hour: do both checks yourself and say so; a late script is worse
-than an unreviewed one. A routine internal call gets no review.
+review round by two fresh reviewers with no access to your drafting conversation, one job each. The
+first gets the source files and a list of every figure, count and quotation of someone's words in the
+quoted lines, saying what each one is and never its value, so it checks the source rather than your
+answer. It derives each one from the sources; set the script to what it derived, and treat one it could
+not derive as a number with no source (see "A number with no source stays out of a quoted line"). The
+second gets the draft alone, no sources and no conversation, and reads it cold as the person about to
+take the call, naming any line they couldn't say as written and any instruction that has leaked into a
+quoted line. If the call's material may only go to certain AI providers, both reviewers run on a
+provider it allows. Apply what they find and note it on the sources line.
+
+A call inside the hour: do the cold read yourself and say so (a late script is worse than an unread
+one), but never the figures check; a figure it has not cleared by call time is a number with no source.
+Any client call whose quoted lines carry a figure or an estimate, a standup included, gets the first
+reviewer's figures check even when it needs no adversarial pass, because nobody verifies their own
+figures. A routine internal call gets no review.
 
 **Whatever the call's topic, everything the call hands over gets its own independent review before the
 call:** a scorecard, a report, a draft email, by a reviewer who did not produce it and works from the
@@ -216,4 +232,4 @@ depends on (a message they said they'd send, a decision not yet made).
 | A linear script for a call someone else drives | Beats keyed to their trigger, must-land beats marked |
 | The full shape, state table and all, for a fifteen-minute internal sync | Core only |
 | A markdown prep, or an HTML one plus a markdown mirror | One HTML page from the template |
-| Updating a prep for part 2 by rewriting it | Keep part 1's beats, add status pills (`done`, `now`, `part`) and a note of what part 1 covered; put tonight's section first in both the page and the nav, and move the digit keys (`data-key`) to tonight's beats |
+| Updating a prep for part 2 by rewriting it | Keep part 1's beats, add status pills (`done`, `now`, `part`) and a note of what part 1 covered; put tonight's section first in both the page and the nav, and move the digit keys (`data-key`) to tonight's beats; give tonight's beats new section ids so part 1's ticks stay on part 1, and set tonight's `data-start` (the clock starts afresh) |

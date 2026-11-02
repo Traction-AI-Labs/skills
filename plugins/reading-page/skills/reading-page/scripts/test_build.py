@@ -359,7 +359,7 @@ def test_fill_escapes_title_and_fills_regions():
     out = page("# A <b> & C\n\nIntro.\n\n## S\n\nx\n")
     assert "<title>A &lt;b&gt; &amp; C</title>" in out
     assert "<!--@title-->A &lt;b&gt; &amp; C<!--/@title-->" in out
-    assert "Every report you read" not in out  # demo standfirst replaced
+    assert "Every report arrives as a page" not in out  # demo standfirst replaced
     assert out.count("<article>") == 1
 
 
@@ -425,7 +425,7 @@ def test_built_page_ships_no_js_and_full_static_contents():
     """The page reads without JavaScript: <html class="no-js"> and a contents list holding a link
     to every h2 and h3 in the article. Behaviour in a real browser: scripts/browser_check.sh."""
     out = page(TOC_MD + "\n## Later\n\n**Bold label**\n\ny\n")
-    assert re.search(r'<html[^>]*\bclass="no-js"', out)
+    assert re.search(r'<html[^>]*\bclass="[^"]*\bno-js\b', out)
     nav = re.search(r'<nav class="toc" id="toc">([\s\S]*?)</nav>', out).group(1)
     article = out[out.index("<article>"):out.index("</article>")]
     heads = re.findall(r'<h[23] id="([^"]+)"', article)
@@ -631,7 +631,8 @@ def test_long_tokens_wrap_in_text_lists_and_cells():
     wrapping = set()
     for sel, body in _css_rules(css):
         if re.search(r"overflow-wrap:\s*(anywhere|break-word)", body):
-            wrapping |= {x.strip() for x in sel.split(",")}
+            # Every template rule is scoped as ".tp <selector>"; compare the selector without the scope.
+            wrapping |= {re.sub(r"^\.tp\s+", "", x.strip()) for x in sel.split(",")}
     for need in ("article p", "article li", "article td", "article th", ".lead p", ".standfirst", ".callout", ".mark-src"):
         assert need in wrapping, need
 

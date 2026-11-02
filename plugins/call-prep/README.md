@@ -9,8 +9,10 @@ points to cover. It is one interactive HTML page for a second screen:
   might ask, in their hardest phrasing;
 - for a yes/no call (a hiring screen, a vendor pick), a checklist and a one-line rule for deciding at
   the close;
-- keyboard jumps between beats (`1` to `8`, `j`/`k`, `a` for answers, `d` for decide, `g` to hide the
-  guard line).
+- a "What you send" panel with copy buttons for anything you paste during the call;
+- keyboard jumps between beats (`1` to `8`, `j`/`k`, `s` for what you send, `a` for answers, `d` for
+  decide, `g` to hide the guard line), `x` to mark a beat done, `f` to dim the other beats, `-`/`=` to
+  resize the script, and `t` for a call clock that shows when the call is booked to end.
 
 Never screen-share the window the prep is in.
 
@@ -37,8 +39,10 @@ Never screen-share the window the prep is in.
 Ask, for example: *Prep me for my 15:00 call with the new client. Here's the last email and our notes
 from the kickoff.* Claude checks your calendar for the time and attendees when it can, pulls every number
 from the source you gave it, and writes the page. In Claude Code it opens the file; in the Claude app it
-shows the page as an artifact. For a pricing or negotiation call, ask for the review pass: two fresh
-reviewers check every number against the sources and read the script cold as you.
+shows the page as an artifact. For a pricing or negotiation call, ask for the review pass: one fresh
+reviewer derives every figure in the quoted lines from the sources, without seeing the draft's values,
+and another reads the script cold as you. Any client call whose script quotes a figure gets the figures
+check.
 
 ## Test
 

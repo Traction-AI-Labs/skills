@@ -4,8 +4,8 @@
 //
 // Checks, for template.html and template-threads.html:
 //   1. In a sandboxed frame with storage blocked (as in a Claude app artifact), the page renders with no
-//      script errors and says answers are NOT saved instead of "Answers save as you go".
-//   2. With storage available, the page keeps "Answers save as you go" (so the warning is not always on).
+//      script errors and says answers are NOT saved instead of "Answers save in this browser".
+//   2. With storage available, the page keeps "Answers save in this browser" (so the warning is not always on).
 //   3. Card text is shown literally: an HTML payload in every string field creates no element and no side effect.
 //   4. "Copy my answers": when the clipboard works the page says Copied; when both clipboard routes fail it
 //      says it could not copy, and leaves the answers visible and selected for a manual copy.
@@ -26,12 +26,16 @@ const check = (ok, msg) => { if (!ok) { failures++; console.error("FAIL " + msg)
 
 function withPayload(name, html) {
   if (name === "template.html") {
-    const data = `const D = [{ id: ${JSON.stringify(idPayload("K1"))}, group: ${JSON.stringify(PAYLOAD)}, title: ${JSON.stringify(PAYLOAD)}, q: ${JSON.stringify(PAYLOAD)}, opts: [[${JSON.stringify(PAYLOAD)}, ${JSON.stringify(PAYLOAD)}], ["B", "b"]], pick: 0, why: ${JSON.stringify(PAYLOAD)}, ev: ${JSON.stringify(PAYLOAD)} }];\nconst RULING_KEY`;
-    return html.replace(/const D = \[[\s\S]*?\];\nconst RULING_KEY/, data);
+    const data = `const D = [{ id: ${JSON.stringify(idPayload("K1"))}, group: ${JSON.stringify(PAYLOAD)}, title: ${JSON.stringify(PAYLOAD)}, q: ${JSON.stringify(PAYLOAD)}, opts: [[${JSON.stringify(PAYLOAD)}, ${JSON.stringify(PAYLOAD)}], ["B", "b"]], pick: 0, why: ${JSON.stringify(PAYLOAD)}, ev: ${JSON.stringify(PAYLOAD)} }];\n</script>`;
+    const out = html.replace(/const D = \[[\s\S]*?\n\];\n<\/script>/, data);
+    if (out === html) throw new Error("template.html: could not find the D array to replace");
+    return out;
   }
   const t = { id: idPayload("Q1"), group: PAYLOAD, title: PAYLOAD, asked: PAYLOAD, when: PAYLOAD, answer: PAYLOAD, owed: PAYLOAD, ev: PAYLOAD,
     branches: [{ id: idPayload("Q1a"), q: PAYLOAD, opts: [[PAYLOAD, PAYLOAD], ["No", "n"]], pick: 0, why: PAYLOAD }] };
-  return html.replace(/const T = \[[\s\S]*?\];\n/, `const T = [${JSON.stringify(t)}];\n`);
+  const out = html.replace(/const T = \[[\s\S]*?\n\];\n/, `const T = [${JSON.stringify(t)}];\n`);
+  if (out === html) throw new Error("template-threads.html: could not find the T array to replace");
+  return out;
 }
 
 const browser = await chromium.launch();
@@ -52,10 +56,12 @@ for (const name of ["template.html", "template-threads.html"]) {
     const saved = await fr.evaluate(() => document.getElementById("saved").textContent);
     check(errors.length === 0, `${name}: no script errors with storage blocked (${errors.join(" | ") || "none"})`);
     check(/not saved/i.test(saved), `${name}: says answers are not saved when storage is blocked ("${saved}")`);
-    const imgs = await fr.evaluate(() => document.querySelectorAll("img, b[id^=inj]").length);
+    // The lightbox ships one empty <img id="tp-lb-img"> in the template; any other image or injected element fails.
+    const found = await fr.evaluate(() => [...document.querySelectorAll("img:not(#tp-lb-img), b[id^=inj]")].map(e => e.outerHTML.slice(0, 80)));
+    const imgs = found.length;
     const flag = await fr.evaluate(() => document.body.dataset.injected || "");
     const literal = await fr.evaluate(p => document.body.innerText.includes(p.slice(0, 20)) && document.body.innerText.includes('<b id="inj'), PAYLOAD);
-    check(imgs === 0 && flag === "" && !injected, `${name}: HTML in card fields and ids creates no element and runs nothing`);
+    check(imgs === 0 && flag === "" && !injected, `${name}: HTML in card fields and ids creates no element and runs nothing (elements ${imgs}${imgs ? ": " + found.join(" ; ") : ""}, flag "${flag}", message ${injected})`);
     check(literal, `${name}: HTML in card fields is shown literally`);
     // Both clipboard routes fail: the page must not claim Copied, and must leave the answers selected.
     await fr.evaluate(() => {
@@ -84,7 +90,7 @@ for (const name of ["template.html", "template-threads.html"]) {
     await page.goto("http://ruling.test/page.html");
     await page.waitForTimeout(300);
     const saved = await page.evaluate(() => document.getElementById("saved").textContent);
-    check(/save as you go/i.test(saved), `${name}: keeps "Answers save as you go" when storage works ("${saved}")`);
+    check(/save in this browser/i.test(saved), `${name}: keeps "Answers save in this browser" when storage works ("${saved}")`);
     await page.close();
   }
 }
