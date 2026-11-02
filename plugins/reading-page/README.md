@@ -5,6 +5,7 @@ When Claude has something for you to read that is longer than a chat message (a 
 - the bottom line first, in its own box;
 - a contents rail that follows you as you scroll, and a compact bar on a phone;
 - callouts for recommendations, risks and decisions you need to make;
+- a link on every heading, and footnotes you can read in place by hovering over their number;
 - tables you can sort, evidence folded away until you want it, and light and dark modes;
 - no external assets, so it opens straight from disk and works offline.
 

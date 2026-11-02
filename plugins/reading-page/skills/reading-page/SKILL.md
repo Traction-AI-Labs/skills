@@ -38,7 +38,7 @@ The script reads the patterns agents already write. Use them on purpose:
 |---|---|
 | `# Title` (a leading H1) | Page title. Always consumed; `--title` or front matter `title` overrides its text |
 | First paragraph starting `Date: 2026-10-07.` | Date moves into the header; the rest of that paragraph becomes the standfirst. Anything else before the first `##` opens the article |
-| `## Recommendation` / `Bottom line` / `Summary` / `TL;DR` / `Verdict` / `Answer` | The section's opening paragraph becomes the bottom-line box. Put the answer first, opening with one bold sentence. A section that opens with a list, a heading or a bold label gets no box |
+| `## Recommendation` / `Bottom line` / `Summary` / `TL;DR` / `Verdict` / `Answer` | The section's opening paragraph becomes the bottom-line box. Put the answer first: open the first paragraph with one bold sentence and carry on in the same paragraph (a short bold sentence alone becomes a sub-heading). A section that opens with a list, a heading or a bold label gets no box |
 | `## Sources` / `Evidence` / `References` / `Appendix` / `Method` / `Notes` | A folded section, closed by default |
 | `## 2. Buy options` (a number, a full stop, a space) | Numbered section; the number shows in the contents. `## 2026 roadmap`, `## 3 risks` and `## 2.0 notes` stay plain titles |
 | `**Main risks:**` then a list | Risk callout with the list inside (labels with risk, caveat, concern) |
@@ -66,10 +66,19 @@ Headless only, never on the reader's screen. `scripts/browser_check.sh <page>.ht
 `agent-browser`) loads the page at phone width with JavaScript off and on, and checks the contents,
 links, ids, the phone bar, sideways overflow and the console; it exits non-zero on any failure.
 Headless browsers are heavy: if the reader's machine is busy, run it on another machine. When you
-change the template or `build.py`, also build `scripts/fixtures/long-tokens.md` and check that page.
+change the template or `build.py`, also build `scripts/fixtures/long-tokens.md` with the copy you
+changed and check that page.
 
 Then read it as they will: the bottom line answers the question without scrolling. Fix what looks
 off; if the template is the problem, fix the template, not the one page.
+
+After changing `build.py` or the template, run its tests from the copy you changed (one plain test
+file, no browser): `uv run <skill-dir>/scripts/test_build.py`. The look is shared with the
+`ruling-page` and `call-prep` templates. The house rule: no one-sided accents, never a border, shadow
+or bar down one side of a box (or moved to its top or bottom); show state with a tinted fill, a full
+outline, a label or a filled marker, never colour alone. In a clone of this skill's repository,
+`ruling-page`'s `scripts/house-check/edges.py` fails on any one-sided edge in the templates ("Changing
+the templates" in that skill).
 
 ## What the page does
 
@@ -78,12 +87,13 @@ off; if the template is the problem, fix the template, not the one page.
   current section that opens the contents as a sheet. The contents list is written into the HTML,
   so without JavaScript (iOS Quick Look of a file) it shows as a plain list above the page and the
   bar and tool buttons are hidden.
-- Bottom-line box, callouts (recommendation, risk, decision needed, note, verified, inferred),
-  provenance marks, sortable tables that stack into cards on a phone, code copy buttons,
-  collapsible evidence, a hairline reading-progress bar.
+- Bottom-line box, callouts (recommendation, risk, decision needed, note, verified, inferred) as tinted
+  panels named by a label chip, provenance marks, sortable tables that stack into cards on a phone, code copy
+  buttons, collapsible evidence, a link on every heading, footnote previews on hover or focus, a hairline
+  reading-progress bar.
 - Light and dark follow the system; the toggle overrides and is remembered.
 - Print or save as PDF opens every fold, drops the chrome and prints external URLs.
-- Typography: Charter body, Avenir Next headings (both ship with macOS and iOS; fallbacks
+- Typography: Charter body and section titles, Avenir Next for smaller headings and the interface (both ship with macOS and iOS; fallbacks
   elsewhere), measure about 68 characters. No external assets, no network, works from `file://`.
 - No time estimates anywhere: no reading-time badge.
 
