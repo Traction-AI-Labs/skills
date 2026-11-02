@@ -4,6 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNNER="$SCRIPT_DIR/doc-gauntlet.sh"
 TMP="$(mktemp -d)"
+# The test owns its HOME: a fake Grok login for the legs that need one, and nothing of the real home is read or written.
+export HOME="$TMP/home"; mkdir -p "$HOME/.grok"; printf '{}\n' > "$HOME/.grok/auth.json"
 trap 'rm -rf "$TMP"' EXIT
 export GAUNTLET_ROUND_RECORD="$TMP/rounds.jsonl"
 export GAUNTLET_ARCHIVE="$TMP/archive"

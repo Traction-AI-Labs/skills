@@ -5,6 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNNER="$SCRIPT_DIR/gauntlet.sh"
 grep -Fq 'com.gauntlet.cli.{engine}' "$RUNNER"
 TMP="$(mktemp -d)"; trap 'touch "$TMP/release-lifecycle-lock" 2>/dev/null || true; rm -rf "$TMP"' EXIT
+# The test owns its HOME: a fake Grok login for the legs that need one, and nothing of the real home is read or written.
+export HOME="$TMP/home"; mkdir -p "$HOME/.grok"; printf '{}\n' > "$HOME/.grok/auth.json"
 export GAUNTLET_ROUND_RECORD="$TMP/rounds.jsonl"
 export GAUNTLET_ARCHIVE="$TMP/archive"
 
