@@ -96,10 +96,11 @@ open-source writing skills; see [NOTICE.md](NOTICE.md).
 
 - **gauntlet 0.6.1 and ruling-page 0.2.1** (4 November 2026). gauntlet: reviewers question the value of every
   hold, switch and timer the diff adds or keeps on a path it touches, and report as material one that names neither
-  the failure it prevents nor the rule it implements, or that blocks more than that failure needs, saying what it
+  the failure it prevents nor the rule or ruling it implements, or that blocks more than that failure needs, saying what it
   blocks in normal use and the change that removes or narrows it. ruling-page: a pasted line whose note asks a
   question is not yet a go, whatever option it picks; answer the question first, saying what it means for the
-  decision, and act only after the reply.
+  decision, and act only after the reply. A line passed on to another thread carries its question, and that
+  thread waits too.
 
 - **gauntlet 0.6.0, doc-gauntlet 0.6.0 and reading-page 0.2.1** (3 November 2026). gauntlet and doc-gauntlet:
   Grok legs run without a forced output schema (it let Grok answer without opening a file), keep its JSON output
