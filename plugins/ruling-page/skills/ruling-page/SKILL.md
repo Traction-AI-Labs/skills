@@ -121,6 +121,11 @@ plan, spec or requirements file), then act on the answered lines only. A line th
 on your own pick for it; ask about those ids once, in chat. If another thread owns some cards, pass its
 lines on.
 
+A line whose note asks a question is not yet a go, whatever option it picks: answer the question in plain
+words, saying what it means for the decision (that this is new work, what it costs, that the earlier work
+did not cover it), and act only after they reply. A line passed on to another thread carries its question,
+and that thread waits too.
+
 ## Threads variant: open questions with answers
 
 When the page carries answers to questions they asked, not only decisions, use
