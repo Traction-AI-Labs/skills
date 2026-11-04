@@ -858,6 +858,7 @@ for p in claude-cli codex-cli claude-native codex-native; do
   grep -Fq 'This is round 2, a later round. A P0 or P1 holds the merge only with a run that shows it' "$ROUNDS/r-b1/prompts/$p.md"
   refute grep -Fq 'counts as traced' "$ROUNDS/r-b1/prompts/$p.md"
   refute grep -Fq 'does not count toward the five' "$ROUNDS/r-b1/prompts/$p.md"
+  grep -Fq "start its verification with 'Unrun P1:'" "$ROUNDS/r-b1/prompts/$p.md"
 done
 scratch_accept "$ROUNDS/r-b1" claude
 test "$(record_lines "$RECORD")" -eq 3
