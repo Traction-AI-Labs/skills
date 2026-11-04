@@ -574,7 +574,7 @@ PY
   # keeps the traced path, for races that are hard to reproduce.
   local proof_rule='A finding traced step by step through code you read counts as traced; name the file and lines of each step.'
   if [[ "$round_number" -ge 2 ]]; then
-    proof_rule="This is round $round_number, a later round. A P0 or P1 holds the merge only with a run that shows it: a failing test, or a command you ran and its output, quoted in verification. If you cannot run it, report it as P2 with its trace, naming the file and lines of each step; such a finding does not count toward the five P2s below."
+    proof_rule="This is round $round_number, a later round. A P0 or P1 holds the merge only with a run that shows it: a failing test, or a command you ran and its output, quoted in verification. If you cannot run it, report it as P2 with its trace, naming the file and lines of each step."
   fi
   local prior_block=''
   if [[ -f "$RUN/scope/prior-findings.snapshot" ]]; then
