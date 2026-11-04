@@ -69,7 +69,8 @@ the window narrows or after), and checks the contents, links, ids, the phone bar
 the console, and fit and readability (no text spilling its box, touching or overlapping a neighbouring box, or under
 11px at phone width). Each check reads ok, FAIL or INCONCLUSIVE; INCONCLUSIVE means the capture broke (the browser
 could not open the page or run the check, or the page showed no text to judge), which is neither a pass nor a design
-fault, so run it again. It exits 0 only when every check passes, 1 on any FAIL, and otherwise 2.
+fault. Run it once more; if it is inconclusive again, the page goes to the reader with that check named as not
+checked, never as passed. It exits 0 only when every check passes, 1 on any FAIL, and otherwise 2.
 Headless browsers are heavy: if the reader's machine is busy, run it on another machine. When you
 change the template or `build.py`, also build `scripts/fixtures/long-tokens.md` with the copy you
 changed and check that page.
