@@ -40,63 +40,99 @@ IFS= read -r -d '' FIT_CORE <<'FITJS' || true
 function () {
   // Fit and readability at the current width (detectors after Stageshow's layout-core.mjs and
   // film-checks.mjs, benjitaylor/skills 80205740, MIT): text never spills the box it sits in, text never touches or
-  // overlaps a neighbouring box, and at phone width (480 or narrower) no text a reader must read is under MINPX (11px: the four templates' smallest text, their pill labels, is 11.5px).
+  // overlaps a neighbouring box, and at phone width (480 or narrower) no text a reader must read is under MINPX
+  // (11px: the templates' smallest text, their pill labels, measured 11.5px).
   // Returns {fails, inconclusive, info}: a page that has not finished loading, or one with no visible text to
-  // judge, is inconclusive (a broken capture), never a design fault and never a pass.
+  // judge, is inconclusive (a broken capture) and is not measured, never a design fault and never a pass.
   var MINPX = 11, d = document, r = { fails: [], inconclusive: [], info: {} };
-  if (d.readyState !== "complete") r.inconclusive.push("page not loaded (readyState " + d.readyState + ")");
+  if (d.readyState !== "complete") { r.inconclusive.push("page not loaded (readyState " + d.readyState + ")"); return r; }
   var name = function (e) {
     var c = typeof e.className === "string" && e.className.trim() ? "." + e.className.trim().split(/\s+/)[0] : "";
     return e.tagName.toLowerCase() + (e.id ? "#" + e.id : c);
   };
+  var said = function (e, k) { return "\"" + e.textContent.trim().slice(0, k).replace(/RPCHECK_/g, "RPCHECK-") + "\""; };
+  var clips = function (cs) { return cs.overflowX !== "visible" || cs.overflowY !== "visible"; };
   var shown = function (e) {
-    for (var a = e; a && a !== d.documentElement; a = a.parentElement) {
+    for (var a = e; a; a = a.parentElement) {
       var cs = getComputedStyle(a);
       if (cs.display === "none" || cs.visibility === "hidden" || parseFloat(cs.opacity) < 0.05) return false;
       if (cs.clip && cs.clip !== "auto") return false;  // visually hidden on purpose
       if (cs.clipPath && cs.clipPath !== "none" && /inset\(50%|inset\(100%/.test(cs.clipPath)) return false;
     }
+    // Inside a closed <details>, only its summary is drawn.
+    for (var dd = e.closest("details:not([open])"); dd; dd = dd.parentElement && dd.parentElement.closest("details:not([open])")) {
+      var sm = dd.querySelector(":scope > summary");
+      if (!sm || !sm.contains(e)) return false;
+    }
     var b = e.getBoundingClientRect();
     return b.width >= 2 && b.height >= 2;
   };
-  var block = function (e) {
-    for (var a = e; a; a = a.parentElement) { var dp = getComputedStyle(a).display; if (dp !== "inline" && dp !== "contents") return a; }
-    return null;
-  };
-  var textRect = function (e) {
-    var t = [].filter.call(e.childNodes, function (c) { return c.nodeType === 3 && c.textContent.trim(); });
-    if (!t.length) return null;
-    var g = d.createRange(); g.setStart(t[0], 0); g.setEnd(t[t.length - 1], t[t.length - 1].length);
-    var rs = [].filter.call(g.getClientRects(), function (x) { return x.width > 0.5 && x.height > 0.5; });
-    return rs.length ? rs : null;
+  // The rectangles of an element's own text, one text node at a time (never a range across its child elements),
+  // cut to what its clipping ancestors let show.
+  var textRects = function (e) {
+    var out = [];
+    [].forEach.call(e.childNodes, function (c) {
+      if (c.nodeType !== 3 || !c.textContent.trim()) return;
+      var g = d.createRange(); g.selectNodeContents(c);
+      [].forEach.call(g.getClientRects(), function (x) { if (x.width > 0.5 && x.height > 0.5) out.push({ left: x.left, right: x.right, top: x.top, bottom: x.bottom, height: x.height }); });
+    });
+    for (var a = e; a && a !== d.documentElement; a = a.parentElement) {
+      var cs = getComputedStyle(a);
+      if (!clips(cs)) continue;
+      var cb = a.getBoundingClientRect();
+      out = out.map(function (x) { return { left: Math.max(x.left, cb.left), right: Math.min(x.right, cb.right), top: Math.max(x.top, cb.top), bottom: Math.min(x.bottom, cb.bottom), height: x.height }; })
+        .filter(function (x) { return x.right - x.left > 0.5 && x.bottom - x.top > 0.5; });
+    }
+    return out;
   };
   var texts = 0, spills = [], touch = [], tiny = [], small = null, seenPair = {};
   var all = d.body ? d.body.querySelectorAll("*") : [];
+  var size = function (n, ncs) {
+    var scale = n.offsetWidth ? n.getBoundingClientRect().width / n.offsetWidth : 1;
+    return parseFloat(ncs.fontSize) * (scale || 1);
+  };
+  var readable = function (n, ncs, label) {
+    var fpx = size(n, ncs);
+    if (!small || fpx < small.px) small = { px: Math.round(fpx * 10) / 10, el: name(n) + " " + label };
+    if (innerWidth <= 480 && fpx < MINPX - 0.01) tiny.push(name(n) + " " + label + " is " + Math.round(fpx * 10) / 10 + "px");
+  };
   for (var i = 0; i < all.length; i++) {
     var n = all[i];
-    if (/^(SCRIPT|STYLE|NOSCRIPT|TEMPLATE|svg|SVG)$/.test(n.tagName) || n.closest("svg")) continue;
-    var rs = textRect(n);
-    if (!rs || !shown(n)) continue;
+    if (/^(SCRIPT|STYLE|NOSCRIPT|TEMPLATE)$/.test(n.tagName) || n.closest("svg")) continue;
+    // A field's own words (its value or placeholder) must be readable too.
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(n.tagName) && shown(n)) {
+      var fv = (n.value || n.placeholder || "").trim();
+      if (fv.length > 1 && !/^(hidden|checkbox|radio|range|color|file)$/.test(n.type)) readable(n, getComputedStyle(n), "\"" + fv.slice(0, 20) + "\"");
+      continue;
+    }
+    var rs = textRects(n);
+    if (!rs.length || !shown(n)) continue;
     texts++;
     var ncs = getComputedStyle(n);
-    // 1. Spill: a line of text runs past the right or bottom edge of the box laid out for it.
-    var bx = block(n);
-    if (bx && bx !== d.body && bx !== d.documentElement) {
-      var bcs = getComputedStyle(bx), bb = bx.getBoundingClientRect();
-      if (bb.width > 2 && bcs.overflowX === "visible") {
-        var over = 0, down = 0;
-        for (var k = 0; k < rs.length; k++) { over = Math.max(over, rs[k].right - bb.right); if (bcs.overflowY === "visible") down = Math.max(down, rs[k].bottom - bb.bottom); }
-        if (over > 2) spills.push(name(n) + " \"" + n.textContent.trim().slice(0, 24) + "\" runs " + Math.round(over) + "px past the right edge of " + name(bx));
-        else if (down > 2) spills.push(name(n) + " \"" + n.textContent.trim().slice(0, 24) + "\" runs " + Math.round(down) + "px below the bottom of " + name(bx));
-      }
+    // 1. Spill: a line of its text runs past the edges of a box laid out for it: each block it sits in, up to the
+    //    first that clips or scrolls (which cuts it, measured above) or an overlay (absolute or fixed), which has
+    //    its own box. A negative text-indent (a hung quote) may pass the left edge by that much.
+    var indent = Math.max(0, -parseFloat(ncs.textIndent) || 0) + 2;
+    for (var bx = n; bx && bx !== d.body && bx !== d.documentElement; bx = bx.parentElement) {
+      var bcs = getComputedStyle(bx);
+      if (bcs.display === "inline" || bcs.display === "contents") continue;
+      var bb = bx.getBoundingClientRect();
+      if (bb.width <= 2) break;
+      var right = 0, down = 0, left = 0;
+      for (var k = 0; k < rs.length; k++) { right = Math.max(right, rs[k].right - bb.right); down = Math.max(down, rs[k].bottom - bb.bottom); left = Math.max(left, bb.left - rs[k].left); }
+      var where = right > 2 ? Math.round(right) + "px past the right edge" : left > indent ? Math.round(left) + "px past the left edge" : down > 2 ? Math.round(down) + "px below the bottom" : "";
+      if (where) { spills.push(name(n) + " " + said(n, 24) + " runs " + where + " of " + name(bx)); break; }
+      if (clips(bcs) || /^(absolute|fixed)$/.test(bcs.position)) break;
     }
     // 2. Touching: text on one line with a neighbouring box (a sibling, or a child box of its own) less than 2px
-    //    away, or overlapping any neighbour's box. Inline neighbours are part of the sentence; overlays are not laid out.
-    var t = rs[0], last = rs[rs.length - 1];
+    //    away, or overlapping a neighbour's box. Inline neighbours are part of the sentence; overlays (absolute,
+    //    fixed or transformed) are laid out on their own.
     var hood = [];
-    if (n.parentElement) [].forEach.call(n.parentElement.children, function (c) { if (c !== n) hood.push(c); });
-    [].forEach.call(n.children, function (c) { hood.push(c); });
-    for (var j = 0; j < hood.length; j++) {
+    // Text that is itself an overlay (a copy button pinned over a code block) sits over its siblings by design.
+    if (/^(absolute|fixed)$/.test(ncs.position)) hood = null;
+    if (hood && n.parentElement) [].forEach.call(n.parentElement.children, function (c) { if (c !== n) hood.push(c); });
+    if (hood) [].forEach.call(n.children, function (c) { hood.push(c); });
+    for (var j = 0; hood && j < hood.length; j++) {
       var c = hood[j], cc = getComputedStyle(c);
       if (cc.display === "inline" || cc.display === "contents" || /^(absolute|fixed)$/.test(cc.position) || !shown(c)) continue;
       if (cc.transform !== "none") continue;
@@ -104,38 +140,33 @@ function () {
       var b = c.getBoundingClientRect();
       var surf = !/^(transparent|rgba\(0, 0, 0, 0\))$/.test(cc.backgroundColor) || cc.backgroundImage !== "none" || cc.boxShadow !== "none" ||
         ["Top", "Right", "Bottom", "Left"].some(function (s) { return parseFloat(cc["border" + s + "Width"]) > 0 && cc["border" + s + "Style"] !== "none"; });
-      if (!surf && /^(IMG|SVG|svg|CANVAS|INPUT|TEXTAREA|SELECT|BUTTON)$/.test(c.tagName) === false) {
+      if (!surf && !/^(IMG|svg|CANVAS|INPUT|TEXTAREA|SELECT|BUTTON)$/.test(c.tagName)) {
         if (!c.textContent.trim()) continue;
         var cr = d.createRange(); cr.selectNodeContents(c); b = cr.getBoundingClientRect();
       }
       if (b.width < 4 || b.height < 4 || c.contains(n)) continue;
-      var hits = [];
-      for (var q = 0; q < rs.length; q++) {
+      var hit = "";
+      for (var q = 0; q < rs.length && !hit; q++) {
         var x = rs[q];
         var ov = Math.min(x.bottom, b.bottom) - Math.max(x.top, b.top), oh = Math.min(x.right, b.right) - Math.max(x.left, b.left);
-        if (ov > 1 && oh > 1 && !(b.left <= x.left && b.right >= x.right && b.top <= x.top && b.bottom >= x.bottom)) { hits.push("overlaps"); break; }
-        var same = ov > 0.5 * Math.min(x.height, b.height);
-        if (!same) continue;
+        if (ov > 1 && oh > 1) { hit = "overlaps"; break; }
+        if (!(ov > 0.5 * Math.min(x.height, b.height))) continue;
         var gap = b.left >= x.right - 0.5 ? b.left - x.right : x.left >= b.right - 0.5 ? x.left - b.right : -1;
-        if (gap >= 0 && gap < 2) { hits.push(Math.round(gap * 10) / 10 + "px from"); break; }
+        if (gap >= 0 && gap < 2) hit = Math.round(gap * 10) / 10 + "px from";
       }
-      if (hits.length) {
+      if (hit) {
         var key = name(n) + "|" + name(c);
-        if (!seenPair[key]) { seenPair[key] = 1; touch.push(name(n) + " \"" + n.textContent.trim().slice(0, 18) + "\" " + hits[0] + " " + name(c)); }
+        if (!seenPair[key]) { seenPair[key] = 1; touch.push(name(n) + " " + said(n, 18) + " " + hit + " " + name(c)); }
       }
     }
-    // 3. Tiny: the drawn size of text a reader must read (more than two characters, not hidden from them).
-    if (n.textContent.trim().length > 2 && !n.closest("[aria-hidden=\"true\"]")) {
-      var scale = n.offsetWidth ? n.getBoundingClientRect().width / n.offsetWidth : 1;
-      var fpx = parseFloat(ncs.fontSize) * (scale || 1);
-      if (!small || fpx < small.px) small = { px: Math.round(fpx * 10) / 10, el: name(n) + " \"" + n.textContent.trim().slice(0, 20) + "\"" };
-      if (innerWidth <= 480 && fpx < MINPX - 0.01) tiny.push(name(n) + " \"" + n.textContent.trim().slice(0, 20) + "\" is " + Math.round(fpx * 10) / 10 + "px");
-    }
+    // 3. Tiny: the drawn size of words a reader must read (two or more characters).
+    if (n.textContent.trim().length > 1) readable(n, ncs, said(n, 20));
   }
   if (!texts) r.inconclusive.push("no visible text to judge");
-  if (spills.length) r.fails.push("text spills its box: " + spills.slice(0, 4).join("; ") + (spills.length > 4 ? " (+" + (spills.length - 4) + " more)" : ""));
-  if (touch.length) r.fails.push("text touches a neighbour: " + touch.slice(0, 4).join("; ") + (touch.length > 4 ? " (+" + (touch.length - 4) + " more)" : ""));
-  if (tiny.length) r.fails.push("text under " + MINPX + "px at " + innerWidth + " wide: " + tiny.slice(0, 4).join("; ") + (tiny.length > 4 ? " (+" + (tiny.length - 4) + " more)" : ""));
+  var more = function (a, k) { return a.slice(0, k).join("; ") + (a.length > k ? " (+" + (a.length - k) + " more)" : ""); };
+  if (spills.length) r.fails.push("text spills its box: " + more(spills, 4));
+  if (touch.length) r.fails.push("text touches a neighbour: " + more(touch, 4));
+  if (tiny.length) r.fails.push("text under " + MINPX + "px at " + innerWidth + " wide: " + more(tiny, 4));
   r.info = { width: innerWidth, texts: texts, smallest: small };
   return r;
 }
@@ -152,7 +183,7 @@ fi
 
 AB="${AGENT_BROWSER:-agent-browser}"
 if ! command -v "$AB" >/dev/null 2>&1; then
-  echo "FAIL: agent-browser not found (set AGENT_BROWSER)" >&2
+  echo "INCONCLUSIVE: agent-browser not found (set AGENT_BROWSER); nothing was checked" >&2
   exit 2
 fi
 
@@ -187,10 +218,12 @@ run_js() {
     inconclusive "$2: eval failed: $_out"
     return
   fi
-  case "$_out" in
-    *RPCHECK_PASS*) ok "$2" ;;
-    *RPCHECK_FAIL*) fail "$2: $_out" ;;
-    *RPCHECK_INCONCLUSIVE*) inconclusive "$2: $_out" ;;
+  # The verdict is the result's first word, never a match anywhere in it (page text quoted in a reason may hold one).
+  _first="$(printf '%s' "$_out" | sed -n 's/^[[:space:]"]*\(RPCHECK_[A-Z]*\).*/\1/p' | head -n 1)"
+  case "$_first" in
+    RPCHECK_PASS) ok "$2" ;;
+    RPCHECK_FAIL) fail "$2: $_out" ;;
+    RPCHECK_INCONCLUSIVE) inconclusive "$2: $_out" ;;
     *) inconclusive "$2: no result: $_out" ;;
   esac
 }
@@ -215,6 +248,8 @@ except Exception as e:
     print("unparseable output: %s" % e); sys.exit(2)
 if isinstance(doc, dict) and doc.get("success") is False:
     print("command failed: %s" % doc.get("error")); sys.exit(2)
+if doc is None or doc == {} or not isinstance(doc, (dict, list)):
+    print("no entries list in the output: %s" % str(doc)[:100]); sys.exit(2)
 found = []
 def walk(x):
     if isinstance(x, list):
