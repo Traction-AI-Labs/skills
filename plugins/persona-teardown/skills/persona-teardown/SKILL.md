@@ -202,7 +202,9 @@ measurably deflates the problem count and inflates severity.
    → **question for the human**, which never enters the design-tool prompt, because a design tool asked
    an open question invents an answer and draws it.
 5. **Verify** every screenshot path exists on disk and every quoted copy string is actually in the
-   artefact. Anything failing is demoted to a question.
+   artefact. Anything failing is demoted to a question. A screenshot that is blank, half-loaded, cut short or of another screen than its row names is
+   inconclusive: its finding is demoted to a question and its row goes on the not-checked list below, never
+   counted as a defect or as a pass.
 6. **Amendment prompt** sections, in order: WHAT THIS IS · WHAT CHANGED AND WHY (one paragraph per
    theme, naming the persona whose goal it blocks) · PER-SCREEN CHANGES (fixes only, element label
    quoted, change, why in one clause, severity) · COPY PASS (from-and-to pairs, both quoted verbatim)
@@ -212,7 +214,9 @@ measurably deflates the problem count and inflates severity.
    (screenshot paths grouped by screen).
 
 Hand the questions-for-the-human list to the human separately as a numbered list, each item stating what
-is unknown and what decision it blocks.
+is unknown and what decision it blocks. With it goes one **What was not checked** list: every persona's not-reached and not-assessable rows, merged,
+plus every screen, viewport and ground in the matrix that no persona captured, and every inconclusive screenshot.
+"Nothing" is valid only beside the list of screens, viewports and grounds that were covered.
 
 ## Failure modes worth remembering
 
