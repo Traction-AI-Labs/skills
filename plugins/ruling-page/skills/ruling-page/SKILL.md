@@ -112,6 +112,11 @@ Several decisions, or asks from several threads, go on one page, not one page ea
   Partly answered: S3, W1
   Not answered: S4, W2, W3
   ```
+- An optional `JUDGE` block, written only by a precedent-checking tool if you run one (a separate `<script>` placed
+  just before the engine, `const JUDGE = {"<card id>": {"label": "...", "why": "...", "where": "..."}}`), shows each
+  card's note folded under its evidence as plain text, headed "Precedent judge (shadow)". It never answers a card:
+  answers, "Copy my answers" and saved state ignore it. Never edit it by hand; run the tool again after changing the
+  cards.
 
 ## After they paste
 

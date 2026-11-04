@@ -440,6 +440,8 @@ const T = [
   var SRC = THREADS ? T : (typeof D !== "undefined" && Array.isArray(D) ? D : []);
   var WHO = typeof RULER === "string" ? RULER.trim() : "";
   var INFO = (typeof BRIEF === "object" && BRIEF) ? BRIEF : {};
+  /* Optional JUDGE block: a folded note per card from a precedent-checking tool, if one was run. Never an answer. */
+  var JUDGE_NOTES = (typeof JUDGE === "object" && JUDGE) ? JUDGE : {};
   /* Only when the page is embedded in a host page that collects answers: they are posted to the host at its exact origin, never "*". */
   var BRIDGE = null;
   if (typeof RULING_BRIDGE === "object" && RULING_BRIDGE) {
@@ -705,6 +707,12 @@ const T = [
     }
     c.parts.forEach(function (p) { sec.appendChild(renderPart(c, p)); });
     if (c.d.ev) { var ev = el("p", "tp-ev"); ev.appendChild(el("b", null, "Evidence: ")); ev.appendChild(doc.createTextNode(c.d.ev)); sec.appendChild(ev); }
+    var jn = Object.prototype.hasOwnProperty.call(JUDGE_NOTES, c.id) ? JUDGE_NOTES[c.id] : null;
+    if (jn && typeof jn === "object" && jn.label) {
+      /* The verdict sits inside the fold, never on the summary line, so the ruler sees it only by choosing to. */
+      var jd = el("details", "tp-more tp-judge"); jd.appendChild(el("summary", null, "Precedent judge (shadow)"));
+      jd.appendChild(el("div", "tp-textbody", [String(jn.label), jn.why, jn.where ? "Where: " + jn.where : ""].filter(Boolean).join("\n\n"))); sec.appendChild(jd);
+    }
     sec.appendChild(noteBox(c, "_", THREADS ? "Anything about this answer? (optional)" : "Add a note (optional)", "Note on " + c.id));
     var foot = el("div", "tp-foot"); c.clear = el("button", "tp-link", THREADS ? "Clear this card" : "Clear my choice"); c.clear.type = "button";
     c.clear.addEventListener("click", function () {

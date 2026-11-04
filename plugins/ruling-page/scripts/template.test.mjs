@@ -6,7 +6,8 @@
 //   1. In a sandboxed frame with storage blocked (as in a Claude app artifact), the page renders with no
 //      script errors and says answers are NOT saved instead of "Answers save in this browser".
 //   2. With storage available, the page keeps "Answers save in this browser" (so the warning is not always on).
-//   3. Card text is shown literally: an HTML payload in every string field creates no element and no side effect.
+//   3. Card text is shown literally: an HTML payload in every string field (the optional JUDGE note included) creates
+//      no element and no side effect.
 //   4. "Copy my answers": when the clipboard works the page says Copied; when both clipboard routes fail it
 //      says it could not copy, and leaves the answers visible and selected for a manual copy.
 import { readFileSync } from "node:fs";
@@ -26,7 +27,7 @@ const check = (ok, msg) => { if (!ok) { failures++; console.error("FAIL " + msg)
 
 function withPayload(name, html) {
   if (name === "template.html") {
-    const data = `const D = [{ id: ${JSON.stringify(idPayload("K1"))}, group: ${JSON.stringify(PAYLOAD)}, title: ${JSON.stringify(PAYLOAD)}, q: ${JSON.stringify(PAYLOAD)}, opts: [[${JSON.stringify(PAYLOAD)}, ${JSON.stringify(PAYLOAD)}], ["B", "b"]], pick: 0, why: ${JSON.stringify(PAYLOAD)}, ev: ${JSON.stringify(PAYLOAD)} }];\n</script>`;
+    const data = `const D = [{ id: ${JSON.stringify(idPayload("K1"))}, group: ${JSON.stringify(PAYLOAD)}, title: ${JSON.stringify(PAYLOAD)}, q: ${JSON.stringify(PAYLOAD)}, opts: [[${JSON.stringify(PAYLOAD)}, ${JSON.stringify(PAYLOAD)}], ["B", "b"]], pick: 0, why: ${JSON.stringify(PAYLOAD)}, ev: ${JSON.stringify(PAYLOAD)} }];\nconst JUDGE = { ${JSON.stringify(idPayload("K1"))}: { label: ${JSON.stringify(PAYLOAD)}, why: ${JSON.stringify(PAYLOAD)}, where: ${JSON.stringify(PAYLOAD)} } };\n</script>`;
     const out = html.replace(/const D = \[[\s\S]*?\n\];\n<\/script>/, data);
     if (out === html) throw new Error("template.html: could not find the D array to replace");
     return out;
@@ -63,6 +64,11 @@ for (const name of ["template.html", "template-threads.html"]) {
     const literal = await fr.evaluate(p => document.body.innerText.includes(p.slice(0, 20)) && document.body.innerText.includes('<b id="inj'), PAYLOAD);
     check(imgs === 0 && flag === "" && !injected, `${name}: HTML in card fields and ids creates no element and runs nothing (elements ${imgs}${imgs ? ": " + found.join(" ; ") : ""}, flag "${flag}", message ${injected})`);
     check(literal, `${name}: HTML in card fields is shown literally`);
+    if (name === "template.html") {
+      const judge = await fr.evaluate(() => { const d = document.querySelector("details.tp-judge"); return d ? { summary: d.querySelector("summary").textContent, body: d.querySelector(".tp-textbody").textContent, open: d.open } : null; });
+      check(!!judge && judge.summary === "Precedent judge (shadow)" && !judge.open && judge.body.includes(PAYLOAD.slice(0, 20)),
+        `${name}: the JUDGE note renders folded, its verdict inside the fold and shown literally (${JSON.stringify(judge)})`);
+    }
     // Both clipboard routes fail: the page must not claim Copied, and must leave the answers selected.
     await fr.evaluate(() => {
       Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: () => Promise.reject(new Error("blocked")) } });
