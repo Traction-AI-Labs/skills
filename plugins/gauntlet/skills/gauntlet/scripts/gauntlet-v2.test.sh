@@ -48,7 +48,9 @@ for p in claude-cli codex-cli claude-native codex-native; do
   refute grep -Fq '+changed' "$TMP/run/prompts/$p.md"
   grep -Fq 'Read the whole file before judging' "$TMP/run/prompts/$p.md"
   grep -Fq 'every existing user of each changed value, function or piece of state, including callers and readers outside the diff' "$TMP/run/prompts/$p.md"
-  grep -Fq 'Report every defect you trace, whatever its severity and whether this diff introduced it' "$TMP/run/prompts/$p.md"
+  grep -Fq 'Report every P0 and P1 you find, whether or not this diff introduced it' "$TMP/run/prompts/$p.md"
+  grep -Fq 'Report at most five P2s, those with the largest consequence, and no P3s.' "$TMP/run/prompts/$p.md"
+  refute grep -Fq 'whatever its severity' "$TMP/run/prompts/$p.md"
   grep -Eq 'app\.txt +\| +2 ' "$TMP/run/prompts/$p.md"
 done
 for p in claude-cli codex-cli; do
@@ -849,6 +851,13 @@ test "$(record_lines "$RECORD")" -eq 2
 # 4. Commit B is round 2. The count survives clean.
 scratch_prepare "$ROUNDS/r-b1" --pr 7 > "$TMP/t4.out"
 grep -Fxq 'ROUND: 2 identity=pr:7 repo=rounds/repo' "$TMP/t4.out"
+# Round 1 keeps the traced path; from round 2 a P0 or P1 needs a run.
+for p in claude-cli codex-cli claude-native codex-native; do
+  grep -Fq 'counts as traced' "$ROUNDS/r-a2/prompts/$p.md"
+  refute grep -Fq 'a later round' "$ROUNDS/r-a2/prompts/$p.md"
+  grep -Fq 'This is round 2, a later round. A P0 or P1 holds the merge only with a run that shows it' "$ROUNDS/r-b1/prompts/$p.md"
+  refute grep -Fq 'counts as traced' "$ROUNDS/r-b1/prompts/$p.md"
+done
 scratch_accept "$ROUNDS/r-b1" claude
 test "$(record_lines "$RECORD")" -eq 3
 scratch_run "$ROUNDS/r-a2" clean --force
