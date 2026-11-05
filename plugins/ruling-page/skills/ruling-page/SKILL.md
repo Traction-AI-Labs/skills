@@ -2,6 +2,7 @@
 name: ruling-page
 description: Use when you need the person you're working with to rule on a COMPLICATED decision (several decisions at once, or options with trade-offs that need explaining), or when asks from several threads need one answer. Builds a clickable one-file HTML ruling page with your recommendation pre-selected on every card and a "Copy my answers" button, instead of asking them to read a markdown file or a long chat message. Simple yes/no decisions stay in chat.
 ---
+<!-- SOURCE-REVISION 2629064 -->
 
 # Ruling page
 
@@ -36,6 +37,8 @@ real trade-offs: build a page.
      they may already have answered. Answers are saved by option position: on such a card, add options
      only at the end, and give a changed question a new id (`D3b`). A repeated id is left out with a
      console error.
+   - `short` (optional): the label the rail, the card head and the progress bar show, for a long `id` such as a
+     ledger key (`20261105-CR1` shows as `CR1`). Answers stay saved and copied under `id`.
    - `group` (optional): a section heading, for example one per workstream.
    - `title`, `q`: plain words, one sentence for the question. No codes, lane names or jargon they
      would have to look up.

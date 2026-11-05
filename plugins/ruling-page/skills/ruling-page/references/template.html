@@ -126,11 +126,11 @@
   .tp .tp-rail-g { display:flex; justify-content:space-between; gap:8px; font:600 .78rem/1.3 var(--tp-sans); color:var(--tp-muted); margin:22px 0 6px 8px; }
   .tp .tp-rail-g:first-child { margin-top:0; }
   .tp .tp-rail ol { list-style:none; margin:0; padding:0; }
-  .tp .tp-rail a { display:grid; grid-template-columns:12px 1.9em minmax(0,1fr); gap:8px; align-items:start; min-height:32px; padding:4px 8px; border-radius:8px;
+  .tp .tp-rail a { display:grid; grid-template-columns:12px minmax(1.9em,max-content) minmax(0,1fr); gap:8px; align-items:start; min-height:32px; padding:4px 8px; border-radius:8px;
                    color:var(--tp-ink-2); text-decoration:none; font-size:.86rem; line-height:1.25; }
   .tp .tp-rail a:hover { background:var(--tp-surface); color:var(--tp-ink); }
   .tp .tp-rail a.is-here { background:var(--tp-accent-tint); color:var(--tp-ink); font-weight:600; box-shadow:inset 0 0 0 1px var(--tp-accent-line); }
-  .tp .tp-rid { font:700 .76rem var(--tp-sans); color:var(--tp-muted); }
+  .tp .tp-rid { font:700 .76rem var(--tp-sans); color:var(--tp-muted); white-space:nowrap; }
   .tp .tp-rt { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
   .tp .tp-rail .tp-dot, .tp .tp-rail .tp-rid { margin-top:3px; }
   .tp .tp-dot { width:12px; height:12px; border-radius:50%; box-shadow:inset 0 0 0 1.5px var(--tp-faint); }
@@ -514,7 +514,7 @@ const D = [
   var lastGroup, seenCards = Object.create(null);
   var CARDS = SRC.filter(function (d) { return d && d.id != null && freshId(seenCards, String(d.id), "card"); }).map(function (d) {
     var seenParts = Object.create(null);
-    var c = { d: d, id: String(d.id), dom: "card-" + sid(d.id), title: String(d.title || ""), parts: [] };
+    var c = { d: d, id: String(d.id), label: String(d.short || d.id), dom: "card-" + sid(d.id), title: String(d.title || ""), parts: [] };
     c.group = d.group || lastGroup; lastGroup = c.group;
     if (THREADS) {
       c.thread = { asked: d.asked, when: d.when, answer: d.answer, owed: d.owed };
@@ -624,7 +624,7 @@ const D = [
     }
     var fs = el("fieldset", "tp-part tp-part--" + p.kind), lg = el("legend", p.solo ? "tp-vh" : "tp-part-q");
     lg.id = name + "-q";
-    if (p.solo) lg.textContent = c.id + ": " + (c.d.q || c.title);
+    if (p.solo) lg.textContent = c.label + ": " + (c.d.q || c.title);
     else {
       lg.appendChild(el("span", "tp-pid", p.id)); lg.appendChild(el("span", null, p.q));
       if (p.kind === "multi") lg.appendChild(el("span", "tp-hint", "Choose any"));
@@ -690,7 +690,7 @@ const D = [
   function renderCard(c) {
     var sec = el("section", "tp-card card"); sec.id = c.dom; sec.tabIndex = -1; sec.setAttribute("aria-labelledby", c.dom + "-t");
     var head = el("div", "tp-card-head"), h = el("h3", "tp-card-title", c.title);
-    h.id = c.dom + "-t"; head.appendChild(el("span", "tp-id", c.id));
+    h.id = c.dom + "-t"; head.appendChild(el("span", "tp-id", c.label));
     if (c.d.chip) h.appendChild(el("span", "tp-flag", c.d.chip));
     head.appendChild(h); c.chip = el("span", "tp-state"); head.appendChild(c.chip); sec.appendChild(head);
     if (c.thread) {
@@ -762,7 +762,7 @@ const D = [
       if (c.group && run) run.cards.push(c);
       holder.appendChild(renderCard(c));
       var li = el("li"), a = el("a"); a.href = "#" + c.dom; c.dot = el("span", "tp-dot"); c.dot.setAttribute("aria-hidden", "true");
-      a.appendChild(c.dot); a.appendChild(el("span", "tp-rid", c.id)); a.appendChild(el("span", "tp-rt", c.title)); c.rstate = el("span", "tp-vh"); a.appendChild(c.rstate);
+      a.appendChild(c.dot); a.appendChild(el("span", "tp-rid", c.label)); a.appendChild(el("span", "tp-rt", c.title)); c.rstate = el("span", "tp-vh"); a.appendChild(c.rstate);
       li.appendChild(a); railList.appendChild(li); c.rlink = a;
       c.seg = el("span", "tp-seg" + (c.gapBefore ? " tp-seg--gap" : "")); c.seg.addEventListener("click", function () { goCard(c); }); strip.appendChild(c.seg);
       c.parts.forEach(function (p) { syncPart(c, p); });
@@ -775,7 +775,7 @@ const D = [
     var st = status(c), word = st.st === "done" && st.changed ? "Not my pick" : WORDS[st.st];
     [c.el, c.chip, c.seg, c.dot].forEach(function (e) { e.dataset.st = st.st; e.dataset.ch = st.changed ? "1" : "0"; });
     c.chip.textContent = word; c.rstate.textContent = ", " + word + (st.changed && st.st !== "done" ? ", not my pick" : "");
-    c.seg.title = c.id + " " + c.title + ": " + word;
+    c.seg.title = c.label + " " + c.title + ": " + word;
     var s = S.cards[c.id]; c.clear.hidden = !Object.keys(s.a).length;
   }
   function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
@@ -810,7 +810,7 @@ const D = [
     [["Not answered", function (c) { return status(c).st === "open"; }], ["Partly answered", function (c) { return status(c).st === "part"; }], ["Not my pick", function (c) { return status(c).changed; }]].forEach(function (row) {
       var list = CARDS.filter(row[1]); if (!list.length) return;
       var box = el("div", "tp-jumps"), ul = el("ul"); box.appendChild(el("h3", null, row[0] + " (" + list.length + ")"));
-      list.forEach(function (c) { var li = el("li"), a = el("a"); a.href = "#" + c.dom; a.appendChild(el("span", "tp-rid", c.id)); a.appendChild(el("span", null, c.title)); li.appendChild(a); ul.appendChild(li); });
+      list.forEach(function (c) { var li = el("li"), a = el("a"); a.href = "#" + c.dom; a.appendChild(el("span", "tp-rid", c.label)); a.appendChild(el("span", null, c.title)); li.appendChild(a); ul.appendChild(li); });
       box.appendChild(ul); jumps.appendChild(box);
     });
     if (!$("out").hidden) $("out").textContent = buildText();

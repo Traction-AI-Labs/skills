@@ -2,6 +2,7 @@
 name: call-prep
 description: Use BEFORE writing any talking track, call prep, meeting prep, standup prep, briefing script or "what do I say on the call" doc, for any counterpart (client, candidate, recruiter, cofounder, vendor). Produces a verbatim script as one interactive HTML page the caller reads live off a second window, with a guard line of what not to say, numbered beats with the exact lines in quotes, fallbacks for pushback and answers to the hardest questions, not a list of points to cover.
 ---
+<!-- SOURCE-REVISION 7f9eeb3 -->
 
 # Call prep
 
