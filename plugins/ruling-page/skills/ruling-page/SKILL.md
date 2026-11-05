@@ -17,7 +17,7 @@ real trade-offs: build a page.
 ## Build it
 
 1. Copy `references/template.html` next to the record the decisions belong to (the plan, spec or
-   status folder), named for what it rules on, for example `2026-10-02-pricing-rulings.html`.
+   status folder; a private one when a client or third party can read that folder), named for what it rules on, for example `2026-10-02-pricing-rulings.html`.
    **In the Claude app**, where there is no local folder, fill the template and show it as an HTML
    artifact instead; the rest of this skill is the same.
 2. In the data script, replace `RULER`, `BRIEF` and `D` (keep the `svg` helper above `D` if your
@@ -38,7 +38,8 @@ real trade-offs: build a page.
      only at the end, and give a changed question a new id (`D3b`). A repeated id is left out with a
      console error.
    - `short` (optional): the label the rail, the card head and the progress bar show, for a long `id` such as a
-     ledger key (`20261105-CR1` shows as `CR1`). Answers stay saved and copied under `id`.
+     tracker key (`pricing-2026-K1` shows as `K1`). Answers stay saved and copied under `id`. It is for
+     cards only (a part shows its own `id`); keep each `short` unique on the page.
    - `group` (optional): a section heading, for example one per workstream.
    - `title`, `q`: plain words, one sentence for the question. No codes, lane names or jargon they
      would have to look up.
@@ -119,7 +120,7 @@ Several decisions, or asks from several threads, go on one page, not one page ea
 ## After they paste
 
 Record their pasted answers verbatim, with the time, wherever the decisions are written down (the
-plan, spec or requirements file), then act on the answered lines only. A line that reads "not answered
+plan, spec or requirements file; a private one when others can read it), then act on the answered lines only. A line that reads "not answered
 (your pick was ...)", and every id under "Partly answered" or "Not answered", is still open: never act
 on your own pick for it; ask about those ids once, in chat. If another thread owns some cards, pass its
 lines on.
@@ -135,7 +136,7 @@ When the page carries answers to questions they asked, not only decisions, use
 `references/template-threads.html`. Each card is a thread: their question verbatim with when and where
 they asked it, the answer, what is still owed and by whom, a **Got it** button (saved like a choice),
 then one or more branch decisions with the same pick buttons. Replace only the data script (`RULER`,
-`BRIEF` with `date` and `lede`, `T`) and the `<h1>`. Thread fields: `id`, `group`, `title`, `asked`,
+`BRIEF` with `date` and `lede`, `T`) and the `<h1>`. Thread fields: `id`, `short` (optional, as above), `group`, `title`, `asked`,
 `when`, `answer`, `owed` (empty hides it), `ev`, `branches: [{id, q, opts, pick, why, flip, multi}]`.
 Branch ids are stable (`Q1a`, `Q1b`). Check it as in step 3: the card count equals the number of
 threads in `T`, and `rulingText()` starts `Open questions: 0 of <N> answers read, 0 of <B> decisions

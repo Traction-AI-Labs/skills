@@ -95,8 +95,8 @@ open-source writing skills; see [NOTICE.md](NOTICE.md).
 ## Changelog
 
 - **ruling-page 0.2.2 and reading-page 0.2.2** (6 November 2026). ruling-page: a card can carry an optional
-  `short` label, which the rail, the card head and the progress bar show in place of a long `id` (a ledger key
-  such as `20261105-CR1` shows as `CR1`); answers stay saved and copied under `id`. Both ruling templates carry
+  `short` label, which the rail, the card head and the progress bar show in place of a long `id` (a tracker key
+  such as `pricing-2026-K1` shows as `K1`); answers stay saved and copied under `id`. Both ruling templates carry
   the change, so their shared engine stays word for word the same. reading-page: code inside a source note never
   renders under 11.5px, so it stays readable at phone width.
 - **gauntlet 0.6.1 and ruling-page 0.2.1** (4 November 2026). gauntlet: reviewers question the value of every
