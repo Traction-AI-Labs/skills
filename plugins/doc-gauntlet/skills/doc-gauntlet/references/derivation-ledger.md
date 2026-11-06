@@ -58,6 +58,8 @@ commands cannot expose is recorded as a cannot-derive, never guessed.
    counts the wrong thing gives a clean ledger for a wrong draft; a mismatch means a corrected manifest and
    a fresh leg one.
 5. Runs the cold task as the recipient.
+6. Tests every question for whether it is worth asking, and on a relayed message also runs the cold read as
+   the person who relays it (see "Questions worth asking" below).
 
 Leg two reports one line per checkable item in the draft, so its coverage is visible.
 
@@ -182,3 +184,25 @@ These rules override the paragraphs above where they differ.
 - **A proposal** gets two doc-gauntlet rounds that check its facts and figures by re-derivation from the
   source (the derivation leg above, a verbatim copy of its ledger appended to the reviewed export), then one
   round of this review in the order above, whose findings are applied once, with no re-run.
+
+## Questions worth asking, and a message someone else relays
+
+- **A message to a colleague that carries asks they will pass to a client or counterpart is client-facing**
+  for this procedure: it gets the whole procedure above (both legs and the final figures check) before it
+  reaches them.
+- **Leg two tests every question for whether it is worth asking.** For this test its inputs also include the
+  engagement's transcripts, recordings and message threads (the fresh listing leg one uses for what someone
+  said, in their own words) and any earlier version of a re-asked question. Each of these is a P1, fixed in
+  the question itself, never by adding a sentence:
+  - the answer is obvious, or someone has already given it, the recipient or anyone else in the place it
+    will be asked (on a call, in a message, on the board): cut it;
+  - the call is ours to make: state our default and ask only whether they object ("We'll match a customer
+    across records by account ID, then email or mobile, unless you say otherwise");
+  - an option offered is one someone who knows the domain would not offer, or the obvious one is missing:
+    correct the options;
+  - a question re-asked from an earlier date is copied rather than thought through again against everything
+    said since: rewrite it from the current facts, or cut it.
+- **A relayed message has two recipients.** Leg two runs the cold read as the person who relays it as well as
+  the client: no timestamps that point back into a thread ("your 06:57 question"), no terms we coined,
+  nothing that makes them scroll back, and each question stands alone so they can paste it to the client
+  unchanged. A stall in the relayer's read is a P1, as in the client's.
