@@ -2,7 +2,7 @@
 name: ruling-page
 description: Use when you need the person you're working with to rule on a COMPLICATED decision (several decisions at once, or options with trade-offs that need explaining), or when asks from several threads need one answer. Builds a clickable one-file HTML ruling page with your recommendation pre-selected on every card and a "Copy my answers" button, instead of asking them to read a markdown file or a long chat message. Simple yes/no decisions stay in chat.
 ---
-<!-- SOURCE-REVISION 2629064 -->
+<!-- SOURCE-REVISION ceb4b2e -->
 
 # Ruling page
 
