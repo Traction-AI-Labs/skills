@@ -2,6 +2,7 @@
 name: reading-page
 description: Use whenever the person you work with is meant to READ something longer than a chat message, in any project - a research report, plan, brief, handoff, review, summary, status write-up or investigation. Builds a polished, self-contained interactive HTML page (contents rail, bottom-line box, callouts, sortable tables, folded evidence, light and dark) from markdown with one command and opens it for them. Never hand them a .md file to read. Decisions they must rule on go to the ruling-page skill instead.
 ---
+<!-- SOURCE-REVISION 8366464 -->
 
 # Reading page
 
@@ -65,8 +66,12 @@ things. Put raw evidence under a Sources or Evidence heading so it folds away.
 Headless only, never on the reader's screen. `scripts/browser_check.sh <page>.html` (needs
 `agent-browser`) loads the page at phone width with JavaScript off and on, loads it at desktop
 width and resizes it to phone width without a reload (nothing may cover the title or standfirst while
-the window narrows or after), and checks the contents, links, ids, the phone bar, sideways overflow
-and the console; it exits non-zero on any failure.
+the window narrows or after), and checks the contents, links, ids, the phone bar, sideways overflow,
+the console, and fit and readability (no text spilling its box, touching or overlapping a neighbouring box, or under
+11px at phone width). Each check reads ok, FAIL or INCONCLUSIVE; INCONCLUSIVE means the capture broke (the browser
+could not open the page or run the check, or the page showed no text to judge), which is neither a pass nor a design
+fault. Run it once more; if it is inconclusive again, the page goes to the reader with that check named as not
+checked, never as passed. It exits 0 only when every check passes, 1 on any FAIL, and otherwise 2.
 Headless browsers are heavy: if the reader's machine is busy, run it on another machine. When you
 change the template or `build.py`, also build `scripts/fixtures/long-tokens.md` with the copy you
 changed and check that page.

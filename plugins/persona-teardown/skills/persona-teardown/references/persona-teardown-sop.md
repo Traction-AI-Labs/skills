@@ -358,7 +358,9 @@ Done by the orchestrator alone, mechanically.
      an open question invents an answer and draws it.
 5. **Verify before writing the prompt.** Every screenshot path referenced exists on disk. Every quoted
    copy string is actually present in the artefact. Any finding failing either check is demoted to a
-   question.
+   question. A screenshot that is blank, half-loaded, cut short or of another screen than its row names is
+   inconclusive: its finding is demoted to a question and its row goes on the not-checked list below, never
+   counted as a defect or as a pass.
 6. **Write the amendment prompt** in this structure:
 
 ```
@@ -399,7 +401,9 @@ ATTACHED
 ```
 
 Keep the questions-for-the-human list out of the prompt and hand it to the human separately as a
-numbered list, each item stating what is unknown and what decision it blocks.
+numbered list, each item stating what is unknown and what decision it blocks. With it goes one **What was not checked** list: every persona's not-reached and not-assessable rows, merged,
+plus every screen, viewport and ground in the matrix that no persona captured, and every inconclusive screenshot.
+"Nothing" is valid only beside the list of screens, viewports and grounds that were covered.
 
 ## Known failure modes and countermeasures
 
