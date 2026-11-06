@@ -851,15 +851,30 @@ test "$(record_lines "$RECORD")" -eq 2
 # 4. Commit B is round 2. The count survives clean.
 scratch_prepare "$ROUNDS/r-b1" --pr 7 > "$TMP/t4.out"
 grep -Fxq 'ROUND: 2 identity=pr:7 repo=rounds/repo' "$TMP/t4.out"
-# Round 1 keeps the traced path; from round 2 a P0 or P1 needs a run.
+# Round 1 keeps the traced path for every engine; from round 2 a Claude or Grok P0 or
+# P1 needs a run, while Codex keeps the traced path.
 for p in claude-cli codex-cli claude-native codex-native; do
   grep -Fq 'counts as traced' "$ROUNDS/r-a2/prompts/$p.md"
   refute grep -Fq 'a later round' "$ROUNDS/r-a2/prompts/$p.md"
+  refute grep -Fq 'does not count toward the five' "$ROUNDS/r-b1/prompts/$p.md"
+done
+for p in claude-cli claude-native; do
   grep -Fq 'This is round 2, a later round. A P0 or P1 holds the merge only with a run that shows it' "$ROUNDS/r-b1/prompts/$p.md"
   refute grep -Fq 'counts as traced' "$ROUNDS/r-b1/prompts/$p.md"
-  refute grep -Fq 'does not count toward the five' "$ROUNDS/r-b1/prompts/$p.md"
   grep -Fq "start its verification with 'Unrun P1:'" "$ROUNDS/r-b1/prompts/$p.md"
 done
+for p in codex-cli codex-native; do
+  grep -Fq 'counts as traced' "$ROUNDS/r-b1/prompts/$p.md"
+  refute grep -Fq 'a later round' "$ROUNDS/r-b1/prompts/$p.md"
+  refute grep -Fq 'Unrun P1:' "$ROUNDS/r-b1/prompts/$p.md"
+done
+# Grok in a later round needs a run as Claude does; Codex beside it keeps the traced path.
+scratch_prepare "$ROUNDS/r-b1-grok" --pr 7 --engines codex,grok > /dev/null
+grep -Fq 'a later round. A P0 or P1 holds the merge only with a run that shows it' "$ROUNDS/r-b1-grok/prompts/grok-cli.md"
+refute grep -Fq 'counts as traced' "$ROUNDS/r-b1-grok/prompts/grok-cli.md"
+grep -Fq 'counts as traced' "$ROUNDS/r-b1-grok/prompts/codex-cli.md"
+refute grep -Fq 'a later round' "$ROUNDS/r-b1-grok/prompts/codex-cli.md"
+scratch_run "$ROUNDS/r-b1-grok" clean --force
 scratch_accept "$ROUNDS/r-b1" claude
 test "$(record_lines "$RECORD")" -eq 3
 scratch_run "$ROUNDS/r-a2" clean --force

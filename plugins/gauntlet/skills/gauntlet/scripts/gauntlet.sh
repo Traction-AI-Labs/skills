@@ -570,17 +570,20 @@ for engine in rows.get("engines", ["claude","codex"]):
     schema={"$schema":"http://json-schema.org/draft-07/schema#","type":"object","additionalProperties":False,"required":["engine","model","transport","scope_sha","scope_digest","verdict","findings"],"properties":{"engine":{"type":"string","enum":[engine]},"model":{"type":"string","enum":[rows[engine]["model"]]},"transport":{"type":"string","enum":[transport]},"scope_sha":{"type":"string","enum":[head]},"scope_digest":{"type":"string","enum":[digest]},"verdict":{"type":"string","enum":["APPROVE","BLOCK"]},"findings":{"type":"array","items":finding}}}
     (out/(engine+"-cli.json")).write_text(json.dumps(schema,separators=(",",":"))+"\n")
 PY
-  # From round 2 on a P0 or P1 holds the loop only with a run that shows it; round 1
-  # keeps the traced path, for races that are hard to reproduce.
-  local proof_rule='A finding traced step by step through code you read counts as traced; name the file and lines of each step.'
-  if [[ "$round_number" -ge 2 ]]; then
-    proof_rule="This is round $round_number, a later round. A P0 or P1 holds the merge only with a run that shows it: a failing test, or a command you ran and its output, quoted in verification. If you cannot run it, report it as P2 with its trace, naming the file and lines of each step, and start its verification with 'Unrun P1:' so it can be run after the round."
-  fi
+  # From round 2 on a Claude or Grok P0 or P1 holds the loop only with a run that shows
+  # it; Codex keeps the traced path, and so does round 1 for every engine, for races
+  # that are hard to reproduce.
+  local traced_rule='A finding traced step by step through code you read counts as traced; name the file and lines of each step.'
+  local run_rule="This is round $round_number, a later round. A P0 or P1 holds the merge only with a run that shows it: a failing test, or a command you ran and its output, quoted in verification. If you cannot run it, report it as P2 with its trace, naming the file and lines of each step, and start its verification with 'Unrun P1:' so it can be run after the round."
   local prior_block=''
   if [[ -f "$RUN/scope/prior-findings.snapshot" ]]; then
     prior_block="$(printf 'Prior-round context follows. This round reviews the whole pinned diff, not only the repair of these findings. Do not re-raise a finding unless it persists in the current code; findings marked accepted or known are settled.\n\n'; cat "$RUN/scope/prior-findings.snapshot")"
   fi
   for engine in "${pair[@]}"; do
+    local proof_rule="$traced_rule"
+    if [[ "$round_number" -ge 2 && "$engine" != codex ]]; then
+      proof_rule="$run_rule"
+    fi
     local model; model="$(python3 - "$RUN/rows.json" "$engine" <<'PY'
 import json,sys
 print(json.load(open(sys.argv[1]))[sys.argv[2]]['model'])
