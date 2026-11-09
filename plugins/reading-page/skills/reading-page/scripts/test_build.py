@@ -654,6 +654,20 @@ def test_long_token_fixture_puts_tokens_everywhere():
         assert re.search(container, body), container
     assert re.search(r"<td><a [^>]*>https://example\.com/" + long, body)
     assert 'href="#h-%E6%97%A5%E6%9C%AC"' in body and 'id="h-日本"' in body
+    # A fence inside a list item or a callout is wrapped in .code like a top-level one (it scrolls with JavaScript off).
+    assert '<div class="code"><pre><code class="language-bash">curl' in body
+
+
+def test_nested_code_fences_get_the_code_wrapper():
+    wrapped = r'<div class="code"><pre><code class="language-bash">'
+    listed = build("# T\n\n## A\n\n1. Step:\n\n   ```bash\n   x\n   ```\n")["body"]
+    assert re.search(r"<li>[\s\S]*?" + wrapped + "x", listed)
+    assert listed.count(wrapped) == 1
+    called = build("# T\n\n## A\n\n**Main risks:**\n\n- Item:\n\n  ```bash\n  y\n  ```\n")["body"]
+    assert re.search(r"callout[\s\S]*?" + wrapped + "y", called)
+    assert called.count(wrapped) == 1
+    top = build("# T\n\n## A\n\n```bash\nz\n```\n")["body"]
+    assert top.count(wrapped) == 1
 
 
 # ---------- round 4, finding 3: bold_only word and punctuation limits in isolation ----------
@@ -735,8 +749,7 @@ console.log(JSON.stringify(asked.filter((x) => typeof x === "string" && x.starts
 
 @pytest.mark.skipif(NODE is None, reason="node not installed")
 def test_click_handlers_decode_percent_encoded_fragments():
-    # Line-anchored: the tp-notes bundle (TRA-865) carries a literal "<script>" string, which the
-    # unanchored pattern matched, so [-1] picked bundle code instead of the page script.
+    # Line-anchored, so a literal "<script>" string inside page JavaScript is never taken for the page script tag.
     script = re.findall(r"^<script>([\s\S]*?)</script>", TEMPLATE, re.M)[-1]
     r = subprocess.run([NODE, "-e", STUB_JS], input=script, capture_output=True, text=True, timeout=30)
     assert r.returncode == 0, r.stderr

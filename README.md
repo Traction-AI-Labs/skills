@@ -96,8 +96,8 @@ open-source writing skills; see [NOTICE.md](NOTICE.md).
 
 - **reading-page 0.2.3** (9 November 2026). A code block inside a list item or a callout now scrolls inside its own box
   with JavaScript off, as top-level code blocks already did; before, a long line in one ran past the right edge at phone
-  width. The overflow fixture gains a nested-fence case, and the test for the page script no longer mistakes an
-  embedded script string for the page script.
+  width. The overflow fixture gains a nested-fence case, tests now guard the nested wrapper, and the page-script
+  test matches only a script tag at the start of a line.
 - **ruling-page 0.2.2 and reading-page 0.2.2** (6 November 2026). ruling-page: a card can carry an optional
   `short` label, which the rail, the card head and the progress bar show in place of a long `id` (a tracker key
   such as `pricing-2026-K1` shows as `K1`); answers stay saved and copied under `id`. Both ruling templates carry
