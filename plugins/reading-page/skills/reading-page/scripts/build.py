@@ -148,6 +148,20 @@ def render_image(self, tokens, idx, options, env):
 MD.add_render_rule("image", render_image)
 
 
+def wrap_code(rule):
+    """Every code block gets the `.code` wrapper (scroll box and copy button hook), wherever it sits.
+
+    A fence inside a list item or callout used to render as a bare <pre> with no overflow rule, so with JavaScript off
+    (which is what wraps it otherwise) a long line ran past the right edge at phone width."""
+    def render_code(self, tokens, idx, options, env):
+        return f'<div class="code">{rule(tokens, idx, options, env)}</div>'
+    return render_code
+
+
+for _name in ("fence", "code_block"):
+    MD.add_render_rule(_name, wrap_code(getattr(MD.renderer, _name)))
+
+
 def inline_empty(children) -> bool:
     """Nothing renderable left: only blank text and line breaks. Images and code count as content."""
     return all(c.type in ("softbreak", "hardbreak") or (c.type == "text" and not c.content.strip())
@@ -466,7 +480,7 @@ def render_blocks(blocks, env, used, lead_first=False, lead_label="Bottom line")
                 tbl = tbl.replace("<table>", '<table class="sortable">', 1)
             out.append(f'<div class="table-wrap">{finish(tbl)}</div>')
         elif t0 in ("fence", "code_block"):
-            out.append(f'<div class="code">{render(b, env)}</div>')
+            out.append(render(b, env))  # the renderer rule adds the .code wrapper
         else:
             out.append(finish(render(b, env)))
         i += 1

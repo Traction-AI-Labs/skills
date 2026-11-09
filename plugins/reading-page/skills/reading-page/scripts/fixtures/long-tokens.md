@@ -13,6 +13,14 @@ A paragraph with a bare URL https://example.com/aVeryLongUnbrokenPathSegmentWith
 - A list item with https://example.com/aVeryLongUnbrokenPathSegmentWithoutAnySeparators1234567890abcdefghijklmnop?token=abcdef0123456789abcdef0123456789
 - A list item with a mark [V, https://example.com/aVeryLongUnbrokenPathSegmentWithoutAnySeparators1234567890abcdefghijklmnop?token=abcdef0123456789abcdef0123456789]
 
+1. A numbered step holding a fenced block with one long unbroken line, which must scroll inside its own box (nested fence, no JavaScript to wrap it):
+
+   ```bash
+   curl -sS https://example.com/aVeryLongUnbrokenPathSegmentWithoutAnySeparators1234567890abcdefghijklmnop?token=abcdef0123456789abcdef0123456789 -o out.json
+   ```
+
+2. A second step after the fence.
+
 **Main risks:**
 
 - A callout item with sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
