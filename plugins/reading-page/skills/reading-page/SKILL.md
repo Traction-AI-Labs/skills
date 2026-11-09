@@ -2,7 +2,7 @@
 name: reading-page
 description: Use whenever the person you work with is meant to READ something longer than a chat message, in any project - a research report, plan, brief, handoff, review, summary, status write-up or investigation. Builds a polished, self-contained interactive HTML page (contents rail, bottom-line box, callouts, sortable tables, folded evidence, light and dark) from markdown with one command and opens it for them. Never hand them a .md file to read. Decisions they must rule on go to the ruling-page skill instead.
 ---
-<!-- SOURCE-REVISION 8366464 -->
+<!-- SOURCE-REVISION 349746e4 -->
 
 # Reading page
 

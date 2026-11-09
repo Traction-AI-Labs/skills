@@ -735,7 +735,9 @@ console.log(JSON.stringify(asked.filter((x) => typeof x === "string" && x.starts
 
 @pytest.mark.skipif(NODE is None, reason="node not installed")
 def test_click_handlers_decode_percent_encoded_fragments():
-    script = re.findall(r"<script>([\s\S]*?)</script>", TEMPLATE)[-1]
+    # Line-anchored: the tp-notes bundle (TRA-865) carries a literal "<script>" string, which the
+    # unanchored pattern matched, so [-1] picked bundle code instead of the page script.
+    script = re.findall(r"^<script>([\s\S]*?)</script>", TEMPLATE, re.M)[-1]
     r = subprocess.run([NODE, "-e", STUB_JS], input=script, capture_output=True, text=True, timeout=30)
     assert r.returncode == 0, r.stderr
     asked = json.loads(r.stdout.strip().splitlines()[-1])
