@@ -94,6 +94,8 @@ open-source writing skills; see [NOTICE.md](NOTICE.md).
 
 ## Changelog
 
+- **reading-page 0.2.4** (12 November 2026). Inline code in prose, the standfirst and table cells never renders under
+  11px, so it stays readable at phone width.
 - **reading-page 0.2.3** (9 November 2026). A code block inside a list item or a callout now scrolls inside its own box
   with JavaScript off, as top-level code blocks already did; before, a long line in one ran past the right edge at phone
   width. The overflow fixture gains a nested-fence case, tests now guard the nested wrapper, and the page-script
