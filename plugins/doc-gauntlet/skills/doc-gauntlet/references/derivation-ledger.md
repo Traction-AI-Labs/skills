@@ -206,3 +206,6 @@ These rules override the paragraphs above where they differ.
   the client: no timestamps that point back into a thread ("your 06:57 question"), no terms we coined,
   nothing that makes them scroll back, and each question stands alone so they can paste it to the client
   unchanged. A stall in the relayer's read is a P1, as in the client's.
+- **The worth-asking test covers every message to a colleague that carries a question or ask**, not only asks
+  they relay. Each question in it passes the four tests above before it reaches them. A message that gets no
+  reviewer under this procedure gets none for this either: its author runs the tests.
