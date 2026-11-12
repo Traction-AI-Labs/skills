@@ -94,6 +94,8 @@ open-source writing skills; see [NOTICE.md](NOTICE.md).
 
 ## Changelog
 
+- **reading-page 0.2.4** (12 November 2026). Inline code in prose, the standfirst and table cells never renders under
+  11px, so it stays readable at phone width.
 - **doc-gauntlet 0.6.1** (12 November 2026). The client-draft review's worth-asking test now covers every message
   to a colleague that carries a question or ask, not only asks they will relay to a client; a message that gets no
   reviewer has its author run the same tests.
