@@ -989,6 +989,32 @@ def test_partly_replaced_banner_says_the_rest_is_folded():
     assert "the other sections are replaced and folded." in banner(page(with_fm(**PARTLY, still_stands="2")))
 
 
+@pytest.mark.parametrize("word", ["Live", "LIVE", "Replaced"])
+def test_state_words_are_reserved_in_any_case(word):
+    with pytest.raises(SystemExit, match="what_you_do|replaced_by"):
+        build(with_fm(status=word))
+
+
+def test_a_state_needs_the_state_region_and_root(tmp_path):
+    parts = build(with_fm(status="live", what_you_do="Pick by Friday."))
+    with pytest.raises(SystemExit, match="@state"):
+        B.fill(TEMPLATE.replace("<!--@state--><!--/@state-->", ""), parts)
+    with pytest.raises(SystemExit, match="tp tp-reading"):
+        B.fill(TEMPLATE.replace('class="tp tp-reading', 'class="tp-reading', 1), parts)
+    with pytest.raises(SystemExit, match="tp tp-reading"):  # the classes on a descendant do not count
+        B.fill(TEMPLATE.replace('class="tp tp-reading no-js"', 'class="no-js"', 1).replace("<body", '<body class="tp tp-reading"', 1), parts)
+    with pytest.raises(SystemExit, match="tp tp-reading"):  # a lookalike class is not the class
+        B.fill(TEMPLATE.replace('class="tp tp-reading no-js"', 'class="tp tp-reading-x no-js"', 1), parts)
+    re_ordered = B.fill(TEMPLATE.replace('class="tp tp-reading no-js"', 'class="no-js tp-reading tp"', 1), parts)
+    assert re.search(r'<html[^>]*data-page-state="live"', re_ordered)
+    src, tpl, out = tmp_path / "r.md", tmp_path / "t.html", tmp_path / "r.html"
+    src.write_text(with_fm(status="live", what_you_do="Pick by Friday."), encoding="utf-8")
+    tpl.write_text(TEMPLATE.replace("<!--@state--><!--/@state-->", ""), encoding="utf-8")
+    with pytest.raises(SystemExit):
+        B.main([str(src), str(out), "--template", str(tpl)])
+    assert not out.exists()
+
+
 def test_live_page_keeps_its_standfirst():
     pg = page(with_fm(status="live", what_you_do="Pick by Friday."))
     assert "A sample report for the page states." in pg.split('<div class="standfirst">', 1)[1].split("</div>", 1)[0]

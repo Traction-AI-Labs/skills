@@ -2,7 +2,7 @@
 name: ruling-page
 description: Use when you need the person you're working with to rule on a COMPLICATED decision (several decisions at once, or options with trade-offs that need explaining), or when asks from several threads need one answer. Builds a clickable one-file HTML ruling page with your recommendation pre-selected on every card and a "Copy my answers" button, instead of asking them to read a markdown file or a long chat message. Simple yes/no decisions stay in chat.
 ---
-<!-- SOURCE-REVISION 46e23df0 -->
+<!-- SOURCE-REVISION 9882cf5a -->
 
 # Ruling page
 
@@ -66,7 +66,8 @@ real trade-offs: build a page.
    open the file, then check that the number of `.tp-card` elements equals the number of cards in `D`,
    that the page and console show no errors, and that `rulingText()` (the text Copy my answers would
    copy) starts `Rulings (<RULER>): 0 of <N> answered` (`Rulings: 0 of <N>` with no `RULER`), with every
-   card id after a line break. Copy any picture files with the page, at the same relative paths. With
+   card id after a line break. The `0 of` holds in a fresh browser session; a page reopened where answers were
+   already saved (a page given a new state at the same path) shows the saved count instead. Copy any picture files with the page, at the same relative paths. With
    a shell but no browser, the extracted scripts must at least pass `node --check`. Without a shell,
    read the data through once for unbalanced quotes and brackets.
 4. Show it. In Claude Code, open the file for them (`open` on macOS, `xdg-open` on Linux, `start` on
@@ -88,9 +89,12 @@ Several decisions, or asks from several threads, go on one page, not one page ea
 Both templates ship with `const STATE = {status: "live"};` in the data script: keep it, and the page opens with a
 "This needs you" banner (coral, "!") above the title. Once they have answered, or another page takes over, replace
 that line; the page is never deleted or moved. Every field is needed except `why`, `answers_in` and the `_title`s:
-- `{status: "replaced", replaced_by: "<the replacement's .html>", replaced_by_title, replaced_on: "12 Nov 2026", why}`
-- `{status: "answered", answered_on, answers_in: "<the .html where the answers are recorded>", answers_in_title, why}`.
-  Leave `answers_in` out when the answers are recorded only in markdown (a `plan.md`); never link the `.md`.
+- `const STATE = {status: "replaced", replaced_by: "../2026-11-12-new/rulings.html", replaced_by_title: "the new rulings", replaced_on: "12 Nov 2026", why: "One line on why."};`
+- `const STATE = {status: "answered", answered_on: "12 Nov 2026", answers_in: "plan.html#rulings", answers_in_title: "the plan", why: "One line."};`
+
+Write every field as `name: "value"`, as here; a bare name (`why,`) is a script error that stops the page drawing
+its cards. Dates read like `12 Nov 2026`. Leave `answers_in` out when the answers are recorded only in markdown (a
+`plan.md`); never link the `.md`.
 
 The banner then reads "Nothing for you to answer here" with the link and date, the instructions, tally, Accept all
 picks, the notes and Send your answers are hidden or switched off, Copy is switched off, and the cards fold, dimmed,

@@ -797,7 +797,11 @@ def fill(template: str, parts: dict) -> str:
     out = region("body", "\n" + parts["body"] + "\n", out)
     if parts.get("state"):
         out = region("state", parts["state"], out)
-        out = out.replace('class="tp tp-reading', f'data-page-state="{parts["page_state"]}" class="tp tp-reading', 1)
+        m = re.search(r"<html\b[^>]*>", out, re.I)
+        cls = re.search(r'\sclass="([^"]*)"', m.group(0)) if m else None
+        if not cls or not {"tp", "tp-reading"} <= set(cls.group(1).split()):
+            sys.exit('template root (<html>) has no "tp tp-reading" classes: the page state needs the reading template\'s root')
+        out = out[:m.start()] + m.group(0)[:5] + f' data-page-state="{parts["page_state"]}"' + m.group(0)[5:] + out[m.end():]
     elif "<!--@state-->" in out:
         out = region("state", "", out)
     if not parts["standfirst"]:
