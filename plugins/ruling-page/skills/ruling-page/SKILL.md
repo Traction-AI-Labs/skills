@@ -14,9 +14,10 @@ in chat: an HTML page for a yes/no is noise.
 line: ask in chat, with your recommendation and a one-line why. Several decisions, or options with
 real trade-offs: build a page.
 
-**A design decision shows each option as a picture**: a frame or screenshot per option (the card's `frames`, step 2),
-each annotated to mark what differs between the options, or a clickable mock. Never offer visual options in words
-alone.
+**A design decision shows each option as a picture**, even a two-way pick that would otherwise stay in chat: a page
+with a frame or screenshot per option (the card's `frames`, step 2; a `data:` URI in the Claude app, where there is
+no folder beside the page), each annotated to mark what differs between the options, or a clickable mock. Never offer
+visual options in words alone.
 
 ## Build it
 
