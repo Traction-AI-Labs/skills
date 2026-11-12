@@ -94,6 +94,9 @@ open-source writing skills; see [NOTICE.md](NOTICE.md).
 
 ## Changelog
 
+- **ruling-page 0.3.1 and reading-page 0.3.1** (13 November 2026). A ruling page on a design decision shows each
+  option as an annotated picture, never in words alone. A reading page whose markdown opens with an HTML comment
+  (a provenance note, say) still takes its title from the first heading, and the comment no longer shows as text.
 - **ruling-page 0.3.0 and reading-page 0.3.0** (12 November 2026). Pages say whether they need the reader. A ruling
   page opens with a coral "This needs you" banner while it is live; once answered or replaced, `STATE` in its data
   turns the banner teal with a tick or grey with an arrow and a link to the page that took over, switches the answer

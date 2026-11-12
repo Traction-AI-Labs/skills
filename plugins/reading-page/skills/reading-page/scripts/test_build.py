@@ -93,6 +93,22 @@ def test_safe_links_still_link():
 FM = "---\ntitle: Front title\n---\n# Heading title\n\nDate: 2026-10-07. Intro.\n\n## Summary\n\nAnswer.\n"
 
 
+def test_leading_comment_does_not_hide_title():
+    p = build("<!-- note for agents\nover two lines -->\n\n<!-- second -->\n# Real title\n\nIntro.\n\n## A\n\nBody.\n")
+    assert p["title"] == "Real title"
+    assert "note for agents" not in p["body"] + p["standfirst"]
+    assert "Intro." in p["standfirst"]
+
+
+def test_unclosed_or_later_comment_still_escaped():
+    p = build("<!-- never closed\n# T\n\nIntro.\n")
+    assert p["title"] != "T"
+    assert "&lt;!--" in p["body"] + p["standfirst"]
+    q = build("# T\n\nIntro.\n\n<!-- later -->\n\n## A\n\nBody.\n")
+    assert q["title"] == "T"
+    assert "&lt;!-- later --&gt;" in q["body"] + q["standfirst"]
+
+
 def test_front_matter_title_consumes_leading_h1():
     p = build(FM)
     assert p["title"] == "Front title"
