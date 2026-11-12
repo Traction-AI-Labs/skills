@@ -20,6 +20,11 @@
     <span class="st part">Partly</span>.
   - "What you send" panel first (key s): each item, where it goes, the one action the caller takes; text to paste goes in a
     .copybox (a <pre id> and a .copy button whose data-copy names it). A not-ready item says so with a pill.
+  - .act a send action: anything the caller sends, pastes or shares during the call, in the beat where they do it and
+    before any line that says it has gone ("I've put it in the chat"). It holds the "Send now" pill, a .act-what line
+    (where it goes, the one action) and the content in a .copybox with its own Copy button, never behind a key or in
+    another section. An email draft sent live takes data-draft="<the draft's subject>" in place of the copybox. The
+    "What you send" panel lists it too, by beat. scripts/check_prep.py fails the page otherwise.
   - .tick checkboxes for a decision rule; they persist across reloads, keyed by their label text.
   From the script, no authoring: the current beat is marked and j / k move it, x marks it done, f dims the other beats,
   the minus and equals keys change the script size, t starts the call clock, and each beat ends with what comes next.
@@ -167,6 +172,12 @@
   .tp .copy { min-height:40px; padding:0 14px; border-radius:var(--tp-r-btn); border:1px solid var(--tp-accent); background:var(--tp-surface); color:var(--tp-accent-ink); cursor:pointer; font:600 .86rem var(--tp-sans); white-space:nowrap; }
   .tp .copy.ok { background:var(--tp-accent); color:var(--tp-surface); }
   .tp.no-js .copy { display:none; }
+  /* A send action in a beat: a full outline and tint (never a bar down one side), the pill, then the content. */
+  .tp .act { margin:12px 0; padding:10px 14px 12px; border:2px solid var(--tp-action); border-radius:var(--tp-r-code); background:var(--tp-surface-2); }
+  .tp .act-what { margin:0 0 6px; font:600 1rem/1.45 var(--tp-sans); color:var(--tp-ink); }
+  .tp .act-pill { display:inline-block; margin-right:8px; font:700 .72rem/1 var(--tp-sans); padding:4px 9px; border-radius:var(--tp-r-pill); color:var(--tp-on-action); background:var(--tp-action); vertical-align:1px; }
+  .tp .act .copybox pre { max-height:14em; overflow:auto; font:400 .92rem/1.45 var(--tp-mono); }
+  .tp.no-js .act .copybox pre { max-height:none; }
   .tp ul { padding-left:1.3em; } .tp li { margin:0 0 .35em; }
 
   /* Live helpers (scripts only): where you are, what is next, what is done. */
@@ -258,8 +269,9 @@
 
 <section id="send" data-key="s" class="send"><h2>What you send</h2>
 <ol>
-<li><b>{{When and where}}:</b> {{what it is; the one action you take}}
+<li><b>{{Before the call, where}}:</b> {{what it is; the one action you take}}
 <div class="copybox"><pre id="c-1">{{text you paste}}</pre><button class="copy" type="button" data-copy="c-1">Copy</button></div></li>
+<li><b>During the call, beat 1:</b> {{what you send and where}}. The content and its Copy button are in beat 1.</li>
 <li><b>{{After the call}}:</b> {{item}} <span class="st part">Not ready</span> {{why, and when it will be}}</li>
 </ol>
 <!-- Nothing to send: one line saying so. -->
@@ -273,6 +285,10 @@
 <div class="ctx">{{What this beat is for, one line.}}</div>
 <p class="say">"{{Exact line, spoken English, the caller's register.}}"</p>
 <p class="dir">{{Stage direction.}}</p>
+<!-- A send during the call: the action first, then the line that says it has gone. Delete if nothing is sent here. -->
+<div class="act"><p class="act-what"><span class="act-pill">Send now</span>{{Where it goes and the one action, e.g. paste into the meeting chat and press Enter}}</p>
+<div class="copybox"><pre id="c-b1">{{the message, exactly as it goes}}</pre><button class="copy" type="button" data-copy="c-b1">Copy</button></div></div>
+<p class="say">"{{The line that says it has gone, e.g. I've put it in the chat.}}"</p>
 </section>
 
 <section id="b2" data-key="2" class="beat must"><h2>2. {{Beat}} <span class="mustpill">Must land</span></h2>
@@ -432,7 +448,7 @@
   var boxes = [].slice.call(doc.querySelectorAll(".tick input")), label = function (b) { return b.closest("label").textContent.trim(); };
   boxes.forEach(function (b) { b.checked = !!saved[label(b)]; b.addEventListener("change", function () { var m = {}; boxes.forEach(function (x) { m[label(x)] = x.checked; }); try { localStorage.setItem(KEY, JSON.stringify(m)); } catch (e) {} }); });
 
-  /* Copy buttons in "What you send". */
+  /* Copy buttons, in "What you send" and in each send action. */
   doc.querySelectorAll(".copy").forEach(function (b) {
     b.addEventListener("click", function () {
       var t = doc.getElementById(b.dataset.copy).textContent;

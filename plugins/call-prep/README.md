@@ -9,7 +9,10 @@ points to cover. It is one interactive HTML page for a second screen:
   might ask, in their hardest phrasing;
 - for a yes/no call (a hiring screen, a vendor pick), a checklist and a one-line rule for deciding at
   the close;
-- a "What you send" panel with copy buttons for anything you paste during the call;
+- anything you send or paste during the call as a "Send now" block, with its copy button, in the beat where you
+  send it and before the line that says it has gone, and a "What you send" panel listing every send;
+- a check, `scripts/check_prep.py`, that fails a page where a line says something has been sent with no send
+  before it in the same beat;
 - keyboard jumps between beats (`1` to `8`, `j`/`k`, `s` for what you send, `a` for answers, `d` for
   decide, `g` to hide the guard line), `x` to mark a beat done, `f` to dim the other beats, `-`/`=` to
   resize the script, and `t` for a call clock that shows when the call is booked to end.

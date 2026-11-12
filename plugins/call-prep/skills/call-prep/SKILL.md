@@ -19,8 +19,11 @@ The page's script marks the current beat in the nav and gives single keys: digit
 `d` decide, `a` answers, `j`/`k` next and back, `x` beat done, `f` focus (dims the other beats),
 `-`/`=` script size, `t` call clock, `g` hides the guard line. Large serif quoted lines, persistent
 checkboxes for a decision rule, status pills for a multi-part call. Delete the sections the call does
-not use, with their nav links and keys. Before handing it over, no `{{` may be left in the file
-(`grep -c '{{' <prep>.html` prints 0). The look is shared with `ruling-page` and `reading-page`: no
+not use, with their nav links and keys. Before handing it over, run
+`python3 scripts/check_prep.py <prep>.html` from this skill's folder: it must print `ok` and exit 0. It fails a page
+with a `{{` placeholder left in or a send that breaks rule 7 under "Everything the call promises is ready before the
+call", and lists the sends during the call by beat for the handover. In the Claude app, where no script runs, make
+the same checks by reading the page. The look is shared with `ruling-page` and `reading-page`: no
 one-sided accents (never a border, shadow or bar down one side of a box); after a template change, run
 the checks in `ruling-page` ("Changing the templates"). In Claude Code, write the file and open it for
 the caller. **In the Claude app**, show the filled template as an HTML artifact. The HTML is the only copy:
@@ -70,6 +73,20 @@ caller exposed on the call and with work to do after it.
    writing an apology into the opener.
 6. **Not ready by call time:** the panel and the handover say what isn't ready, as a count ("2 of 3
    ready; the email is in review"). Never call an unwritten or unreviewed artefact ready.
+7. **Anything the caller sends, pastes or shares during the call is a send action in the beat where they do
+   it.** A script that says "press c, copy the message, paste it into the chat", then has the caller read "I've
+   put everything for today in the chat", with the message in a section at the bottom, leaves them saying it has
+   gone when it hasn't, and stopping mid-call to find it. A panel at the top listing it does not help at that
+   moment. So:
+   - The send is a `.act` block in that beat (template: the "Send now" pill, where it goes and the one action,
+     then the content in a copy box with its own Copy button), placed before any quoted line that assumes it has
+     gone. Never behind a key, in a separate prompts section or only in the panel. An email draft sent live is a
+     `.act` with `data-draft` naming the draft's subject.
+   - A quoted line that says something has gone ("I've put it in the chat", "I've just emailed you") comes after
+     a send action by the same route (an email draft for an email, a copy box for a chat or channel) in the same
+     beat, and a direction telling the caller to paste or send something somewhere has its send action in that beat. A line about something sent before the call carries `data-sent-before`
+     saying where and when it went, checked in the channel or sent mail, never assumed.
+   - The panel lists each send during the call too, by beat ("During the call, beat 3"), pointing at the beat.
 
 ## The shape
 
@@ -208,7 +225,9 @@ own counts is not a review.
 
 ## Handing it over
 
-First line: what the caller sends and whether it is ready, as a count. Then the path (and confirm it is open) or the artifact, the guard line (or that nothing is off
+First line: what the caller sends and whether it is ready, as a count. Next, every send during the call, one line per
+send in beat order ("Beat 3: paste the session message into the meeting chat; the copy box is in the beat"), from
+the list `check_prep.py` prints, or "No sends during the call". Then the path (and confirm it is open) or the artifact, the guard line (or that nothing is off
 limits), the beat headings, and whether a review ran. Not the whole script; they open the page. Flag
 anything you could not verify against a source, and anything the caller still owes that the call
 depends on (a message they said they'd send, a decision not yet made).
@@ -228,6 +247,7 @@ depends on (a message they said they'd send, a decision not yet made).
 | "Answer if asked" in the polite phrasing | The hostile phrasing, with an answer the caller can say to it |
 | A slip held back until they raise it | An early beat, in the caller's words |
 | An apology for a slip that was the counterpart's to act on | Read the thread for who owed the next step first |
+| "Press c, copy it and paste it in the chat", then "I've put it in the chat", with the message in a section at the bottom | A send action in that beat, before the line: the "Send now" pill, where it goes, the content and its Copy button |
 | "After the call: email them X" when X could be written now | X drafted, reviewed and ready to send before the call; the "What you send" panel says where |
 | A follow-up named in shorthand ("the half hour on the logging") | One plain sentence in the beat: what it is, why they want it, what happens |
 | A linear script for a call someone else drives | Beats keyed to their trigger, must-land beats marked |
