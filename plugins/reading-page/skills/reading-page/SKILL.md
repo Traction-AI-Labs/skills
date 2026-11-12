@@ -2,7 +2,7 @@
 name: reading-page
 description: Use whenever the person you work with is meant to READ something longer than a chat message, in any project - a research report, plan, brief, handoff, review, summary, status write-up or investigation. Builds a polished, self-contained interactive HTML page (contents rail, bottom-line box, callouts, sortable tables, folded evidence, light and dark) from markdown with one command and opens it for them. Never hand them a .md file to read. Decisions they must rule on go to the ruling-page skill instead.
 ---
-<!-- SOURCE-REVISION 256dab95 -->
+<!-- SOURCE-REVISION 9882cf5a -->
 
 # Reading page
 
@@ -27,9 +27,38 @@ also needs rulings links to its ruling page from a decision callout); call prep 
    ```
    `<skill-dir>` is the folder holding this SKILL.md. Output defaults to `<report>.html`. Dependencies are pinned in the script header (PEP 723),
    so `uv run` needs nothing installed. Optional `--title`, `--date YYYY-MM-DD`, `--template`;
-   front matter (`title`, `date`, `author`, `status`) works too.
+   front matter (`title`, `date`, `author`, `status`) works too; `status` also sets the page state, which every
+   new page needs (below).
 3. Check it before they see it (below), commit both files, then `open <report>.html` and say in
    the message which page is open. They never get "read X.md".
+
+## Say whether the page needs the reader
+
+Every new page says whether it needs the reader: `status: live` with `what_you_do` when it asks anything of them (a
+decision, a reply, a check), `status: reference` when it does not. Front matter `status` sets a banner above the
+title, written into the HTML so it shows without scripts:
+
+| `status` | Banner | Also needs |
+|---|---|---|
+| `live` | "This needs you" (coral, "!") | `what_you_do`: one line, what they must do |
+| `reference` | "Nothing needed from you" (teal, tick) | `why` (optional) |
+| `replaced` | "Nothing needed from you here", folded into the link on the date; the whole old body, opening paragraph included, folds under "Read the old version anyway" | `replaced_by` (the replacement's `.html`, never a `.md`), `replaced_on`; optional `replaced_by_title`, `why` |
+| `partly-replaced` | The same, listing the sections that still stand; each section, folded ones such as Sources included, gets a "Still stands" or "Replaced" pill, and replaced ones fold | as `replaced`, plus `still_stands`: section numbers or title starts, comma-separated |
+
+The build stops with a message, before writing anything, on a missing field, a `replaced_by` that is not another
+page's `.html` (a `.md`, `mailto:` or text file) or a `still_stands` entry that names no section. Any other `status`
+value stays the free-text label in the header, as before; a page with no `status` gets no banner. The four state
+words are reserved in any case (`status: Live` is `live`): an older page that used one as a label needs the new fields
+when it is rebuilt. When a page is
+replaced, rebuild it with the new front matter in the same commit as its replacement and show it again as step 3
+says, or they keep seeing the old page.
+
+On a `partly-replaced` page the opening (everything above the first `##`) is a section called `Opening` and footnotes
+are `Notes`; name them in `still_stands` to keep them. Each entry must name exactly one section (use its number when a
+title start fits several), and at least one section must be replaced; otherwise the build stops and says which.
+Two sections with the same title and no number (a `## Notes` heading beside footnotes, two `## Risks`) cannot be told
+apart: number or rename one heading.
+Printing opens every fold, the replaced ones included.
 
 ## Write the markdown so the page comes out right
 
@@ -107,7 +136,11 @@ the templates" in that skill).
 ## Hand-built pages
 
 For something markdown cannot express, copy `references/template.html` and replace only the
-marked regions (`<title>`, `@title`, `@standfirst`, `@meta`, `@toc`, `@body`). Fill `@toc` with the
+marked regions (`<title>`, `@title`, `@standfirst`, `@meta`, `@toc`, `@body`, and `@state`). Every new page needs a
+state. A hand-built page takes only `live` or `reference`: build a one-line markdown stub with that front matter,
+copy its `@state` region, and put the same `data-page-state="live"` (or `"reference"`) on the `<html>` tag. A
+`replaced` or `partly-replaced` page folds its old body and marks its sections, which only `build.py` does: rebuild
+it from markdown with `build.py`. Fill `@toc` with the
 same static list `build.py` writes (one link per h2 and h3, in order), so the contents still show
 where scripts do not run, such as an iPhone Quick Look preview; an empty `@toc` is filled by the
 script only when JavaScript runs. Prefer `build.py` whenever markdown can express the page. The demo body in the

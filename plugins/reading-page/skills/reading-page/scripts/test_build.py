@@ -763,5 +763,280 @@ def test_encoded_href_kept_and_id_is_unicode():
     assert 'href="#h-caf%C3%A9"' in body  # native (no-JS) navigation decodes it
 
 
+# ---------- page states ----------
+
+STATES_MD = (HERE / "fixtures" / "states.md").read_text(encoding="utf-8")
+
+
+def with_fm(**fm) -> str:
+    return "---\n" + "".join(f"{k}: {v}\n" for k, v in fm.items()) + "---\n" + STATES_MD
+
+
+def banner(pg: str) -> str:
+    m = re.search(r'<!--@state-->([\s\S]*?)<!--/@state-->', pg)
+    return m.group(1) if m else ""
+
+
+def test_no_status_has_no_banner_as_before():
+    pg = page(STATES_MD)
+    assert banner(pg) == ""
+    assert "data-page-state=" not in pg
+    assert 'class="state-old"' not in pg
+
+
+def test_free_text_status_stays_a_label():
+    pg = page(with_fm(status="Research complete"))
+    assert banner(pg) == ""
+    assert '<span class="status">Research complete</span>' in pg
+
+
+def test_live_says_this_needs_you_and_what_to_do():
+    pg = page(with_fm(status="live", what_you_do="Pick the weekend roster by Friday."))
+    b = banner(pg)
+    assert 'data-state="live"' in b and "This needs you" in b
+    assert "Pick the weekend roster by Friday." in b
+    assert 'data-page-state="live"' in pg
+    assert 'class="state-old"' not in pg
+    assert '<span class="status">live</span>' not in pg  # the keyword is the banner, never a label too
+
+
+def test_live_without_what_you_do_is_refused():
+    with pytest.raises(SystemExit, match="what_you_do"):
+        build(with_fm(status="live"))
+
+
+def test_reference_says_nothing_needed():
+    b = banner(page(with_fm(status="reference", why="Kept as background for the roster.")))
+    assert 'data-state="reference"' in b and "Nothing needed from you" in b
+    assert "Kept as background for the roster." in b
+
+
+def test_replaced_links_the_html_and_folds_the_old_body():
+    pg = page(with_fm(status="replaced", replaced_by="../2026-11-12-new/plan.html", replaced_by_title="the one plan to Tue 17",
+                      replaced_on="2026-11-12"))
+    b = banner(pg)
+    assert 'data-state="replaced"' in b and "Nothing needed from you here" in b
+    assert '<a href="../2026-11-12-new/plan.html">the one plan to Tue 17</a>' in b
+    assert "12 November 2026" in b
+    body = pg.split("<!--@body-->")[1].split("<!--/@body-->")[0]
+    assert body.strip().startswith('<details class="state-old">') and "Read the old version anyway" in body
+    assert body.strip().endswith("</details>")
+    assert "<details class=\"state-old\" open" not in body  # folded by default
+    assert 'id="h-1-what-changes-for-customers"' in body or "What changes for customers" in body
+
+
+@pytest.mark.parametrize("href", ["plan.md", "../x/plan.md#sec-2", "PLAN.MD?x=1"])
+def test_replaced_by_md_is_refused(href):
+    with pytest.raises(SystemExit, match=r"\.html, never a \.md"):
+        build(with_fm(status="replaced", replaced_by=href))
+
+
+@pytest.mark.parametrize("href", ["javascript:alert(1)", "data:text/html,x"])
+def test_replaced_by_unsafe_is_refused(href):
+    with pytest.raises(SystemExit, match="not a link"):
+        build(with_fm(status="replaced", replaced_by=href))
+
+
+def test_replaced_without_link_is_refused():
+    with pytest.raises(SystemExit, match="replaced_by"):
+        build(with_fm(status="replaced", replaced_on="2026-11-12"))
+
+
+def test_partly_replaced_marks_each_section():
+    pg = page(with_fm(**{"status": "partly replaced", "replaced_by": "new.html", "replaced_on": "2026-11-12",
+                         "still_stands": "2, the roster"}))
+    b = banner(pg)
+    assert 'data-state="partly-replaced"' in b and "Still standing here:" in b
+    assert b.count('<a href="#') == 2
+    secs = re.findall(r'<section class="sec" id="([^"]+)">([\s\S]*?)</section>', pg)
+    by = {sid: inner for sid, inner in secs}
+    stands = [s for s, i in by.items() if "sec-state--stands" in i]
+    replaced = [s for s, i in by.items() if "sec-state--replaced" in i]
+    assert len(stands) == 2 and any("who-does-what" in s for s in stands) and any("roster" in s for s in stands)
+    assert len(replaced) == 3  # the bottom line, section 1 and Sources (a folded section is marked too)
+    assert any("sources" in s for s in replaced)
+    for s in replaced:
+        assert '<details class="state-old">' in by[s] and "Read the old section anyway" in by[s]
+        assert '<a href="new.html">new.html</a>' in by[s]
+
+
+def test_partly_replaced_needs_real_sections():
+    with pytest.raises(SystemExit, match="still_stands names no section: 9"):
+        build(with_fm(status="partly-replaced", replaced_by="new.html", replaced_on="2026-11-12", still_stands="2, 9"))
+    with pytest.raises(SystemExit, match="still_stands"):
+        build(with_fm(status="partly-replaced", replaced_by="new.html", replaced_on="2026-11-12"))
+
+
+@pytest.mark.parametrize("stands", [", ,", " , ", ","])
+def test_partly_replaced_with_only_commas_is_refused(stands):
+    with pytest.raises(SystemExit, match="needs still_stands"):
+        build(with_fm(status="partly-replaced", replaced_by="new.html", replaced_on="2026-11-12", still_stands=f"'{stands}'"))
+
+
+@pytest.mark.parametrize("stands", ["2, Who", "2, 2.", "Who, who does"])
+def test_two_selectors_for_one_section_both_count(stands):
+    pg = page(with_fm(status="partly-replaced", replaced_by="new.html", replaced_on="2026-11-12", still_stands=stands))
+    secs = dict(re.findall(r'<section class="sec" id="([^"]+)">([\s\S]*?)</section>', pg))
+    assert [s for s, i in secs.items() if "sec-state--stands" in i] == [s for s in secs if "who-does-what" in s]
+
+
+def test_a_folded_section_can_still_stand():
+    pg = page(with_fm(status="partly-replaced", replaced_by="new.html", replaced_on="2026-11-12", still_stands="Sources"))
+    secs = dict(re.findall(r'<section class="sec" id="([^"]+)">([\s\S]*?)</section>', pg))
+    src = [i for s, i in secs.items() if "sources" in s]
+    assert len(src) == 1 and "sec-state--stands" in src[0] and '<details class="fold">' in src[0]
+    assert "Still standing here: <a href=\"#h-sources\">Sources</a>" in banner(pg)
+
+
+@pytest.mark.parametrize("status", ["replaced", "partly-replaced"])
+@pytest.mark.parametrize("on", [None, "", "   "])
+def test_replaced_without_a_date_is_refused(status, on, tmp_path):
+    fm = {"status": status, "replaced_by": "new.html", "still_stands": "2"}
+    if on is not None:
+        fm["replaced_on"] = on
+    with pytest.raises(SystemExit, match="needs replaced_on"):
+        build(with_fm(**fm))
+    src, out = tmp_path / "r.md", tmp_path / "r.html"
+    src.write_text(with_fm(**fm), encoding="utf-8")
+    with pytest.raises(SystemExit):
+        B.main([str(src), str(out)])
+    assert not out.exists()
+
+
+@pytest.mark.parametrize("href", ["mailto:someone@example.com", "plan.txt", "../x/", "https://example.com",
+                                  "https://example.com/notes", "tel:123", " ", "#sec-2"])
+def test_replaced_by_must_be_an_html_page(href):
+    with pytest.raises(SystemExit, match="replaced_by"):
+        build(with_fm(status="replaced", replaced_by=href, replaced_on="2026-11-12"))
+
+
+@pytest.mark.parametrize("href", ["new.html", "../x/plan.html#sec-2", "/p/a.htm?v=2", "https://example.com/p/plan.html"])
+def test_replaced_by_html_pages_are_accepted(href):
+    assert 'data-state="replaced"' in banner(page(with_fm(status="replaced", replaced_by=href, replaced_on="2026-11-12")))
+
+
+def test_replaced_page_folds_its_opening_paragraph():
+    pg = page(with_fm(status="replaced", replaced_by="new.html", replaced_on="2026-11-12"))
+    assert '<div class="standfirst">' not in pg
+    body = pg.split("<!--@body-->")[1].split("<!--/@body-->")[0]
+    assert "A sample report for the page states." in body.split('<details class="state-old">', 1)[1]
+
+
+def test_replaced_paragraph_only_report_keeps_nothing_outside_the_fold():
+    md = "---\nstatus: replaced\nreplaced_by: new.html\nreplaced_on: 2026-11-12\n---\nOld intro requiring action.\n"
+    pg = page(md)
+    assert pg.count("Old intro requiring action.") == 1
+    assert "Old intro requiring action." in pg.split('<details class="state-old">', 1)[1]
+
+
+PARTLY = dict(status="partly-replaced", replaced_by="new.html", replaced_on="2026-11-12")
+
+
+def opening(pg: str) -> str:
+    m = re.search(r'<section class="sec sec--intro" id="sec-opening">([\s\S]*?)</section>', pg)
+    return m.group(1) if m else ""
+
+
+def test_partly_replaced_marks_and_folds_the_opening():
+    pg = page(with_fm(**PARTLY, still_stands="2"))
+    assert '<div class="standfirst">' not in pg
+    o = opening(pg)
+    assert "sec-state--replaced" in o and '<details class="state-old">' in o and "A sample report for the page states." in o
+
+
+def test_partly_replaced_opening_can_still_stand():
+    pg = page(with_fm(**PARTLY, still_stands="Opening, 2"))
+    o = opening(pg)
+    assert "sec-state--stands" in o and "state-old" not in o
+    assert '<a href="#sec-opening">Opening</a>' in banner(pg)
+
+
+FOOTNOTED = STATES_MD.replace("Swaps go through Ana.", "Swaps go through Ana.[^1]") + "\n[^1]: Ana agreed on 9 Nov.\n"
+
+
+def test_partly_replaced_marks_the_notes_and_can_keep_them():
+    md = "---\nstatus: partly-replaced\nreplaced_by: new.html\nreplaced_on: 2026-11-12\nstill_stands: {}\n---\n" + FOOTNOTED
+    notes = lambda pg: re.search(r'<section class="sec sec--notes"[^>]*>([\s\S]*?)</section>', pg).group(1)
+    n = notes(page(md.format("3")))
+    assert "sec-state--replaced" in n and '<details class="state-old">' in n and "Ana agreed on 9 Nov." in n
+    n = notes(page(md.format("3, Notes")))
+    assert "sec-state--stands" in n and "state-old" not in n
+
+
+@pytest.mark.parametrize("stands", ["2, 2", "2, 2, 2.", "Who, who"])
+def test_a_repeated_entry_builds_as_one(stands):
+    assert page(with_fm(**PARTLY, still_stands=stands)) == page(with_fm(**PARTLY, still_stands="2"))
+
+
+def test_a_folded_section_shows_its_mark_in_the_summary():
+    pg = page(with_fm(**PARTLY, still_stands="2"))
+    src = re.search(r'<section class="sec" id="sec-sources">([\s\S]*?)</section>', pg).group(1)
+    summary = src.split("<summary>", 1)[1].split("</summary>", 1)[0]
+    assert '<span class="sec-state sec-state--replaced">' in summary and "<p" not in summary
+
+
+def test_a_selector_naming_two_sections_is_refused():
+    with pytest.raises(SystemExit, match="names more than one section"):
+        build(with_fm(**PARTLY, still_stands="W"))  # "What changes for customers" and "Who does what"
+
+
+def test_partly_replaced_with_nothing_replaced_is_refused():
+    with pytest.raises(SystemExit, match="every section still stands"):
+        build(with_fm(**PARTLY, still_stands="Opening, Bottom, 1, 2, 3, Sources"))
+
+
+def test_partly_replaced_banner_says_the_rest_is_folded():
+    assert "the other sections are replaced and folded." in banner(page(with_fm(**PARTLY, still_stands="2")))
+
+
+@pytest.mark.parametrize("word", ["Live", "LIVE", "Replaced"])
+def test_state_words_are_reserved_in_any_case(word):
+    with pytest.raises(SystemExit, match="what_you_do|replaced_by"):
+        build(with_fm(status=word))
+
+
+def test_a_state_needs_the_state_region_and_root(tmp_path):
+    parts = build(with_fm(status="live", what_you_do="Pick by Friday."))
+    with pytest.raises(SystemExit, match="@state"):
+        B.fill(TEMPLATE.replace("<!--@state--><!--/@state-->", ""), parts)
+    with pytest.raises(SystemExit, match="tp tp-reading"):
+        B.fill(TEMPLATE.replace('class="tp tp-reading', 'class="tp-reading', 1), parts)
+    with pytest.raises(SystemExit, match="tp tp-reading"):  # the classes on a descendant do not count
+        B.fill(TEMPLATE.replace('class="tp tp-reading no-js"', 'class="no-js"', 1).replace("<body", '<body class="tp tp-reading"', 1), parts)
+    with pytest.raises(SystemExit, match="tp tp-reading"):  # a lookalike class is not the class
+        B.fill(TEMPLATE.replace('class="tp tp-reading no-js"', 'class="tp tp-reading-x no-js"', 1), parts)
+    re_ordered = B.fill(TEMPLATE.replace('class="tp tp-reading no-js"', 'class="no-js tp-reading tp"', 1), parts)
+    assert re.search(r'<html[^>]*data-page-state="live"', re_ordered)
+    src, tpl, out = tmp_path / "r.md", tmp_path / "t.html", tmp_path / "r.html"
+    src.write_text(with_fm(status="live", what_you_do="Pick by Friday."), encoding="utf-8")
+    tpl.write_text(TEMPLATE.replace("<!--@state--><!--/@state-->", ""), encoding="utf-8")
+    with pytest.raises(SystemExit):
+        B.main([str(src), str(out), "--template", str(tpl)])
+    assert not out.exists()
+
+
+def test_live_page_keeps_its_standfirst():
+    pg = page(with_fm(status="live", what_you_do="Pick by Friday."))
+    assert "A sample report for the page states." in pg.split('<div class="standfirst">', 1)[1].split("</div>", 1)[0]
+
+
+def test_state_banner_is_static_html_and_escaped():
+    """The banner is written into the page (no script needed, so iOS Quick Look shows it) and escapes its text."""
+    pg = page(with_fm(status="live", what_you_do="<b>Answer</b> by Friday"))
+    b = banner(pg)
+    assert "&lt;b&gt;Answer&lt;/b&gt;" in b and "<b>Answer</b>" not in b
+    assert pg.index("<!--@state-->") < pg.index('<header class="masthead">')
+
+
+def test_cli_status_label_survives_beside_a_state():
+    pg = page(with_fm(status="reference"), status="Research complete")
+    assert 'data-state="reference"' in banner(pg) and '<span class="status">Research complete</span>' in pg
+
+
+def test_template_without_state_region_still_fills():
+    old = TEMPLATE.replace("<!--@state--><!--/@state-->", "")
+    assert "@state" not in B.fill(old, build(STATES_MD))
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-q", "-p", "no:cacheprovider", *sys.argv[1:]]))

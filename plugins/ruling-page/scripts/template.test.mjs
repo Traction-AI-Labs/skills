@@ -9,6 +9,10 @@
 //   3. Card text is shown literally: an HTML payload in every string field creates no element and no side effect.
 //   4. "Copy my answers": when the clipboard works the page says Copied; when both clipboard routes fail it
 //      says it could not copy, and leaves the answers visible and selected for a manual copy.
+//   5. Page state: STATE live shows "This needs you"; a page with no STATE has no banner and nothing switched off;
+//      answered and replaced switch the answer controls and Copy off, fold the old cards (still readable and
+//      printable) and keep saved answers unchanged when the cards are clicked or typed in; a broken STATE (unknown
+//      status, a .md, mailto: or text link, a missing field) logs one console error naming the fault.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -91,6 +95,78 @@ for (const name of ["template.html", "template-threads.html"]) {
     await page.waitForTimeout(300);
     const saved = await page.evaluate(() => document.getElementById("saved").textContent);
     check(/save in this browser/i.test(saved), `${name}: keeps "Answers save in this browser" when storage works ("${saved}")`);
+    await page.close();
+  }
+}
+// 5: page state
+const LIVE = 'const STATE = {status: "live"};\n';
+async function statePage(name, state) {
+  const html = readFileSync(join(refs, name), "utf8");
+  if (!html.includes(LIVE)) throw new Error(name + ": the template does not ship STATE live");
+  const page = await browser.newPage(), errors = [];
+  page.on("pageerror", e => errors.push("pageerror: " + e.message));
+  page.on("console", m => { if (m.type() === "error") errors.push(m.text()); });
+  const body = html.replace(LIVE, state === null ? "" : "const STATE = " + state + ";\n");
+  await page.route("http://ruling.test/**", r => r.fulfill({ contentType: "text/html", body }));
+  await page.goto("http://ruling.test/" + name.replace(".html", "") + "-" + Math.random().toString(36).slice(2) + ".html");
+  await page.waitForTimeout(400);
+  return { page, errors };
+}
+const banner = page => page.evaluate(() => { const b = document.querySelectorAll(".tp-pstate"); return { n: b.length, state: b[0] && b[0].dataset.state,
+  head: b[0] && b[0].querySelector(".tp-pstate-head").textContent, links: b[0] ? [...b[0].querySelectorAll("a")].map(a => a.getAttribute("href")) : [] }; });
+for (const name of ["template.html", "template-threads.html"]) {
+  {
+    const { page, errors } = await statePage(name, '{status: "live"}');
+    const b = await banner(page), off = await page.evaluate(() => document.querySelector(".tp").classList.contains("tp-off") || document.getElementById("copy").disabled);
+    check(b.n === 1 && b.state === "live" && /needs you/.test(b.head) && !off && !errors.length, `${name}: STATE live shows "This needs you" and leaves the page on (${JSON.stringify(b)} ${errors.join(" | ")})`);
+    await page.close();
+  }
+  {
+    const { page, errors } = await statePage(name, null);
+    const r = await page.evaluate(() => ({ banners: document.querySelectorAll(".tp-pstate").length, off: document.querySelector(".tp").classList.contains("tp-off"),
+      fold: !!document.querySelector("details.tp-old"), copy: document.getElementById("copy").disabled, text: typeof window.rulingText === "function" }));
+    check(r.banners === 0 && !r.off && !r.fold && !r.copy && r.text && !errors.length, `${name}: no STATE line: no banner, nothing switched off (${JSON.stringify(r)} ${errors.join(" | ")})`);
+    await page.close();
+  }
+  for (const [st, want] of [['{status: "answered", answered_on: "12 Nov 2026", answers_in: "plan.html#rulings"}', "answered"],
+                            ['{status: "replaced", replaced_by: "../new/rulings.html", replaced_on: "12 Nov 2026"}', "replaced"]]) {
+    const { page, errors } = await statePage(name, st);
+    const b = await banner(page);
+    check(b.n === 1 && b.state === want && /^Nothing for you to answer here/.test(b.head) && b.links.length === 1 && /\.html/.test(b.links[0]) && !errors.length,
+      `${name}: ${want}: banner says nothing to answer and links the other page (${JSON.stringify(b)} ${errors.join(" | ")})`);
+    const before = await page.evaluate(() => ({ text: window.rulingText(), store: JSON.stringify(localStorage) }));
+    const ctl = await page.evaluate(() => { const c = document.getElementById("tp-cards"), d = c.closest("details.tp-old");
+      return { folded: !!d && !d.open, copy: document.getElementById("copy").disabled && document.getElementById("tp-copy2").disabled,
+        answersOff: [...c.querySelectorAll("input, textarea, button:not(.tp-frame)")].every(x => x.disabled) }; });
+    check(ctl.folded && ctl.copy && ctl.answersOff, `${name}: ${want}: old cards folded, Copy and every answer control off (${JSON.stringify(ctl)})`);
+    await page.evaluate(() => { document.querySelector("details.tp-old").open = true; });
+    const radio = await page.$("#tp-cards input[type=radio]:not(:checked)");
+    if (radio) await radio.click({ force: true }).catch(() => {});
+    const ta = await page.$("#tp-cards textarea");
+    if (ta) { await ta.focus().catch(() => {}); await page.keyboard.type("changed").catch(() => {}); }
+    await page.keyboard.press("Space").catch(() => {});
+    const after = await page.evaluate(() => ({ text: window.rulingText(), store: JSON.stringify(localStorage) }));
+    check(after.text === before.text && after.store === before.store, `${name}: ${want}: clicking and typing in the old cards changes nothing saved or copied`);
+    const read = await page.evaluate(() => { const c = document.getElementById("tp-cards"), m = c.querySelector("details.tp-more:not([open]) > summary"), f = c.querySelector(".tp-frame"), lb = document.getElementById("tp-lb");
+      let more = null, pic = null; if (m) { m.click(); more = m.parentElement.open; } if (f) { f.click(); pic = lb.open; if (lb.open) lb.close(); } return { more, pic }; });
+    if (name === "template.html") check(read.more === true && read.pic === true, `${name}: ${want}: folded text and pictures in the old cards still open (${JSON.stringify(read)})`);
+    const pr = await page.evaluate(() => { const d = document.querySelector("details.tp-old"); d.open = false; dispatchEvent(new Event("beforeprint")); const o = d.open; dispatchEvent(new Event("afterprint")); return [o, d.open]; });
+    check(pr[0] === true && pr[1] === false, `${name}: ${want}: printing opens the old cards and folds them again (${pr})`);
+    await page.close();
+  }
+  for (const [st, rx] of [['{status: "done"}', /STATE\.status must be live, answered or replaced/], ['"answered"', /STATE must be an object/],
+                          ['{status: "replaced", replaced_by: "x/rulings.md", replaced_on: "12 Nov 2026"}', /never a \.md/],
+                          ['{status: "replaced", replaced_by: "mailto:someone@example.com", replaced_on: "12 Nov 2026"}', /must be another page's \.html/],
+                          ['{status: "answered", answered_on: "12 Nov 2026", answers_in: "answers.txt"}', /must be another page's \.html/],
+                          ['{status: "replaced", replaced_on: "12 Nov 2026"}', /STATE\.replaced_by is missing/],
+                          ['{status: "answered", answers_in: "plan.html"}', /STATE\.answered_on is missing/]]) {
+    const { page, errors } = await statePage(name, st);
+    check(errors.length === 1 && rx.test(errors[0]), `${name}: ${st} logs one console error naming the fault (${errors.join(" | ") || "none"})`);
+    await page.close();
+  }
+  {
+    const { page, errors } = await statePage(name, '{status: "answered", answered_on: "12 Nov 2026"}');
+    check(!errors.length, `${name}: answered with no answers_in is allowed (${errors.join(" | ") || "no errors"})`);
     await page.close();
   }
 }

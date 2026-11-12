@@ -20,6 +20,12 @@ Output defaults to the input path with .html. Mapping:
     the rest of that first paragraph becomes the standfirst. Everything else before the first H2
     opens the article.
   - Optional front matter (--- key: value ---) supplies title, date, author, status.
+  - Page state: front matter status: live | reference | replaced | partly-replaced puts a banner above
+    the title saying whether the page needs the reader. live needs what_you_do; replaced and partly-replaced need
+    replaced_by (the replacement's .html, never a .md) and replaced_on, and take replaced_by_title and why;
+    partly-replaced needs still_stands (section numbers or title starts, comma-separated); every section, folded
+    ones such as Sources included, gets a "Still stands" or "Replaced" pill. Any other status
+    value is the free-text status label, as before.
   - Raw HTML in the markdown is escaped and shown as text; only http(s), mailto, relative and
     in-page links are emitted as links (javascript:, data:, vbscript:, file: are not).
   - H2 -> a section and a contents entry; H3 -> an indented contents entry.
@@ -172,7 +178,7 @@ def esc(s: str) -> str:
     return html.escape(s, quote=True)
 
 
-TEMPLATE_IDS = ("toc",)
+TEMPLATE_IDS = ("toc", "tp-pstate", "tp-pstate-head")
 
 
 def slugify(text: str, used: set[str]) -> str:
@@ -487,6 +493,127 @@ def render_blocks(blocks, env, used, lead_first=False, lead_label="Bottom line")
     return "\n".join(out)
 
 
+# ---------- page state ----------
+
+STATES = ("live", "reference", "replaced", "partly-replaced")
+GLYPH = {"live": "!", "reference": "\u2713", "replaced": "\u21aa", "partly-replaced": "\u21aa"}
+
+
+def page_state(meta: dict):
+    """The page state named in front matter, or None. Exits with a message on a state missing what it needs."""
+    raw = (meta.get("status") or "").strip().lower().replace(" ", "-")
+    if raw not in STATES:
+        return None
+    st = {"status": raw}
+    for k in ("replaced_by", "replaced_by_title", "replaced_on", "what_you_do", "still_stands", "why"):
+        st[k] = (meta.get(k) or "").strip()
+    if raw == "live" and not st["what_you_do"]:
+        sys.exit("status: live needs what_you_do (one line: what the reader must do)")
+    if raw in ("replaced", "partly-replaced"):
+        href = st["replaced_by"]
+        if not href:
+            sys.exit(f"status: {raw} needs replaced_by (the replacement page's .html)")
+        if re.search(r"\.md($|[#?])", href, re.I):
+            sys.exit(f"replaced_by must be the replacement page's .html, never a .md file: {href}")
+        if not validate_link(href) or not is_html_page(href):
+            sys.exit(f"replaced_by is not a link the page can open: {href} (it must be the replacement page's .html)")
+        if not st["replaced_on"]:
+            sys.exit(f"status: {raw} needs replaced_on (the date the replacement took over)")
+    if raw == "partly-replaced" and not stands_tokens(st):
+        sys.exit("status: partly-replaced needs still_stands (the sections that still stand: numbers or title starts)")
+    return st
+
+
+HTML_PAGE = re.compile(r"^(https?://[^/?#]+/|(?![a-z][a-z0-9+.-]*:))[^?#]*\.html?([?#]|$)", re.I)
+
+
+def is_html_page(href: str) -> bool:
+    """A web or relative link whose path ends in .html (or .htm): another page, never mail, a text file or a .md."""
+    return bool(HTML_PAGE.match(href))
+
+
+def stands_tokens(st) -> list[str]:
+    """The still_stands entries, each once (an entry repeated, "2, 2", is the same entry)."""
+    out, seen = [], set()
+    for x in st["still_stands"].split(","):
+        x, key = x.strip(), x.strip().rstrip(".").lower()
+        if key and key not in seen:
+            seen.add(key)
+            out.append(x)
+    return out
+
+
+def section_stands(tokens: list[str], head_text: str) -> list[str]:
+    """Every still_stands token that names this section (by its number or the start of its title)."""
+    num = NUM_RE.match(head_text)
+    plain = NUM_RE.sub("", head_text).strip().lower()
+    hits = []
+    for tok in tokens:
+        t = tok.strip().rstrip(".").lower()
+        if (num and t == num.group(1)) or (t and not t.isdigit() and plain.startswith(t)):
+            hits.append(tok)
+    return hits
+
+
+def mark_section(inner: str, hid: str, head_text: str, st, tokens: list[str], matched: dict, standing: list,
+                 replaced: list) -> str:
+    """A partly replaced page: a "Still stands" or "Replaced" pill on this section; a replaced one folds."""
+    hits = section_stands(tokens, head_text)
+    for tok in hits:
+        matched.setdefault(tok, []).append(head_text)
+    if hits:
+        standing.append((hid, head_text))
+        return '<p class="sec-state sec-state--stands"><span aria-hidden="true">\u2713</span> Still stands</p>\n' + inner
+    replaced.append(head_text)
+    return (f'<p class="sec-state sec-state--replaced"><span aria-hidden="true">\u21aa</span> Replaced by {state_link(st)}</p>\n'
+            + old_fold(inner, "section"))
+
+
+def check_stands(tokens: list[str], matched: dict, replaced: list) -> None:
+    """Every still_stands entry names exactly one section, and at least one section is replaced."""
+    if missing := [x for x in tokens if x not in matched]:
+        sys.exit("still_stands names no section: " + ", ".join(missing))
+    for tok, heads in matched.items():
+        if len(heads) > 1:
+            sys.exit(f"still_stands entry {tok!r} names more than one section ({'; '.join(heads)}): use its number or more of its title")
+    if not replaced:
+        sys.exit("status: partly-replaced, but every section still stands: use status: reference (or live) instead")
+
+
+def state_link(st) -> str:
+    href = esc(st["replaced_by"])
+    label = esc(st["replaced_by_title"] or st["replaced_by"])
+    ext = ' target="_blank" rel="noopener"' if re.match(r"https?:", st["replaced_by"], re.I) else ""
+    return f'<a href="{href}"{ext}>{label}</a>'
+
+
+def state_banner(st, standing: list[tuple[str, str]]) -> str:
+    s = st["status"]
+    on = f" on {esc(fmt_date(st['replaced_on']))}" if st["replaced_on"] else ""
+    why = f" {esc(st['why'])}" if st["why"] else ""
+    if s == "live":
+        head, detail = "This needs you", esc(st["what_you_do"])
+    elif s == "reference":
+        head, detail = "Nothing needed from you", "Here for reference only." + why
+    elif s == "replaced":
+        head = "Nothing needed from you here"
+        detail = f"Folded into {state_link(st)}{on}. Read that page instead.{why}"
+    else:
+        head = "Nothing needed from you here"
+        keep = ", ".join(f'<a href="#{hid}">{esc(lbl)}</a>' for hid, lbl in standing)
+        detail = (f"Partly folded into {state_link(st)}{on}. Still standing here: {keep}; "
+                  f"the other sections are replaced and folded.{why}")
+    return (f'<section class="tp-pstate" id="tp-pstate" data-state="{s}" aria-labelledby="tp-pstate-head">'
+            f'<span class="tp-pstate-glyph" aria-hidden="true">{GLYPH[s]}</span>'
+            f'<div class="tp-pstate-text"><p class="tp-pstate-head" id="tp-pstate-head">{head}</p>'
+            f'<p class="tp-pstate-detail">{detail}</p></div></section>')
+
+
+def old_fold(inner: str, what: str) -> str:
+    return (f'<details class="state-old"><summary><span class="state-old-label">Read the old {what} anyway</span>'
+            f'<span class="state-old-sub">kept for the record</span></summary>\n<div class="state-old-body">\n{inner}\n</div>\n</details>')
+
+
 # ---------- document assembly ----------
 
 def parse_front_matter(text: str):
@@ -509,6 +636,11 @@ def build(md_text: str, opts) -> dict:
     # Ids the template itself uses outside the body: no generated id may take one.
     used: set[str] = set(TEMPLATE_IDS)
 
+    st = page_state(meta)
+    tokens_stand = stands_tokens(st) if st and st["status"] == "partly-replaced" else []
+    matched: dict[str, list[str]] = {}
+    standing: list[tuple[str, str]] = []
+    replaced_secs: list[str] = []
     title = opts.title or meta.get("title")
     pre, sections, cur, footnotes = [], [], None, []
     for n, b in enumerate(blocks):
@@ -552,13 +684,20 @@ def build(md_text: str, opts) -> dict:
     # whole report when it has no H2) goes into the article, where contents, sorting and copy
     # buttons work.
     standfirst = ""
-    if pre and pre[0][0].type == "paragraph_open" and not bold_only(pre[0]) and not (
+    # A replaced page keeps no opening paragraph outside the fold: it stays in the old version with the rest. A partly
+    # replaced page keeps it in the opening section, which is marked like any other.
+    replaced = bool(st and st["status"] == "replaced")
+    if not (replaced or tokens_stand) and pre and pre[0][0].type == "paragraph_open" and not bold_only(pre[0]) and not (
             (bl := bold_label(pre[0])) and classify(bl[0])):
         standfirst = finish(render(pre[0], env))
         pre = pre[1:]
 
     body = []
-    if pre:
+    if pre and tokens_stand:
+        oid = slugify("sec-opening", used)
+        inner = mark_section(render_blocks(pre, env, used), oid, "Opening", st, tokens_stand, matched, standing, replaced_secs)
+        body.append(f'<section class="sec sec--intro" id="{oid}">\n{inner}\n</section>')
+    elif pre:
         body.append(f'<section class="sec sec--intro">\n{render_blocks(pre, env, used)}\n</section>')
     for s in sections:
         h_inline = s["head"][1]
@@ -568,8 +707,15 @@ def build(md_text: str, opts) -> dict:
         if FOLD_HEADS.match(plain):
             h, _ = heading_html(2, h_inline, env, used)
             inner = render_blocks(s["body"], env, used)
+            pill = ""
+            if tokens_stand:
+                inner = mark_section(inner, re.search(r'id="([^"]+)"', h).group(1), head_text, st, tokens_stand, matched,
+                                     standing, replaced_secs)
+                # A folded section shows its mark in the summary, so it reads while the fold is closed.
+                m = re.match(r'<p (class="sec-state [^"]+")>([\s\S]*?)</p>\n', inner)
+                pill, inner = f'<span {m.group(1)}>{m.group(2)}</span>', inner[m.end():]
             body.append(
-                f'<section class="sec" id="{sid}">\n<details class="fold">\n<summary><span class="chev" aria-hidden="true"></span>{h}'
+                f'<section class="sec" id="{sid}">\n<details class="fold">\n<summary><span class="chev" aria-hidden="true"></span>{h}{pill}'
                 f'<span class="fold-hint"><span class="when-closed">Show</span><span class="when-open">Hide</span></span></summary>\n{inner}\n</details>\n</section>'
             )
         else:
@@ -577,6 +723,9 @@ def build(md_text: str, opts) -> dict:
             is_lead = bool(LEAD_HEADS.match(plain))
             label = "" if plain.lower() == "bottom line" else "Bottom line"
             inner = render_blocks(s["body"], env, used, lead_first=is_lead, lead_label=label)
+            if tokens_stand:
+                inner = mark_section(inner, re.search(r'id="([^"]+)"', h).group(1), head_text, st, tokens_stand, matched,
+                                     standing, replaced_secs)
             body.append(f'<section class="sec" id="{sid}">\n{h}\n{inner}\n</section>')
 
     if not body:
@@ -588,7 +737,8 @@ def build(md_text: str, opts) -> dict:
     author = opts.author or meta.get("author")
     if author:
         meta_html += f"<div><dt>By</dt><dd>{esc(author)}</dd></div>"
-    status = opts.status or meta.get("status")
+    # A page-state keyword is the banner, not a label; --status still sets a free-text label beside it.
+    status = opts.status or (None if st else meta.get("status"))
     if status:
         meta_html += f'<div><dt>Status</dt><dd><span class="status">{esc(status)}</span></dd></div>'
 
@@ -596,11 +746,16 @@ def build(md_text: str, opts) -> dict:
         # The plugin moves every definition to the end; they become a Notes section there.
         hid = heading_id(env, "Notes", used)
         sid = slugify("sec-notes", used)
-        notes = "".join(render(b, env) for b in footnotes)
-        body.append(f'<section class="sec sec--notes" id="{sid}">\n<h2 id="{hid}">Notes</h2>\n'
-                    f'<div class="footnotes">{finish(notes)}</div>\n</section>')
+        notes = f'<div class="footnotes">{finish("".join(render(b, env) for b in footnotes))}</div>'
+        if tokens_stand:
+            notes = mark_section(notes, hid, "Notes", st, tokens_stand, matched, standing, replaced_secs)
+        body.append(f'<section class="sec sec--notes" id="{sid}">\n<h2 id="{hid}">Notes</h2>\n{notes}\n</section>')
+    if tokens_stand:
+        check_stands(tokens_stand, matched, replaced_secs)
 
     body_html = "\n".join(body)
+    if replaced:
+        body_html = old_fold(body_html, "version")
     ids = set(re.findall(r'\sid="([^"]+)"', body_html))
     return {
         "toc": toc_html(body_html),
@@ -608,6 +763,8 @@ def build(md_text: str, opts) -> dict:
         "standfirst": resolve_anchors(standfirst, env, ids),
         "meta": meta_html,
         "body": resolve_anchors(body_html, env, ids),
+        "state": state_banner(st, standing) if st else "",
+        "page_state": st["status"] if st else "",
     }
 
 
@@ -638,6 +795,15 @@ def fill(template: str, parts: dict) -> str:
     out = region("meta", parts["meta"], out)
     out = region("toc", parts.get("toc", ""), out)
     out = region("body", "\n" + parts["body"] + "\n", out)
+    if parts.get("state"):
+        out = region("state", parts["state"], out)
+        m = re.search(r"<html\b[^>]*>", out, re.I)
+        cls = re.search(r'\sclass="([^"]*)"', m.group(0)) if m else None
+        if not cls or not {"tp", "tp-reading"} <= set(cls.group(1).split()):
+            sys.exit('template root (<html>) has no "tp tp-reading" classes: the page state needs the reading template\'s root')
+        out = out[:m.start()] + m.group(0)[:5] + f' data-page-state="{parts["page_state"]}"' + m.group(0)[5:] + out[m.end():]
+    elif "<!--@state-->" in out:
+        out = region("state", "", out)
     if not parts["standfirst"]:
         out = out.replace('<div class="standfirst"><!--@standfirst--><!--/@standfirst--></div>', "")
     return out

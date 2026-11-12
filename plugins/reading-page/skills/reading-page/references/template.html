@@ -34,6 +34,7 @@
     --tp-amber:#8A5A0B; --tp-amber-tint:#F6EFD9;
     --tp-risk:#A2333B; --tp-risk-tint:#F8E8E8; --tp-note:#3F5A7A; --tp-note-tint:#E8EEF5; --tp-ver:#2A6B3C; --tp-ver-tint:#E3F1E6;
     --tp-dec:#1C232B; --tp-dec-tint:#ECEEE9;
+    --tp-action:#FF6F61; --tp-on-action:#0F0F0F;
     --tp-code-bg:#ECEEE9; --tp-sel:#CFE5DF; --tp-focus:#B83A2E;
     --tp-shadow:0 1px 2px rgba(28,35,43,.06), 0 10px 30px -18px rgba(28,35,43,.25);
     --tp-serif:"Charter","Bitstream Charter","Iowan Old Style","Sitka Text",Cambria,Georgia,serif;
@@ -309,6 +310,36 @@
     .tp details.fold > summary .chev { display:none; }
   }
 }
+
+  /* Page state banner: "This needs you" on a live page, "Nothing needed from you" on a reference or
+     replaced one. Full outline or fill only, never a bar on one side. data-page-state on the root is for
+     automated checks. */
+  .tp .tp-pstate { display:grid; grid-template-columns:auto minmax(0,1fr); gap:0 16px; align-items:center; margin:0 0 26px; max-width:var(--measure); padding:18px 22px;
+                  border:2px solid transparent; border-radius:var(--tp-r-card); font-family:var(--tp-sans); }
+  .tp .tp-pstate-glyph { display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; border-radius:50%; font:800 1.3rem/1 var(--tp-sans); flex:none; }
+  .tp .tp-pstate-head { margin:0 0 2px; font:750 1.3rem/1.25 var(--tp-sans); letter-spacing:-.005em; }
+  .tp .tp-pstate-detail { margin:0; font:500 .98rem/1.5 var(--tp-sans); overflow-wrap:anywhere; }
+  .tp .tp-pstate-detail a { color:inherit; font-weight:700; text-decoration:underline; text-underline-offset:3px; text-decoration-thickness:1.5px; }
+  .tp .tp-pstate[data-state="live"] { background:var(--tp-action); border-color:var(--tp-action); color:var(--tp-on-action); }
+  .tp .tp-pstate[data-state="live"] .tp-pstate-glyph { background:var(--tp-on-action); color:var(--tp-action); }
+  .tp .tp-pstate[data-state="answered"], .tp .tp-pstate[data-state="reference"] { background:var(--tp-accent-tint); border-color:var(--tp-accent-line); color:var(--tp-ink); }
+  .tp .tp-pstate[data-state="answered"] .tp-pstate-glyph, .tp .tp-pstate[data-state="reference"] .tp-pstate-glyph { background:var(--tp-accent); color:var(--tp-surface); }
+  .tp .tp-pstate[data-state="replaced"], .tp .tp-pstate[data-state="partly-replaced"] { background:var(--tp-surface-2); border-color:var(--tp-rule); color:var(--tp-ink); }
+  .tp .tp-pstate[data-state="replaced"] .tp-pstate-glyph, .tp .tp-pstate[data-state="partly-replaced"] .tp-pstate-glyph { background:var(--tp-ink-2); color:var(--tp-surface); }
+  .tp details.state-old { margin:0 0 2em; }
+  .tp details.state-old > summary { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:14px 18px; cursor:pointer; list-style:none;
+                                     border:1px solid var(--tp-rule); border-radius:var(--tp-r-btn); background:var(--tp-surface); font:650 .98rem var(--tp-sans); color:var(--tp-ink); }
+  .tp details.state-old > summary::-webkit-details-marker { display:none; }
+  .tp details.state-old > summary::before { content:"+"; font-weight:700; color:var(--tp-muted); }
+  .tp details.state-old[open] > summary::before { content:"\2212"; }
+  .tp details.state-old[open] > summary { margin-bottom:1.4em; }
+  .tp .state-old-sub { font-weight:500; font-size:.88rem; color:var(--tp-muted); }
+  .tp .sec-state { display:inline-flex; align-items:center; gap:6px; margin:-.2em 0 1em; padding:3px 12px; border-radius:var(--tp-r-pill); border:1px solid; font:650 .84rem/1.4 var(--tp-sans); }
+  .tp .sec-state--stands { background:var(--tp-accent-tint); border-color:var(--tp-accent-line); color:var(--tp-accent-ink); }
+  .tp .sec-state--replaced { background:var(--tp-surface-2); border-color:var(--tp-rule); color:var(--tp-ink-2); flex-wrap:wrap; }
+  .tp .sec-state a { color:inherit; font-weight:700; }
+  .tp details.fold > summary:has(.sec-state) { flex-wrap:wrap; }
+  .tp details.fold > summary .sec-state { margin:0; align-self:center; }
 </style>
 </head>
 <body>
@@ -322,6 +353,7 @@
     <nav class="toc" id="toc"><!--@toc--><ol><li class="lvl2"><a href="#h-recommendation">Recommendation</a></li><li class="lvl2"><a href="#h-evidence-marks"><span class="n">1</span>Verified and inferred</a></li><li class="lvl3"><a href="#h-tables">Tables</a></li><li class="lvl3"><a href="#h-code">Code</a></li><li class="lvl2"><a href="#h-sources">Sources</a></li><li class="lvl2"><a href="#h-notes">Notes</a></li></ol><!--/@toc--></nav>
   </aside>
   <main>
+    <!--@state--><!--/@state-->
     <header class="masthead">
       <h1><!--@title-->Reading page template<!--/@title--></h1>
       <div class="standfirst"><!--@standfirst--><p>Every report arrives as a page like this one. This copy doubles as the component gallery: each element below is what the build script produces from ordinary markdown.</p><!--/@standfirst--></div>
@@ -393,8 +425,8 @@
 
   /* Print: open every fold first so nothing is hidden on paper. */
   var folds = Array.prototype.slice.call(doc.querySelectorAll("details.fold"));
-  var printOpened = [];
-  window.addEventListener("beforeprint", function () { printOpened = folds.filter(function (d) { return !d.open; }); printOpened.forEach(function (d) { d.open = true; }); });
+  var printOpened = [], printFolds = Array.prototype.slice.call(doc.querySelectorAll("details.fold, details.state-old"));
+  window.addEventListener("beforeprint", function () { printOpened = printFolds.filter(function (d) { return !d.open; }); printOpened.forEach(function (d) { d.open = true; }); });
   window.addEventListener("afterprint", function () { printOpened.forEach(function (d) { d.open = false; }); printOpened = []; });
   doc.querySelector('[data-act="print"]').addEventListener("click", function () { window.print(); });
 
@@ -438,7 +470,7 @@
   function fragId(href) { var raw = href.charAt(0) === "#" ? href.slice(1) : href; try { return decodeURIComponent(raw); } catch (e) { return raw; } }
   function goTo(id, push) {
     var el = doc.getElementById(id); if (!el) return;
-    var fold = el.closest("details.fold"); if (fold && !fold.open) fold.open = true;
+    for (var fold = el.closest("details"); fold; fold = fold.parentElement && fold.parentElement.closest("details")) if (!fold.open) fold.open = true;
     el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
     if (push) history.replaceState(null, "", "#" + id);
   }
