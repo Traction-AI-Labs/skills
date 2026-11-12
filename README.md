@@ -94,6 +94,12 @@ open-source writing skills; see [NOTICE.md](NOTICE.md).
 
 ## Changelog
 
+- **ruling-page 0.3.0 and reading-page 0.3.0** (12 November 2026). Pages say whether they need the reader. A ruling
+  page opens with a coral "This needs you" banner while it is live; once answered or replaced, `STATE` in its data
+  turns the banner teal with a tick or grey with an arrow and a link to the page that took over, switches the answer
+  controls off and folds the old cards, still readable, under "Show the old cards". A reading page takes front-matter
+  `status`: `live`, `reference`, `replaced` (the whole old body folds) or `partly-replaced` (each section is marked
+  as still standing or replaced, and replaced ones fold). Pages without a state render exactly as before.
 - **call-prep 0.3.0** (12 November 2026). Anything the caller sends, pastes or shares during the call is now a "Send
   now" block in the beat where they send it, with its own Copy button, before the line that says it has gone. A new
   check, `scripts/check_prep.py`, fails a page where a line says something has been sent with no send before it in

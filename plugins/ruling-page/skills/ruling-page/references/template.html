@@ -4,7 +4,7 @@
 <!--
   Ruling page. One self-contained file: inline CSS and JS, no network, works from file://.
 
-  Authors edit only the data script below the header comment: RULER, BRIEF (optional), D, and the <h1>.
+  Authors edit only the data script below the header comment: RULER, BRIEF (optional), D, STATE (optional), and the <h1>.
   Card fields: id, group, title, q, opts [[label, effect, downside?], ...], pick, why, ev,
     text / textLabel / textOpen, frames [{src, cap}]
   Optional:
@@ -351,6 +351,38 @@
     .tp textarea { border:1px solid #999; }
   }
 }
+
+  /* Page state banner: "This needs you" on a live page, "Nothing for you to answer here" on an answered
+     or replaced one. Full outline or fill only, never a bar on one side. */
+  .tp .tp-pstate { display:grid; grid-template-columns:auto minmax(0,1fr); gap:0 16px; align-items:center; margin:0 0 28px; padding:18px 22px;
+                  border:2px solid transparent; border-radius:var(--tp-r-card); font-family:var(--tp-sans); }
+  .tp .tp-pstate-glyph { display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; border-radius:50%; font:800 1.3rem/1 var(--tp-sans); flex:none; }
+  .tp .tp-pstate-head { margin:0 0 2px; font:750 1.3rem/1.25 var(--tp-sans); letter-spacing:-.005em; }
+  .tp .tp-pstate-detail { margin:0; font:500 .98rem/1.5 var(--tp-sans); overflow-wrap:anywhere; }
+  .tp .tp-pstate-detail a { color:inherit; font-weight:700; text-decoration:underline; text-underline-offset:3px; text-decoration-thickness:1.5px; }
+  .tp .tp-pstate[data-state="live"] { background:var(--tp-action); border-color:var(--tp-action); color:var(--tp-on-action); }
+  .tp .tp-pstate[data-state="live"] .tp-pstate-glyph { background:var(--tp-on-action); color:var(--tp-action); }
+  .tp .tp-pstate[data-state="answered"], .tp .tp-pstate[data-state="reference"] { background:var(--tp-accent-tint); border-color:var(--tp-accent-line); color:var(--tp-ink); }
+  .tp .tp-pstate[data-state="answered"] .tp-pstate-glyph, .tp .tp-pstate[data-state="reference"] .tp-pstate-glyph { background:var(--tp-accent); color:var(--tp-surface); }
+  .tp .tp-pstate[data-state="replaced"], .tp .tp-pstate[data-state="partly-replaced"] { background:var(--tp-surface-2); border-color:var(--tp-rule); color:var(--tp-ink); }
+  .tp .tp-pstate[data-state="replaced"] .tp-pstate-glyph, .tp .tp-pstate[data-state="partly-replaced"] .tp-pstate-glyph { background:var(--tp-ink-2); color:var(--tp-surface); }
+  .tp.tp-off #tp-how, .tp.tp-off #saved, .tp.tp-off .tp-strip, .tp.tp-off .tp-tally, .tp.tp-off .tp-notpick, .tp.tp-off #acceptAll,
+  .tp.tp-off .tp-finish, .tp.tp-off .tp-rail, .tp.tp-off .tp-decided label { display:none !important; }
+  .tp.tp-off .tp-how { grid-template-columns:minmax(0,1fr); justify-items:end; padding:8px 0; }
+  .tp .tp-btn:disabled, .tp .tp-btn:disabled:hover { background:var(--tp-surface-2); border-color:var(--tp-rule); color:var(--tp-ink-2); cursor:not-allowed; }
+  .tp .tp-bar-off { flex:none; padding:3px 10px; border:1px solid var(--tp-rule); border-radius:var(--tp-r-pill); background:var(--tp-surface-2); color:var(--tp-ink-2); font:650 .82rem/1.4 var(--tp-sans); }
+  .tp details.tp-old { margin:0 0 32px; }
+  .tp details.tp-old > summary { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:14px 18px; cursor:pointer; list-style:none;
+                                 border:1px solid var(--tp-rule); border-radius:var(--tp-r-btn); background:var(--tp-surface); font:650 .98rem var(--tp-sans); color:var(--tp-ink); }
+  .tp details.tp-old > summary::-webkit-details-marker { display:none; }
+  .tp details.tp-old > summary::before { content:"+"; font-weight:700; color:var(--tp-muted); }
+  .tp details.tp-old[open] > summary::before { content:"\2212"; }
+  .tp details.tp-old[open] > summary { margin-bottom:16px; }
+  .tp .tp-old-sub { font-weight:500; font-size:.88rem; color:var(--tp-muted); }
+  .tp details.tp-old #tp-cards { filter:grayscale(1); }
+  .tp details.tp-old .tp-card { background:var(--tp-surface-2); }
+  .tp details.tp-old .tp-card .tp-state, .tp details.tp-old .tp-card textarea, .tp details.tp-old .tp-card .tp-keep,
+  .tp details.tp-old .tp-group-count, .tp details.tp-old .tp-foot { display:none !important; }
 </style>
 </head>
 <body>
@@ -359,6 +391,12 @@
 <!-- DATA: authors edit from here to the end of this script, plus the <h1> below. -->
 <script>
 const RULER = "";
+/* STATE: a new page keeps {status: "live"}, the "This needs you" banner. Once it is answered or replaced, set one of
+   these instead (every field is needed except why, answers_in and the _titles; links are another page's .html):
+   const STATE = {status: "replaced", replaced_by: "../2026-11-12-new/rulings.html", replaced_by_title: "the new rulings", replaced_on: "12 Nov 2026", why: "One line on why."};
+   const STATE = {status: "answered", answered_on: "12 Nov 2026", answers_in: "plan.html#rulings", answers_in_title: "the plan", why: "One line."};
+   A page with no STATE line (made from an older template) shows no banner and works exactly as before. */
+const STATE = {status: "live"};
 const BRIEF = {
   date: "2 November 2026",
   lede: "Seven choices on the new support desk and the website relaunch. My pick is already selected on each one, so most take a single click.",
@@ -866,6 +904,7 @@ const D = [
   var toastT;
   function toast(msg, ms) { var t = $("toast"); t.textContent = msg; clearTimeout(toastT); toastT = setTimeout(function () { t.textContent = ""; }, ms || 2600); }
   function copyOut() {
+    if (root.classList.contains("tp-off")) return;
     var text = buildText(), out = $("out"); out.textContent = text; out.hidden = false; $("tp-show").setAttribute("aria-expanded", "true"); $("tp-show").textContent = "Hide the text";
     function fallback() {
       var ok = false;
@@ -990,6 +1029,71 @@ const D = [
   }
 
   renderAll();
+
+  /* Page state. STATE = {status: "live" | "answered" | "replaced", ...} in the data. Live pages say
+     "This needs you" above the title; answered and replaced pages say there is nothing to answer, link where to go
+     instead, switch off the answer controls and fold the old cards away. A page whose data has no STATE (made from an
+     older template) gets no banner and works exactly as before. */
+  var HAS_STATE = typeof STATE !== "undefined";
+  var ST = !HAS_STATE ? null : STATE && typeof STATE === "object" ? STATE : {};
+  if (HAS_STATE && ST !== STATE) console.error("STATE must be an object such as {status: \"live\"}, not " + JSON.stringify(STATE) + "; the page shows as live");
+  var PSTATE = !ST ? "" : ST.status === "answered" || ST.status === "replaced" ? ST.status : "live";
+  if (HAS_STATE && ST === STATE && ST.status !== "live" && PSTATE === "live") console.error("STATE.status must be live, answered or replaced, not " + JSON.stringify(ST.status) + "; the page shows as live");
+  function stateNeed(k) { if (ST[k] == null || !String(ST[k]).trim()) console.error("STATE." + k + " is missing: a page marked " + PSTATE + " needs it"); return ST[k] != null && String(ST[k]).trim() ? String(ST[k]) : ""; }
+  function stateLink(href, label, what) {
+    if (href == null || !String(href).trim()) return null;
+    var h = safeHref(href);
+    if (!h) { console.error("STATE." + what + " is not a link the page can open: " + JSON.stringify(href)); return null; }
+    if (/\.md($|[#?])/i.test(h)) { console.error("STATE." + what + " must be the page's .html, never a .md file: " + JSON.stringify(href)); return null; }
+    if (!/^(https?:\/\/[^\/?#]+\/|(?![a-z][a-z0-9+.-]*:))[^?#]*\.html?([?#]|$)/i.test(h)) { console.error("STATE." + what + " must be another page's .html: " + JSON.stringify(href)); return null; }
+    var a = el("a", null, label || h); a.href = h; return a;
+  }
+  (function stateBanner() {
+    var hero = doc.querySelector(".tp-hero"); if (!hero || !PSTATE) return;
+    var b = el("section", "tp-pstate"), g = el("span", "tp-pstate-glyph"), tx = el("div", "tp-pstate-text"), d = el("p", "tp-pstate-detail");
+    b.id = "tp-pstate"; b.dataset.state = PSTATE; b.setAttribute("aria-labelledby", "tp-pstate-head");
+    g.setAttribute("aria-hidden", "true"); g.textContent = PSTATE === "live" ? "!" : PSTATE === "answered" ? "✓" : "↪";
+    var head = el("p", "tp-pstate-head", PSTATE === "live" ? "This needs you" : "Nothing for you to answer here"); head.id = "tp-pstate-head";
+    function add(node) { if (node) d.appendChild(typeof node === "string" ? doc.createTextNode(node) : node); }
+    if (PSTATE === "live") {
+      add(THREADS ? plural(CARDS.length, "question", "questions") + " to read and answer." : plural(CARDS.length, "decision", "decisions") + " to answer.");
+    } else if (PSTATE === "replaced") {
+      var ra = stateLink(stateNeed("replaced_by"), ST.replaced_by_title, "replaced_by"), ron = stateNeed("replaced_on");
+      if (ra) { add("Replaced by "); add(ra); } else add("Replaced");
+      add(ron ? " on " + ron + "." : ".");
+    } else {
+      var aon = stateNeed("answered_on");
+      add(aon ? "Answered on " + aon + "." : "Answered.");
+      var aa = stateLink(ST.answers_in, ST.answers_in_title, "answers_in");
+      if (aa) { add(" The answers are recorded in "); add(aa); add("."); }
+    }
+    if (ST.why) add(" " + String(ST.why));
+    tx.appendChild(head); tx.appendChild(d); b.appendChild(g); b.appendChild(tx);
+    hero.insertBefore(b, hero.firstChild);
+    if (PSTATE === "live") return;
+    /* Not live: nothing on the page can be answered or copied, and the old cards are folded and dimmed. */
+    root.classList.add("tp-off"); root.dataset.pageState = PSTATE;
+    ["copy", "tp-copy2", "acceptAll", "tp-decided-note", "tp-pagenote"].forEach(function (id) { var e = $(id); if (e) { e.disabled = true; e.setAttribute("aria-disabled", "true"); } });
+    var bt = $("tp-bar-title"); if (bt) { var off = el("span", "tp-bar-off", PSTATE === "answered" ? "Answered" : "Replaced"); bt.parentNode.insertBefore(off, bt.nextSibling); }
+    var cards = $("tp-cards"); if (!cards) return;
+    var det = el("details", "tp-old"), sm = el("summary");
+    sm.appendChild(el("span", null, "Show the old " + (THREADS ? "questions" : "cards")));
+    sm.appendChild(el("span", "tp-old-sub", plural(CARDS.length, THREADS ? "question" : "card", THREADS ? "questions" : "cards") + ", for the record only"));
+    cards.parentNode.insertBefore(det, cards); det.appendChild(sm); det.appendChild(cards);
+    /* Print: the old cards go on paper too, and fold again afterwards. */
+    var reopen = false;
+    window.addEventListener("beforeprint", function () { reopen = !det.open; det.open = true; });
+    window.addEventListener("afterprint", function () { if (reopen) det.open = false; reopen = false; });
+    /* The old cards stay readable (Background, the text that goes out, pictures); everything that answers is off. */
+    cards.querySelectorAll("input, textarea, select, button:not(.tp-frame)").forEach(function (x) { x.disabled = true; x.setAttribute("aria-disabled", "true"); });
+    ["click", "change", "input", "keydown"].forEach(function (ev) {
+      cards.addEventListener(ev, function (e) {
+        var t = e.target && e.target.closest ? e.target : null;
+        if (!t || t.closest("summary, .tp-frame")) return;
+        if (t.closest("input, textarea, select, label, button")) { e.preventDefault(); e.stopPropagation(); }
+      }, true);
+    });
+  })();
   if (location.hash.length > 1) { var target = $(decodeURIComponent(location.hash.slice(1))); if (target) setTimeout(function () { target.scrollIntoView(); }, 0); }
   /* For headless checks: the text Copy my answers would put on the clipboard. */
   window.rulingText = buildText;

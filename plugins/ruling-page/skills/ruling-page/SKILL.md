@@ -2,7 +2,7 @@
 name: ruling-page
 description: Use when you need the person you're working with to rule on a COMPLICATED decision (several decisions at once, or options with trade-offs that need explaining), or when asks from several threads need one answer. Builds a clickable one-file HTML ruling page with your recommendation pre-selected on every card and a "Copy my answers" button, instead of asking them to read a markdown file or a long chat message. Simple yes/no decisions stay in chat.
 ---
-<!-- SOURCE-REVISION 8e3de19e -->
+<!-- SOURCE-REVISION 46e23df0 -->
 
 # Ruling page
 
@@ -83,6 +83,26 @@ real trade-offs: build a page.
   their own words.
 
 Several decisions, or asks from several threads, go on one page, not one page each.
+
+## When the page no longer needs answers
+Both templates ship with `const STATE = {status: "live"};` in the data script: keep it, and the page opens with a
+"This needs you" banner (coral, "!") above the title. Once they have answered, or another page takes over, replace
+that line; the page is never deleted or moved. Every field is needed except `why`, `answers_in` and the `_title`s:
+- `{status: "replaced", replaced_by: "<the replacement's .html>", replaced_by_title, replaced_on: "12 Nov 2026", why}`
+- `{status: "answered", answered_on, answers_in: "<the .html where the answers are recorded>", answers_in_title, why}`.
+  Leave `answers_in` out when the answers are recorded only in markdown (a `plan.md`); never link the `.md`.
+
+The banner then reads "Nothing for you to answer here" with the link and date, the instructions, tally, Accept all
+picks, the notes and Send your answers are hidden or switched off, Copy is switched off, and the cards fold, dimmed,
+under "Show the old cards", where they can still be read (background, the text that goes out, pictures) but not
+answered. Printing opens the fold. A missing field, a link that is not another page's `.html` (a `.md`, `mailto:` or
+text file) or an unknown status is a console error, so step 3's check catches it. A page whose data has no `STATE`
+line (made from an older template) shows no banner and works exactly as before.
+
+A page made from an older template has no code that reads `STATE`, so adding the line does nothing. To give it a
+state, copy its data script (RULER, BRIEF, D or T) and its `<h1>` into the current template, add the `STATE` line,
+and save it over the old file at the same path, so answers already saved in the browser carry over. Whenever a
+page's state changes, run step 3's check and show it again as step 4 says, or they keep seeing the old live page.
 
 ## What the page already does
 
