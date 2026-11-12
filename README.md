@@ -94,6 +94,10 @@ open-source writing skills; see [NOTICE.md](NOTICE.md).
 
 ## Changelog
 
+- **call-prep 0.3.0** (12 November 2026). Anything the caller sends, pastes or shares during the call is now a "Send
+  now" block in the beat where they send it, with its own Copy button, before the line that says it has gone. A new
+  check, `scripts/check_prep.py`, fails a page where a line says something has been sent with no send before it in
+  the same beat, and lists the sends by beat for the handover, which now names them first.
 - **reading-page 0.2.4** (12 November 2026). Inline code in prose, the standfirst and table cells never renders under
   11px, so it stays readable at phone width.
 - **doc-gauntlet 0.6.1** (12 November 2026). The client-draft review's worth-asking test now covers every message

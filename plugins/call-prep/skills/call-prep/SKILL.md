@@ -19,8 +19,11 @@ The page's script marks the current beat in the nav and gives single keys: digit
 `d` decide, `a` answers, `j`/`k` next and back, `x` beat done, `f` focus (dims the other beats),
 `-`/`=` script size, `t` call clock, `g` hides the guard line. Large serif quoted lines, persistent
 checkboxes for a decision rule, status pills for a multi-part call. Delete the sections the call does
-not use, with their nav links and keys. Before handing it over, no `{{` may be left in the file
-(`grep -c '{{' <prep>.html` prints 0). The look is shared with `ruling-page` and `reading-page`: no
+not use, with their nav links and keys. Before handing it over, run
+`python3 scripts/check_prep.py <prep>.html` from this skill's folder: it must print `ok` and exit 0. It fails a page
+with a `{{` placeholder left in or the send mistakes rule 7 under "Everything the call promises is ready before the
+call" lists, and lists the sends during the call by beat for the handover. In the Claude app, where no script runs, make
+the same checks by reading the page. The look is shared with `ruling-page` and `reading-page`: no
 one-sided accents (never a border, shadow or bar down one side of a box); after a template change, run
 the checks in `ruling-page` ("Changing the templates"). In Claude Code, write the file and open it for
 the caller. **In the Claude app**, show the filled template as an HTML artifact. The HTML is the only copy:
@@ -61,15 +64,38 @@ caller exposed on the call and with work to do after it.
    send-ready form (a draft email on the right thread, attachments on it). "After the call: send X" is
    allowed only for the part that genuinely depends on what is said; the rest is drafted, and the open
    part is named.
-2. **A "What you send" panel at the top of the page**, under the guard line: each item, where it is,
-   and the one action the caller takes. If nothing is sent, say so.
+2. **A "What you send" panel at the top of the page**, under the guard line: each item, where it is (the
+   draft's subject, or a copy button for text sent before or after the call; for a send during the call, the beat
+   that holds it, under rule 7), and the one action the caller takes. If nothing is sent, say so.
 3. **Every ask and follow-up in plain words, in the beat that raises it:** what it is, why the
    counterpart wants it, what happens next. No shorthand the caller has to decode mid-call.
 4. **A figure framed as agreed names who said it and when**, from the transcript.
 5. **A slip is the caller's only if the thread shows they owed the next step.** Read the thread before
    writing an apology into the opener.
-6. **Not ready by call time:** the panel and the handover say what isn't ready, as a count ("2 of 3
-   ready; the email is in review"). Never call an unwritten or unreviewed artefact ready.
+6. **Not ready by call time:** the panel and the handover (straight after its list of sends during the call) say
+   what isn't ready, as a count ("2 of 3 ready; the email is in review"). Never call an unwritten or unreviewed artefact ready.
+7. **Anything the caller sends, pastes or shares during the call is a send action in the beat where they do
+   it.** A script that says "press c, copy the message, paste it into the chat", then has the caller read "I've
+   put everything for today in the chat", with the message in a section at the bottom, leaves them saying it has
+   gone when it hasn't, and stopping mid-call to find it. A panel at the top listing it does not help at that
+   moment. So:
+   - The send is a `.act` block in that beat (template: the "Send now" pill, where it goes and the one action,
+     then the content in a copy box with its own Copy button), placed before any quoted line that assumes it has
+     gone. Never behind a key, in a separate prompts section or only in the panel. An email draft sent live is a
+     `.act` with `data-draft` holding the draft's subject, and its `.act-what` line names that subject so the
+     caller can find the draft ("Open the draft 'Notes from today' and press Send"). An answer under "Answer if
+     asked" that needs a send carries its own send action directly above the line.
+   - A quoted line that says something has gone ("I've put it in the chat", "I've just emailed you") comes after
+     a send action by the same route (an email draft for an email, a copy box for a chat or channel) in the same
+     beat, and a direction telling the caller to paste or send something somewhere is followed straight away by its
+     send action. Fallback lines quoted in a direction ("If pushed: ...") and the "If they..." table count as lines
+     the caller says. A line about something sent before the call carries `data-sent-before`
+     saying where and when it went, checked in the channel or sent mail, never assumed.
+   - The panel lists each send during the call too, by beat ("During the call, beat 3"), pointing at the beat.
+   - `scripts/check_prep.py` fails a sent line it recognises with no send action before it, a send action outside
+     a beat or "Answer if asked", one with no content, Copy button or "Send now" line, a direction to send with no
+     send action straight after it, and a pointer to a key for content. It recognises common phrasings, not every one, so placing
+     each send is still the author's job.
 
 ## The shape
 
@@ -208,7 +234,9 @@ own counts is not a review.
 
 ## Handing it over
 
-First line: what the caller sends and whether it is ready, as a count. Then the path (and confirm it is open) or the artifact, the guard line (or that nothing is off
+First, every send during the call, one line per send in beat order ("Beat 3: paste the session message into the
+meeting chat; the copy box is in the beat"), from the list `check_prep.py` prints, or "No sends during the call".
+Next, what the caller sends and whether it is ready, as a count. Then the path (and confirm it is open) or the artifact, the guard line (or that nothing is off
 limits), the beat headings, and whether a review ran. Not the whole script; they open the page. Flag
 anything you could not verify against a source, and anything the caller still owes that the call
 depends on (a message they said they'd send, a decision not yet made).
@@ -228,9 +256,10 @@ depends on (a message they said they'd send, a decision not yet made).
 | "Answer if asked" in the polite phrasing | The hostile phrasing, with an answer the caller can say to it |
 | A slip held back until they raise it | An early beat, in the caller's words |
 | An apology for a slip that was the counterpart's to act on | Read the thread for who owed the next step first |
+| "Press c, copy it and paste it in the chat", then "I've put it in the chat", with the message in a section at the bottom | A send action in that beat, before the line: the "Send now" pill, where it goes, the content and its Copy button |
 | "After the call: email them X" when X could be written now | X drafted, reviewed and ready to send before the call; the "What you send" panel says where |
 | A follow-up named in shorthand ("the half hour on the logging") | One plain sentence in the beat: what it is, why they want it, what happens |
 | A linear script for a call someone else drives | Beats keyed to their trigger, must-land beats marked |
 | The full shape, state table and all, for a fifteen-minute internal sync | Core only |
 | A markdown prep, or an HTML one plus a markdown mirror | One HTML page from the template |
-| Updating a prep for part 2 by rewriting it | Keep part 1's beats, add status pills (`done`, `now`, `part`) and a note of what part 1 covered; put tonight's section first in both the page and the nav, and move the digit keys (`data-key`) to tonight's beats; give tonight's beats new section ids so part 1's ticks stay on part 1, and set tonight's `data-start` (the clock starts afresh) |
+| Updating a prep for part 2 by rewriting it | Keep part 1's beats, turning each of part 1's send actions into a plain line saying when it went (and `data-sent-before` on any quoted line about it), so the check and the handover list only tonight's sends; add status pills (`done`, `now`, `part`) and a note of what part 1 covered; put tonight's section first in both the page and the nav, and move the digit keys (`data-key`) to tonight's beats; give tonight's beats new section ids so part 1's ticks stay on part 1, and set tonight's `data-start` (the clock starts afresh) |
