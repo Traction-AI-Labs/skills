@@ -163,6 +163,58 @@ class PreReviewFindings(unittest.TestCase):
         self.assertTrue(self.fails("<html><body><main><section id='send'></section></main></body></html>"))
 
 
+class RoundOneFindings(unittest.TestCase):
+    """One case per finding from gauntlet round 1 on the check."""
+
+    def fails(self, html):
+        return check_prep.check(html)[0]
+
+    def test_more_sent_phrasings(self):
+        for line in ["I emailed you the notes.", "The notes are in Slack.", "Before we start, I have sent the notes."]:
+            self.assertTrue(self.fails(page('<p class="say">"%s"</p>' % line)), line)
+
+    def test_lines_that_send_nothing_pass(self):
+        for line in ["I've shared my screen, can you see it?", "Can you open the chat?"]:
+            self.assertEqual(self.fails(page('<p class="say">"%s"</p>' % line)), [], line)
+
+    def test_keyboard_shortcut_is_not_a_page_key(self):
+        self.assertEqual(self.fails(page(ACT + '<p class="dir">Click into the chat, press \u2318V to paste, then Enter.</p>')), [])
+
+    def test_each_claim_in_a_line_needs_its_own_route(self):
+        draft = ('<div class="act" data-draft="Notes"><p class="act-what"><span class="act-pill">Send now</span>'
+                 'Open the draft and press Send</p></div>')
+        line = '<p class="say">"I have emailed the notes. The link is in the chat."</p>'
+        self.assertTrue(any("by chat or channel" in f for f in self.fails(page(draft + line))))
+        self.assertEqual(self.fails(page(draft + ACT + line)), [])
+
+    def test_spoken_lines_outside_beats_are_checked(self):
+        answers = '<section id="answers" data-key="a"><h2>Answer if asked</h2>%s</section></main>'
+        self.assertTrue(self.fails(page("").replace("</main>", answers % SAY_SENT)))
+        ok = '<p class="say" data-sent-before="homework email, 29 Oct 17:40">"I\'ve emailed you the homework."</p>'
+        self.assertEqual(self.fails(page("").replace("</main>", answers % ok)), [])
+
+    def test_hidden_copy_button_and_missing_act_what_fail(self):
+        self.assertTrue(self.fails(page(ACT.replace('<button class="copy"', '<button hidden class="copy"') + SAY_SENT)))
+        self.assertTrue(self.fails(page(re.sub(r'<p class="act-what">.*?</p>', "", ACT) + SAY_SENT)))
+
+    def test_panel_line_pointing_at_a_key_fails(self):
+        panel = '<ul><li><b>At the start of beat 3:</b> one message (press <code>c</code>, Copy on the first block, paste into the channel, send).</li></ul>'
+        self.assertTrue(any("outside the beats points at a key" in f for f in self.fails(page(ACT, extra=panel))))
+
+
+class DocRoundFindings(unittest.TestCase):
+    def fails(self, html):
+        return check_prep.check(html)[0]
+
+    def test_answers_may_hold_a_send_action(self):
+        answers = '<section id="answers" data-key="a"><h2>Answer if asked</h2>%s</section></main>'
+        self.assertEqual(self.fails(page("").replace("</main>", answers % (ACT + SAY_SENT))), [])
+        self.assertTrue(self.fails(page("").replace("</main>", answers % (SAY_SENT + ACT))))
+
+    def test_direction_to_send_a_draft_needs_an_action(self):
+        self.assertTrue(any("direction has the caller send" in f for f in self.fails(page('<p class="dir">Open the draft and press Send.</p>'))))
+
+
 class Template(unittest.TestCase):
     def test_filled_template_passes_and_lists_its_send(self):
         html = read(TEMPLATE)
