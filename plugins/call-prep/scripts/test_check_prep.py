@@ -42,6 +42,12 @@ class TheIncident(unittest.TestCase):
         bad = bad.replace('<p class="say">"x"</p>\n</section>', sent + "\n</section>", 1)
         bad = bad.replace("</main>", '<section id="prompts" data-key="c"><h2>Prompts</h2><pre>message</pre></section></main>', 1)
         good = filled.replace('<p class="say">"x"</p>\n</section>', sent + "\n</section>", 1)
+        self.assertNotEqual(bad, filled)
+        self.assertIn(sent, bad)
+        self.assertIn("Press c", bad)
+        self.assertIn('id="prompts"', bad)
+        self.assertIn(sent, good)
+        self.assertLess(good.index('class="act"'), good.index(sent))
         return bad, good
 
     def test_incident_fails_and_fixed_passes(self):
@@ -114,8 +120,7 @@ class Actions(unittest.TestCase):
         self.assertTrue(check_prep.check(page(broken))[0])
 
     def test_email_draft_action_passes(self):
-        draft = ('<div class="act" data-draft="Notes from today"><p class="act-what"><span class="act-pill">Send now</span>'
-                 'Open the draft and press Send</p></div>')
+        draft = ('<div class="act" data-draft="Notes from today"><p class="act-what"><span class="act-pill">Send now</span>Open the draft \'Notes from today\' and press Send</p></div>')
         self.assertEqual(check_prep.check(page(draft + '<p class="say">"I\'ve just emailed you the notes."</p>'))[0], [])
 
     def test_key_direction_fails(self):
@@ -138,8 +143,7 @@ class PreReviewFindings(unittest.TestCase):
 
     def test_a_chat_send_does_not_cover_an_email_claim(self):
         self.assertTrue(self.fails(page(ACT + '<p class="say">"I have just emailed you the contract."</p>')))
-        draft = ('<div class="act" data-draft="Contract"><p class="act-what"><span class="act-pill">Send now</span>'
-                 'Open the draft and press Send</p></div>')
+        draft = ('<div class="act" data-draft="Contract"><p class="act-what"><span class="act-pill">Send now</span>Open the draft \'Contract\' and press Send</p></div>')
         self.assertEqual(self.fails(page(ACT + draft + '<p class="say">"I have just emailed you the contract."</p>')), [])
 
     def test_direction_to_send_needs_an_action(self):
@@ -181,8 +185,7 @@ class RoundOneFindings(unittest.TestCase):
         self.assertEqual(self.fails(page(ACT + '<p class="dir">Click into the chat, press \u2318V to paste, then Enter.</p>')), [])
 
     def test_each_claim_in_a_line_needs_its_own_route(self):
-        draft = ('<div class="act" data-draft="Notes"><p class="act-what"><span class="act-pill">Send now</span>'
-                 'Open the draft and press Send</p></div>')
+        draft = ('<div class="act" data-draft="Notes"><p class="act-what"><span class="act-pill">Send now</span>Open the draft \'Notes\' and press Send</p></div>')
         line = '<p class="say">"I have emailed the notes. The link is in the chat."</p>'
         self.assertTrue(any("by chat or channel" in f for f in self.fails(page(draft + line))))
         self.assertEqual(self.fails(page(draft + ACT + line)), [])
@@ -213,6 +216,52 @@ class DocRoundFindings(unittest.TestCase):
 
     def test_direction_to_send_a_draft_needs_an_action(self):
         self.assertTrue(any("direction has the caller send" in f for f in self.fails(page('<p class="dir">Open the draft and press Send.</p>'))))
+
+
+class PublishedRoundFindings(unittest.TestCase):
+    """One case per finding from the gauntlet round on the published cut."""
+
+    def fails(self, html):
+        return check_prep.check(html)[0]
+
+    def answers(self, inner):
+        return page("").replace("</main>", '<section id="answers" data-key="a"><h2>Answer if asked</h2>%s</section></main>' % inner)
+
+    def test_each_answer_keeps_its_own_sends(self):
+        two = '<p class="q">"Where is it?"</p>' + ACT + '<p class="say">"It\'s here."</p><p class="q">"Did you send it?"</p>' + SAY_SENT
+        self.assertTrue(any("#answers" in f for f in self.fails(self.answers(two))))
+
+    def test_quoted_fallbacks_and_table_lines_are_read(self):
+        self.assertTrue(self.fails(page('<p class="dir">If pushed: "I have emailed you the notes."</p>')))
+        table = '<section id="ifthey"><h2>If they</h2><table><tr><td>go quiet</td><td>"I\'ve put it in the chat."</td></tr></table></section></main>'
+        self.assertTrue(any("#ifthey" in f for f in self.fails(page("").replace("</main>", table))))
+
+    def test_a_direction_needs_the_send_action_straight_after_it(self):
+        d = '<p class="dir">Paste the brief into Slack and send it.</p>'
+        self.assertTrue(self.fails(page(ACT + d + SAY_SENT)))
+        self.assertEqual(self.fails(page(d + ACT + SAY_SENT)), [])
+
+    def test_claim_route_comes_from_its_own_clause(self):
+        draft = ('<div class="act" data-draft="Notes"><p class="act-what"><span class="act-pill">Send now</span>'
+                 "Open the draft 'Notes' and press Send</p></div>")
+        self.assertTrue(any("by chat or channel" in f for f in self.fails(page(draft + '<p class="say">"The link is in the chat and I have emailed the notes."</p>'))))
+        self.assertEqual(self.fails(page(ACT + '<p class="say">"I\'ve put the link to the draft in the chat."</p>')), [])
+        self.assertEqual(self.fails(page(ACT + '<p class="say">"The link is in the chat and we can discuss the email later."</p>')), [])
+
+    def test_send_line_and_button_must_be_usable(self):
+        self.assertTrue(self.fails(page(ACT.replace('<p class="act-what">', '<p class="act-what" hidden>') + SAY_SENT)))
+        self.assertTrue(self.fails(page(ACT.replace('<button class="copy"', '<button disabled class="copy"') + SAY_SENT)))
+        self.assertTrue(self.fails(page(ACT.replace('<span class="act-pill">Send now</span>', "") + SAY_SENT)))
+        self.assertTrue(self.fails(page(ACT.replace("Here is the link", " ") + SAY_SENT)))
+        self.assertTrue(self.fails(page('<div style="display: none">' + ACT + "</div>" + SAY_SENT)))
+
+    def test_email_action_names_its_draft(self):
+        bare = ('<div class="act" data-draft="Notes from today"><p class="act-what"><span class="act-pill">Send now</span>'
+                "Open the draft and press Send</p></div>")
+        self.assertTrue(any("must name its draft" in f for f in self.fails(page(bare))))
+
+    def test_plain_past_mid_sentence_is_history(self):
+        self.assertEqual(self.fails(page('<p class="say">"So the plan is what I put in the email last week."</p>')), [])
 
 
 class Template(unittest.TestCase):

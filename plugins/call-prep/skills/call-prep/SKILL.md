@@ -87,12 +87,14 @@ caller exposed on the call and with work to do after it.
      asked" that needs a send carries its own send action directly above the line.
    - A quoted line that says something has gone ("I've put it in the chat", "I've just emailed you") comes after
      a send action by the same route (an email draft for an email, a copy box for a chat or channel) in the same
-     beat, and a direction telling the caller to paste or send something somewhere has its send action in that beat. A line about something sent before the call carries `data-sent-before`
+     beat, and a direction telling the caller to paste or send something somewhere is followed straight away by its
+     send action. Fallback lines quoted in a direction ("If pushed: ...") and the "If they..." table count as lines
+     the caller says. A line about something sent before the call carries `data-sent-before`
      saying where and when it went, checked in the channel or sent mail, never assumed.
    - The panel lists each send during the call too, by beat ("During the call, beat 3"), pointing at the beat.
    - `scripts/check_prep.py` fails a sent line it recognises with no send action before it, a send action outside
      a beat or "Answer if asked", one with no content, Copy button or "Send now" line, a direction to send with no
-     send action, and a pointer to a key for content. It recognises common phrasings, not every one, so placing
+     send action straight after it, and a pointer to a key for content. It recognises common phrasings, not every one, so placing
      each send is still the author's job.
 
 ## The shape
