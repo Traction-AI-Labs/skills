@@ -264,6 +264,44 @@ class PublishedRoundFindings(unittest.TestCase):
         self.assertEqual(self.fails(page('<p class="say">"So the plan is what I put in the email last week."</p>')), [])
 
 
+class FixForwardFindings(unittest.TestCase):
+    """One case per finding from the fix-forward pass."""
+
+    def fails(self, html):
+        return check_prep.check(html)[0]
+
+    DRAFT = ('<div class="act" data-draft="Notes"><p class="act-what"><span class="act-pill">Send now</span>'
+             "Open the draft 'Notes' and press Send</p></div>")
+
+    def test_email_claims_need_an_email_action(self):
+        for line in ["I've emailed both teams the notes.", "I've sent you the notes, by email.",
+                     "I've sent it over and it should be in your inbox.", "I have emailed you the Slack notes.",
+                     "I have sent the contract and notes by email."]:
+            self.assertTrue(any("by email" in f for f in self.fails(page(ACT + '<p class="say">"%s"</p>' % line))), line)
+            self.assertEqual(self.fails(page(self.DRAFT + '<p class="say">"%s"</p>' % line)), [], line)
+
+    def test_their_quoted_words_are_not_his_lines(self):
+        for d in ['If they say "I have emailed you the notes", ask them to resend.',
+                  'He may say "I\'ve put it in the chat already".', 'His post, 14:44: "I have sent the table."']:
+            self.assertEqual(self.fails(page('<p class="dir">%s</p>' % d)), [], d)
+        self.assertTrue(self.fails(page('<p class="dir">If pushed: "I have emailed you the notes."</p>')))
+
+    def test_only_the_if_they_answer_cells_are_read(self):
+        hist = '<section id="bg"><h2>Where things stand</h2><table><tr><td>29 Oct</td><td>"I\'ve sent the homework."</td></tr></table></section></main>'
+        self.assertEqual(self.fails(page("").replace("</main>", hist)), [])
+        trig = '<section id="ifthey"><h2>If they</h2><table><tr><td>"I\'ve emailed it to you"</td><td>"Thanks, I\'ll look."</td></tr></table></section></main>'
+        self.assertEqual(self.fails(page("").replace("</main>", trig)), [])
+
+    def test_hidden_draft_name_fails(self):
+        hid = self.DRAFT.replace("Open the draft 'Notes' and", "Open the draft <span hidden>Notes</span> and")
+        self.assertTrue(any("must name its draft" in f for f in self.fails(page(hid))))
+
+    def test_email_direction_needs_an_email_action(self):
+        d = '<p class="dir">Open the draft and press Send.</p>'
+        self.assertTrue(self.fails(page(d + ACT)))
+        self.assertEqual(self.fails(page(d + self.DRAFT)), [])
+
+
 class Template(unittest.TestCase):
     def test_filled_template_passes_and_lists_its_send(self):
         html = read(TEMPLATE)

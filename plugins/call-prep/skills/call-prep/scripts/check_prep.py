@@ -5,16 +5,17 @@ Usage: python3 check_prep.py <prep>.html [more.html ...]
 Exit 0 when every page passes, 1 when any page fails, 2 on a usage or read error.
 
 Fails a page when:
-  1. a spoken line (.say) in a beat says something has been sent ("I've put it in Slack",
-     "I've just emailed you", "the link is in the chat") and no visible send action (.act) by the
-     same route (email, or a chat or channel) comes before it in the same beat, unless the line
-     carries data-sent-before naming where and when it was sent before the call;
-  2. a send action sits outside a beat (in the "What you send" panel or a section of its own);
-  3. a send action is hidden, lacks its .act-what line with the Send now pill, or has no content
-     and visible Copy button inside it (a <button class=copy> whose data-copy names a <pre> inside
-     the same .act), unless it is an email draft (data-draft names the draft);
+  1. a line the caller says (a .say line, a fallback quoted in a direction as theirs, an answer in
+     the "If they..." table) says something has been sent ("I've put it in Slack", "I've just emailed
+     you", "the link is in the chat") and no visible send action (.act) by the same route (an email
+     draft, or a chat or channel copy box) comes before it in the same beat, or in the same answer
+     under "Answer if asked", unless the line carries data-sent-before naming where and when it went;
+  2. a send action sits outside a beat or "Answer if asked" (in the panel or a section of its own);
+  3. a send action is hidden, lacks its visible .act-what line with the Send now pill, or has no
+     content and visible, enabled Copy button inside it (a <button class=copy> whose data-copy names
+     a <pre> inside the same .act); an email draft (data-draft) instead names its draft visibly;
   4. a stage direction points at a key to reach content ("press c, copy ..."), or tells the
-     caller to send, paste or post something somewhere with no send action in that beat; a line
+     caller to send, paste or post something with no send action of that kind straight after it; a line
      outside the beats (the panel, a heading) points at a key for content; or a spoken line outside
      the beats ("Answer if asked") claims a send;
   5. a placeholder ({{ ... }}) is left in, an id is used twice (a Copy button would copy the
@@ -53,8 +54,9 @@ OPENS_RE = re.compile(r"(^|[.!?,;:]\s*|\b(so|and|ok|okay|right|now)\s+)$", re.I)
 # "Before we start, I have sent the notes" is still a claim.
 COND_RE = re.compile(r"\b(once|when|whenever|after|if|until|as soon as|before)\b(\s+\S+){0,4}\s*$", re.I)
 EMAIL_RE = re.compile(r"e-?mail|inbox", re.I)
-CHAT_RE = re.compile(r"slack|\bchat\b|channel|thread|whatsapp|teams|\bdms?\b|#", re.I)
-# A direction that opens by telling the caller to send somewhere (quoted lines inside it are the counterpart's words).
+CHAT_RE = re.compile(r"\bslack\b|\bchat\b|\bchannel\b|\bthread\b|\bwhatsapp\b|(?-i:\bTeams\b)|\bdms?\b|#\S", re.I)
+EMAIL_VERB_RE = re.compile(r"\be-?mailed\b", re.I)
+# A direction that opens by telling the caller to send somewhere (quoted text inside it is set aside first).
 DIR_SEND_RE = re.compile(r"^(then\s+|now\s+)?(paste|post|send|share|drop|put|copy)\b[^.]*?\b(in|into|to|on)\s+" + ART + WHERE, re.I)
 # A direction to send an email draft ("open the draft and press Send").
 DIR_DRAFT_RE = re.compile(r"^(then\s+|now\s+)?(open|send)\s+(the\s+|your\s+)?(e-?mail\s+)?(draft|e-?mail)\b", re.I)
@@ -131,10 +133,20 @@ def hidden(n):
     return False
 
 
-def route(text):
-    """A claim's route: a chat or channel when it names one ("the link to the email is in the chat"), else email when
-    it names email, else a chat."""
-    return "chat" if CHAT_RE.search(text) else "email" if EMAIL_RE.search(text) else "chat"
+def route(match, tail):
+    """A claim's route. An email verb in the claim ("I've emailed both teams") is email; a chat or channel named in the
+    claim ("the link to the email is in the chat") is chat; an email named in the claim ("check your email") is email.
+    Otherwise the first route the rest of the sentence names ("I've sent you the notes, by email"), else chat."""
+    if EMAIL_VERB_RE.search(match):
+        return "email"
+    if CHAT_RE.search(match):
+        return "chat"
+    if EMAIL_RE.search(match):
+        return "email"
+    c, e = CHAT_RE.search(tail), EMAIL_RE.search(tail)
+    if e and (not c or e.start() < c.start()):
+        return "email"
+    return "chat"
 
 
 def clause_before(line, start):
@@ -155,12 +167,28 @@ def sent_claims(line):
             out.append(m)
     # A claim's route is read from the claim and the rest of its own clause ("I've sent you the notes by email"),
     # never from a later clause ("The link is in the chat and I have emailed the notes" holds two claims).
-    return [(m, route(re.split(r"[.!?;,]|\band\b|\bbut\b", line[m.end():])[0] + " " + m.group(0))) for m in out]
+    return [(m, route(m.group(0), re.split(r"[.!?]", line[m.end():])[0])) for m in out]
 
 
-def quoted(text):
-    """Spoken lines quoted inside a direction or a table cell ('If pushed: "..."')."""
-    return [q for q in re.findall(r'"([^"]+)"|“([^”]+)”', text) for q in q if q]
+# A quote in a direction is the caller's line when it is introduced as one ('If pushed: "..."', 'say "..."'), never
+# when it is someone else's words ('If they say "..."', 'He posted: "..."').
+MINE_RE = re.compile(r"(if pushed|fallback|\bsay\b|\btell (him|her|them)\b|\breply\b)[^\"\u201c]{0,40}$", re.I)
+THEIRS_RE = re.compile(r"\b(he|she|they|him|her|them)\s+(may |might |will |would )?(say|says|said|asks?|asked|posted|wrote|writes)\b[^\"\u201c]{0,20}$", re.I)
+
+
+def quoted(text, mine_only=False):
+    """Spoken lines quoted inside a direction or a table cell. With mine_only, only quotes introduced as the caller's."""
+    out = []
+    for m in re.finditer(r'"([^"]+)"|\u201c([^\u201d]+)\u201d', text):
+        before = text[:m.start()]
+        if mine_only and (not MINE_RE.search(before) or THEIRS_RE.search(before)):
+            continue
+        out.append(m.group(1) or m.group(2))
+    return out
+
+
+def visible_text(n):
+    return "".join(c if isinstance(c, str) else ("" if hidden(c) else visible_text(c)) for c in n.children)
 
 
 def own_text(n):
@@ -223,11 +251,14 @@ def check(html):
         else:
             if n.tag in ("p", "li", "span", "small", "h2", "h3", "h4") and KEY_RE.search(own_text(n)):
                 fails.append('a line outside the beats points at a key for content; point at the beat that holds the send action: "%s"' % own_text(n)[:120])
-            if "dir" in n.classes or n.tag == "td":
-                sec = n.parent
-                while sec is not None and sec.tag != "section":
-                    sec = sec.parent
-                for q in quoted(n.text()):
+            sec = n.parent
+            while sec is not None and sec.tag != "section":
+                sec = sec.parent
+            in_ifthey = sec is not None and sec.attrs.get("id") == "ifthey"
+            # The "If they..." table's answer cells (every cell after the first in a row) are lines the caller says.
+            row_cells = [c for c in n.parent.children if isinstance(c, Node) and c.tag == "td"] if n.tag == "td" and n.parent else []
+            if "dir" in n.classes or (in_ifthey and row_cells and row_cells[0] is not n):
+                for q in quoted(n.text(), mine_only="dir" in n.classes):
                     say_line(n, "#%s" % (sec.attrs.get("id", "?") if sec is not None else "page"), set(), q)
 
     for b in holders:
@@ -245,7 +276,7 @@ def check(html):
                     continue
                 aw = next((x for x in n.walk() if "act-what" in x.classes and not hidden(x)), None)
                 pill = aw is not None and any("act-pill" in x.classes and not hidden(x) and norm(x.text()) for x in aw.walk())
-                what = norm("".join(c if isinstance(c, str) else ("" if "act-pill" in c.classes else c.text()) for c in aw.children)) if aw else ""
+                what = norm("".join(c if isinstance(c, str) else ("" if "act-pill" in c.classes or hidden(c) else visible_text(c)) for c in aw.children)) if aw else ""
                 if not (pill and what):
                     fails.append("%s: a send action needs its visible .act-what line, with the Send now pill and where it goes: %s" % (name, norm(n.text())[:80]))
                     what = what or norm(n.text())[:80]
@@ -266,14 +297,15 @@ def check(html):
                 say_line(n, name, routes)
             elif "dir" in n.classes:
                 line = norm(n.text())
-                for q in quoted(line):
+                for q in quoted(line, mine_only=True):
                     say_line(n, name, routes, q)
                 if KEY_RE.search(line):
                     fails.append('%s: a direction points at a key for the content; put the content and its Copy button in the beat as a send action: "%s"' % (name, line[:120]))
                 elif any(r.search(re.sub(r'"[^"]*"|“[^”]*”', "", line).strip()) for r in (DIR_SEND_RE, DIR_DRAFT_RE)):
                     i = lines.index(n)
                     nxt = lines[i + 1] if i + 1 < len(lines) else None
-                    if nxt is None or "act" not in nxt.classes or hidden(nxt):
+                    wants_draft = DIR_DRAFT_RE.search(re.sub(r'"[^"]*"|\u201c[^\u201d]*\u201d', "", line).strip())
+                    if nxt is None or "act" not in nxt.classes or hidden(nxt) or (wants_draft and not (nxt.attrs.get("data-draft") or "").strip()):
                         fails.append('%s: a direction has the caller send something, with no send action straight after it: "%s"' % (name, line[:120]))
     return fails, sends
 
