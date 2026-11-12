@@ -18,7 +18,7 @@
       "name": "doc-gauntlet",
       "source": "./plugins/doc-gauntlet",
       "description": "Reviews a committed plan or requirements document with six breadth lenses and two independent engines, returning a sparring memo and a list of true errors.",
-      "version": "0.6.0"
+      "version": "0.6.1"
     },
     {
       "name": "persona-teardown",

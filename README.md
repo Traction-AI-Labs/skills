@@ -96,6 +96,9 @@ open-source writing skills; see [NOTICE.md](NOTICE.md).
 
 - **reading-page 0.2.4** (12 November 2026). Inline code in prose, the standfirst and table cells never renders under
   11px, so it stays readable at phone width.
+- **doc-gauntlet 0.6.1** (12 November 2026). The client-draft review's worth-asking test now covers every message
+  to a colleague that carries a question or ask, not only asks they will relay to a client; a message that gets no
+  reviewer has its author run the same tests.
 - **reading-page 0.2.3** (9 November 2026). A code block inside a list item or a callout now scrolls inside its own box
   with JavaScript off, as top-level code blocks already did; before, a long line in one ran past the right edge at phone
   width. The overflow fixture gains a nested-fence case, tests now guard the nested wrapper, and the page-script
