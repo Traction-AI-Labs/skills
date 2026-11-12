@@ -628,8 +628,24 @@ def parse_front_matter(text: str):
     return meta, text
 
 
+def strip_leading_comments(text: str) -> str:
+    # A closed <!-- ... --> note before the first content is for agents, not the reader: drop it,
+    # so a leading H1 after it still becomes the page title (a report opening with a provenance
+    # comment built as "Untitled" with the comment shown as text). An unclosed comment, or one
+    # after content, stays and is escaped like any raw HTML.
+    while True:
+        s = text.lstrip()
+        if not s.startswith("<!--"):
+            return text
+        end = s.find("-->")
+        if end < 0:
+            return text
+        text = s[end + 3:]
+
+
 def build(md_text: str, opts) -> dict:
     meta, md_text = parse_front_matter(md_text)
+    md_text = strip_leading_comments(md_text)
     env: dict = {"_base": getattr(opts, "base", None)}
     tokens = MD.parse(md_text, env)
     blocks = top_blocks(tokens)

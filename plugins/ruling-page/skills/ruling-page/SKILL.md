@@ -2,7 +2,7 @@
 name: ruling-page
 description: Use when you need the person you're working with to rule on a COMPLICATED decision (several decisions at once, or options with trade-offs that need explaining), or when asks from several threads need one answer. Builds a clickable one-file HTML ruling page with your recommendation pre-selected on every card and a "Copy my answers" button, instead of asking them to read a markdown file or a long chat message. Simple yes/no decisions stay in chat.
 ---
-<!-- SOURCE-REVISION 9882cf5a -->
+<!-- SOURCE-REVISION 9c099e97 -->
 
 # Ruling page
 
@@ -13,6 +13,10 @@ in chat: an HTML page for a yes/no is noise.
 **Simple or complicated?** One yes/no, or a pick between two options whose difference fits on one
 line: ask in chat, with your recommendation and a one-line why. Several decisions, or options with
 real trade-offs: build a page.
+
+**A design decision shows each option as a picture**: a frame or screenshot per option (the card's `frames`, step 2),
+each annotated to mark what differs between the options, or a clickable mock. Never offer visual options in words
+alone.
 
 ## Build it
 
