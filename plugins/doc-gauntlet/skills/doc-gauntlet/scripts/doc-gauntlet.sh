@@ -100,10 +100,8 @@ for candidate in (os.path.abspath(run), os.path.realpath(run)):
 # (18 Oct 2026: an empty ~/.agents file, and instruction files in the
 # review worktree that made collect refuse it as dirty).
 for extra_home in (os.path.expanduser("~/.claude"), os.path.expanduser("~/.agents"), os.path.expanduser("~/.cursor"), os.path.expanduser("~/.gauntlet")):
-    # A symlinked home folder is denied by its target; a dangling one is skipped.
-    if os.path.exists(extra_home):
-        if not os.path.islink(extra_home):
-            add(os.path.abspath(extra_home))
+    if os.path.lexists(extra_home):
+        add(os.path.abspath(extra_home))
         add(os.path.realpath(extra_home))
 # Grok refuses to start when a deny entry is a symlink (19 Oct 2026: a repo whose
 # AGENTS.md links to CLAUDE.md failed every Grok leg at startup), and a ** pattern
@@ -786,12 +784,11 @@ run_cli_locked() {
   local dir="$1" target="$2" kind name leg result lock row_engine timeout_seconds timeout_source
   kind="${target%%:*}"; name="${target#*:}"; leg="$kind-$name"; result="$dir/results/$leg.json"; lock="$dir/locks/$leg.lock"
   [[ ! -e "$result" ]] || fail "$name already has an accepted result"
-  # The timeout is validated before the leg lock is taken, so a refused value leaves no lock behind.
-  row_engine="$name"; [[ "$kind" == breadth ]] && row_engine="$(breadth_engine "$dir")"
-  timeout_seconds="$(provider_timeout "$dir" "$row_engine")"; timeout_source="$(provider_timeout_source "$dir" "$row_engine")"
   if ! mkdir "$lock" 2>/dev/null; then fail "$name CLI leg is already running; wait for collect to stop reporting RUNNING"; fi
   chmod 700 "$lock"
   rm -f "$dir/completion/$leg.done" "$dir/failures/$leg.txt" "$dir/failures/$leg.raw" "$dir/raw-$leg.txt" "$dir/raw-$leg.grok.txt" "$dir/results/gauntlet-failed.json"
+  row_engine="$name"; [[ "$kind" == breadth ]] && row_engine="$(breadth_engine "$dir")"
+  timeout_seconds="$(provider_timeout "$dir" "$row_engine")"; timeout_source="$(provider_timeout_source "$dir" "$row_engine")"
   printf '%s %s\n' "$timeout_seconds" "$timeout_source" > "$dir/completion/$leg.bound"; chmod 600 "$dir/completion/$leg.bound"
   if ! command -v nohup >/dev/null 2>&1; then
     rmdir "$lock" 2>/dev/null || true

@@ -4,8 +4,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNNER="$SCRIPT_DIR/doc-gauntlet.sh"
 TMP="$(mktemp -d)"
-# The test owns its HOME: a fake Grok login for the legs that need one, and nothing of the real home is read or written.
-unset GROK_HOME; export HOME="$TMP/home"; mkdir -p "$HOME/.grok"; printf '{}\n' > "$HOME/.grok/auth.json"
 trap 'rm -rf "$TMP"' EXIT
 export GAUNTLET_ROUND_RECORD="$TMP/rounds.jsonl"
 export GAUNTLET_ARCHIVE="$TMP/archive"
@@ -239,8 +237,6 @@ if DOC_GAUNTLET_DIR="$refused_run" bash "$RUNNER" ingest --engine codex --transp
 grep -Fq 'adversarial transport must match its engine' "$TMP/refused-ingest.err"
 if GAUNTLET_TIMEOUT_CLAUDE_SECONDS=soon DOC_GAUNTLET_DIR="$refused_run" bash "$RUNNER" run-cli --engine claude > /dev/null 2> "$TMP/refused-run-cli.err"; then exit 1; fi
 grep -Fq 'timeout for claude must be a positive whole number of seconds' "$TMP/refused-run-cli.err"
-# The refusal happens before the leg lock is taken: no lock is left behind to block the corrected launch.
-test -z "$(ls -A "$refused_run/locks")"
 if DOC_GAUNTLET_DIR="$refused_run" bash "$RUNNER" collect > "$TMP/refused-again.out"; then exit 1; fi
 [[ "$(sed -n 's/^ARCHIVE: //p' "$TMP/refused-again.out")" == "$refused_archive" ]]
 test ! -e "$refused_archive-2"

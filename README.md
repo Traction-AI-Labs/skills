@@ -94,6 +94,20 @@ open-source writing skills; see [NOTICE.md](NOTICE.md).
 
 ## Changelog
 
+- **gauntlet 0.7.0 and doc-gauntlet 0.6.2** (14 November 2026). gauntlet: a review budget by kind of change (rounds
+  per change, one raise past it for a demonstrated consequence, `FIXES CHECKED` after the last round, a recurrence
+  ladder for a class of finding that keeps returning); a round-1 gate that checks for a pre-review and a run-once, with
+  an enforcement list (`enforce.tsv`) that turns the refusals on per repository and everything else a warning;
+  `--run-once` can run a repository's own CI; a standing approval is recognised when main is brought in; a finding is
+  dropped or downgraded only through `dispose` with a passing test; a large round can split its reviewers by file group
+  (`prepare --group`); the changed-line count leaves out tests, generated files and documentation, and a large round 1
+  is a note, never a refusal. doc-gauntlet: the client-draft review's procedure file is restated in full (derivation
+  ledger, ordering, wording, read-only reviewers, what someone said, depth and stops, questions worth asking), the
+  review kernel's provenance record is included, a document's round count defers to the repository's own review
+  budget, and Grok may substitute for either engine while it has usage. This refresh follows the source, so three
+  small fixes made only in these copies for 0.6.0 are not in it (a symlinked home folder denied by its target, test
+  fixtures that own their home and a launchctl stand-in, and the timeout check before the leg lock); they return
+  once the source carries them.
 - **ruling-page 0.3.1 and reading-page 0.3.1** (13 November 2026). A ruling page on a design decision shows each
   option as an annotated picture, never in words alone. A reading page whose markdown opens with an HTML comment
   (a provenance note, say) still takes its title from the first heading, and the comment no longer shows as text.
