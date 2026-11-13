@@ -46,7 +46,7 @@ export GAUNTLET_ENFORCE_LIST="$TMP/on.tsv"
 
 # 1. O5, enforced: converged, then main brought in with the PR's own diff
 #    unchanged. The approval stands and no round is prepared.
-new_repo sam https://github.com/example-org/example-dashboard.git
+new_repo solo https://github.com/example-org/example-dashboard.git
 edit app.txt one; edit other.txt two
 converge stand
 grep -Fq 'GAUNTLET: APPROVE' "$TMP/collect.out"
@@ -76,7 +76,7 @@ R="$TMP/held"
 prep --identity held > "$TMP/held.out"
 refute grep -Fq 'APPROVAL STANDS' "$TMP/held.out"
 grep -Fq 'GAUNTLET_DIR=' "$TMP/held.out"
-R="$TMP/sam"
+R="$TMP/solo"
 
 # 2. O5, enforced: a merge fix changes one file of the PR's own diff. Only that
 #    file is the review scope.
@@ -115,7 +115,7 @@ export GAUNTLET_ENFORCE_LIST="$TMP/on.tsv"
 
 # 4. O7, enforced: findings are kept as written. A disposition needs a test,
 #    a failing test is refused and recorded, a passing one is accepted.
-R="$TMP/sam"
+R="$TMP/solo"
 edit third.txt three
 prep --identity stand --timeout-seconds 2 > /dev/null
 result "$RUN_DIR" claude APPROVE; result "$RUN_DIR" codex BLOCK third.txt:1

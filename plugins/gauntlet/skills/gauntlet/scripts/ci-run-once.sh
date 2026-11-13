@@ -13,7 +13,7 @@
 # counts when it is a dispatch of the workflow at the reviewed head and, if
 # inputs are asked for, one this script dispatched with the same inputs
 # (recorded in $GAUNTLET_CI_DISPATCHES, as GitHub does not show a run's inputs).
-# GitHub is read once every 600 seconds (frugal CI rule 16). Exit 0 only when
+# GitHub is read once every 600 seconds. Exit 0 only when
 # the run followed is at the reviewed head and concluded success; 1 when it
 # failed, ran at another commit, or was cancelled with no later run to follow;
 # 2 when it could not start or could not be followed.

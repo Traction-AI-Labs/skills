@@ -64,9 +64,9 @@ test -z "$(grep -Ev '^(#|$)' "$SCRIPT_DIR/../enforce.tsv")"
 printf '#example-org/example-infra\t-\ttrue\nexample-org/example-dashboard\t-\tbash run-once.sh\n' > "$TMP/on.tsv"
 export GAUNTLET_ENFORCE_LIST="$TMP/on.tsv"
 
-# 2b. TRA-470: lines git shows were moved unchanged do not count toward the
+# 2b. lines git shows were moved unchanged do not count toward the
 #     round-1 size; copied, edited and re-indented lines do. One case per
-#     acceptance example in docs/plans/2026-10-24-round1-moved-lines.md; every
+#     acceptance example; every
 #     case runs and the failures are listed together.
 SIZE_FAILS=()
 mv_repo() { new_repo "mv-$1" https://github.com/example-org/example-dashboard.git; }
@@ -165,7 +165,7 @@ size_case short "ROUND-1 SIZE: 602 changed non-test lines $ON)" noted
 # 11. The pre-review coverage check still reads the raw count.
 [[ "$(python3 "$SCRIPT_DIR/lib/nontest_lines.py" "$ONE_R" main feature)" == 1410 ]] || SIZE_FAILS+=("coverage: one is not 1410 raw")
 if (( ${#SIZE_FAILS[@]} )); then printf 'round-1 size case failed: %s\n' "${SIZE_FAILS[@]}" >&2; exit 1; fi
-new_repo sam https://github.com/example-org/example-dashboard.git
+new_repo solo https://github.com/example-org/example-dashboard.git
 printf 'echo tests-ran; exit "${RUN_ONCE_EXIT:-0}"\n' > "$R/run-once.sh"; git -C "$R" add run-once.sh; git -C "$R" commit -qm runner
 git -C "$R" checkout -q main; git -C "$R" merge -q --ff-only feature; git -C "$R" checkout -q feature
 
@@ -188,7 +188,7 @@ refute grep -Fq 'SIZE NOTE' "$TMP/size2.out"
 
 # O6's base, one test per case. The first case (--base on the default branch)
 # is the one above. The others use a stack repo.
-SAM_R="$R"
+SOLO_R="$R"
 new_repo stack https://github.com/example-org/example-dashboard.git
 reviewed() {  # record HEAD of $1 as a reviewed gauntlet head
   python3 -c 'import json,sys; print(json.dumps({"runner":"gauntlet","repo":"x","identity":"id:"+sys.argv[2],"digest":sys.argv[1],"round":1,"head":sys.argv[1]},separators=(",",":")))' "$(git -C "$R" rev-parse "$1")" "$1" >> "$GAUNTLET_ROUND_RECORD"
@@ -215,46 +215,46 @@ git -C "$R" checkout -q main; git -C "$R" merge -q --squash sq-parent; git -C "$
 stack_prep --base sq-parent --identity squashed > "$TMP/sq.out" 2> "$TMP/sq.err" || true
 grep -Fq 'ROUND-1 SIZE: 12 changed non-test lines from --base (a reviewed head)' "$TMP/sq.out"
 refute grep -Fq 'round 1 is limited' "$TMP/sq.err"
-R="$SAM_R"
+R="$SOLO_R"
 
 # 4. O19(a): no pre-review refuses round 1, naming the same-machine rule.
-if prep --identity sam1 > /dev/null 2> "$TMP/nopre.err"; then echo 'O19 did not refuse a missing pre-review' >&2; exit 1; fi
-grep -Fq 'no pre-review of id:sam1' "$TMP/nopre.err"
+if prep --identity solo1 > /dev/null 2> "$TMP/nopre.err"; then echo 'O19 did not refuse a missing pre-review' >&2; exit 1; fi
+grep -Fq 'no pre-review of id:solo1' "$TMP/nopre.err"
 grep -Fq 'pre-review, run-once and rounds run on the same machine' "$TMP/nopre.err"
 # --pre-reviewed-by none is no longer an escape.
-if prep --identity sam1 --pre-reviewed-by none > /dev/null 2>&1; then echo '--pre-reviewed-by none still escapes' >&2; exit 1; fi
+if prep --identity solo1 --pre-reviewed-by none > /dev/null 2>&1; then echo '--pre-reviewed-by none still escapes' >&2; exit 1; fi
 
 # 5. The pre-review must run on an engine other than the builder's family.
-if prep --identity sam1 --pre-review --builder gpt --engines codex > /dev/null 2> "$TMP/same.err"; then exit 1; fi
+if prep --identity solo1 --pre-review --builder gpt --engines codex > /dev/null 2> "$TMP/same.err"; then exit 1; fi
 grep -Fq 'other than the builder' "$TMP/same.err"
 # The builder's family is read by prefix from a model name.
-refute prep --identity sam1 --pre-review --builder gpt-6-luna --engines codex > /dev/null 2>&1
-refute prep --identity sam1 --pre-review --builder grok-4.7 --engines grok > /dev/null 2>&1
-refute prep --identity sam1 --pre-review --engines grok > /dev/null 2>&1
-refute prep --identity sam1 --pre-review --builder deepseek --engines grok,codex > /dev/null 2>&1
-if prep --identity sam1 --pre-review --builder deepseek --engines grok --exclude app.txt > /dev/null 2> "$TMP/excl.err"; then exit 1; fi
+refute prep --identity solo1 --pre-review --builder gpt-6-luna --engines codex > /dev/null 2>&1
+refute prep --identity solo1 --pre-review --builder grok-4.7 --engines grok > /dev/null 2>&1
+refute prep --identity solo1 --pre-review --engines grok > /dev/null 2>&1
+refute prep --identity solo1 --pre-review --builder deepseek --engines grok,codex > /dev/null 2>&1
+if prep --identity solo1 --pre-review --builder deepseek --engines grok --exclude app.txt > /dev/null 2> "$TMP/excl.err"; then exit 1; fi
 grep -Fq 'a pre-review covers the whole change' "$TMP/excl.err"
-if prep --identity sam1 --pre-review --builder deepseek --engines grok --run-once > /dev/null 2> "$TMP/preonce.err"; then exit 1; fi
+if prep --identity solo1 --pre-review --builder deepseek --engines grok --run-once > /dev/null 2> "$TMP/preonce.err"; then exit 1; fi
 grep -Fq 'belongs to the round-1 prepare' "$TMP/preonce.err"
 
 # 6. A pre-review whose leg failed may be retried; a valid one is recorded once.
-prep --identity sam1 --pre-review --builder deepseek --engines grok > "$TMP/pre1.out"
-grep -Fq 'PRE-REVIEW: id:sam1 by grok (builder deepseek)' "$TMP/pre1.out"
+prep --identity solo1 --pre-review --builder deepseek --engines grok > "$TMP/pre1.out"
+grep -Fq 'PRE-REVIEW: id:solo1 by grok (builder deepseek)' "$TMP/pre1.out"
 grep -Fq 'Pre-review checklist.' "$RUN_DIR/prompts/grok-cli.md"
 grep -Fq 'every check-then-write' "$RUN_DIR/prompts/grok-native.md"
 printf 'not json\n' > "$TMP/bad.txt"
 refute env GAUNTLET_DIR="$RUN_DIR" bash "$RUNNER" ingest --engine grok --text "$TMP/bad.txt" 2>/dev/null
 refute grep -Fq 'gauntlet-pre-review' "$TMP/rounds.jsonl"
-prep --identity sam1 --pre-review --builder deepseek --engines grok > /dev/null
+prep --identity solo1 --pre-review --builder deepseek --engines grok > /dev/null
 approve "$RUN_DIR" grok
 grep -Fq '"runner":"gauntlet-pre-review"' "$TMP/rounds.jsonl"
 grep -Fq '"engine":"grok","builder":"deepseek"' "$TMP/rounds.jsonl"
-if prep --identity sam1 --pre-review --builder deepseek --engines codex > /dev/null 2> "$TMP/second.err"; then exit 1; fi
+if prep --identity solo1 --pre-review --builder deepseek --engines codex > /dev/null 2> "$TMP/second.err"; then exit 1; fi
 grep -Fq 'already recorded' "$TMP/second.err"
 # The pre-review is not a budget round.
 python3 - "$TMP/rounds.jsonl" <<'PY'
 import json, sys
-assert not [e for e in map(json.loads, open(sys.argv[1])) if e["runner"] == "gauntlet" and e["identity"] == "id:sam1"]
+assert not [e for e in map(json.loads, open(sys.argv[1])) if e["runner"] == "gauntlet" and e["identity"] == "id:solo1"]
 PY
 
 # The pre-review record is written under an flock: a lock file left behind by
@@ -277,15 +277,15 @@ grep -c '"identity":"id:lock2"' "$TMP/rounds.jsonl" | grep -qx 1
 
 # 7. O19(b): with a pre-review but no run-once, round 1 is refused; a failing
 #    run-once is refused and recorded; a passing one lets round 1 prepare.
-if prep --identity sam1 > /dev/null 2> "$TMP/noonce.err"; then exit 1; fi
-grep -Fq 'no passing run-once is recorded for id:sam1' "$TMP/noonce.err"
-if RUN_ONCE_EXIT=3 prep --identity sam1 --run-once > "$TMP/fail.out" 2> "$TMP/fail.err"; then exit 1; fi
+if prep --identity solo1 > /dev/null 2> "$TMP/noonce.err"; then exit 1; fi
+grep -Fq 'no passing run-once is recorded for id:solo1' "$TMP/noonce.err"
+if RUN_ONCE_EXIT=3 prep --identity solo1 --run-once > "$TMP/fail.out" 2> "$TMP/fail.err"; then exit 1; fi
 grep -Fq 'RUN-ONCE: exit 3 after' "$TMP/fail.out"
 grep -Fq 'the run-once command failed' "$TMP/fail.err"
 grep -Fq '"runner":"gauntlet-run-once"' "$TMP/rounds.jsonl"
-prep --identity sam1 --run-once > "$TMP/pass.out"
+prep --identity solo1 --run-once > "$TMP/pass.out"
 grep -Fq "RUN-ONCE: timeout --kill-after=10 1800 bash -c 'bash run-once.sh'" "$TMP/pass.out"
-grep -Fq 'ROUND: 1 identity=id:sam1' "$TMP/pass.out"
+grep -Fq 'ROUND: 1 identity=id:solo1' "$TMP/pass.out"
 record="$(sed -n 's/^RUN-ONCE: exit 0 after [0-9]*s; record //p' "$TMP/pass.out")"
 python3 - "$record/run-once.json" <<'PY'
 import json, sys
@@ -294,19 +294,19 @@ assert r["command"] == "bash run-once.sh" and r["exit_code"] == 0 and isinstance
 assert "tests-ran" in r["output_tail"], r
 PY
 # A recorded pass at this head satisfies a plain prepare (a retry of round 1).
-prep --identity sam1 > /dev/null
+prep --identity solo1 > /dev/null
 # --run-once at a head with a recorded pass reuses it rather than running again.
-prep --identity sam1 --run-once > "$TMP/reuse.out"
+prep --identity solo1 --run-once > "$TMP/reuse.out"
 grep -Fq 'already recorded at' "$TMP/reuse.out"
-test "$(grep -c '"runner":"gauntlet-run-once".*"identity":"id:sam1".*"exit_code":0' "$TMP/rounds.jsonl")" -eq 1
+test "$(grep -c '"runner":"gauntlet-run-once".*"identity":"id:solo1".*"exit_code":0' "$TMP/rounds.jsonl")" -eq 1
 ROUND_ONE="$RUN_DIR"
 approve "$ROUND_ONE" claude
 grep -Fq '"runner":"gauntlet","repo"' "$TMP/rounds.jsonl"
 
 # 8. Later rounds are not size-checked or gated.
 lines big.txt 900
-prep --identity sam1 > "$TMP/r2.out" 2> "$TMP/r2.err"
-grep -Fq 'ROUND: 2 identity=id:sam1' "$TMP/r2.out"
+prep --identity solo1 > "$TMP/r2.out" 2> "$TMP/r2.err"
+grep -Fq 'ROUND: 2 identity=id:solo1' "$TMP/r2.out"
 refute grep -Fq 'ROUND-1 SIZE' "$TMP/r2.out"
 
 # A pre-review at an ancestor head still counts after a later commit; the
@@ -669,6 +669,6 @@ for raw in open(sys.argv[1]):
     assert all(isinstance(e.get(k), str) for k in ("runner", "repo", "identity", "digest")), e
     assert isinstance(e.get("round"), int) and e["round"] >= 1, e
 PY
-# The moved-line counter's own unit tests (TRA-470).
+# The moved-line counter's own unit tests.
 python3 "$SCRIPT_DIR/lib/nontest_lines_test.py"
 echo 'round-gate.test.sh: OK'

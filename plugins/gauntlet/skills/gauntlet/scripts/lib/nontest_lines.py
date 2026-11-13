@@ -1,7 +1,7 @@
 """Changed non-test lines (added plus removed) between two commits, the O6 measure.
 
 Tests, snapshots, lockfiles, generated files (including linguist-generated) and
-documentation (TRA-1033, 12 Nov 2026) do not count. Documentation is a Markdown
+documentation (12 Nov 2026) do not count. Documentation is a Markdown
 file (*.md, *.markdown) at the repository root or under a docs, doc,
 documentation, changelog, changelog.d or evidence folder at any depth. Everything
 else counts: code or configuration in those folders, Markdown elsewhere (skill
@@ -16,7 +16,7 @@ check reads). With it prints the ROUND-1 SIZE line and, over the threshold,
 per-file counts and the SIZE NOTE line, exiting 0 either way: size is a note,
 never a refusal. A non-zero exit means only that counting failed. The report does not count
 lines git shows were moved unchanged, within a file or between counted files
-(TRA-470), when its three checks pass; otherwise it counts every line.
+(moved-line discount), when its three checks pass; otherwise it counts every line.
 """
 import collections, os, re, subprocess, sys, tempfile
 

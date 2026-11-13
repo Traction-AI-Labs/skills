@@ -398,8 +398,8 @@ grep -Fx 'FAILED: claude' "$TMP/timeout-run.collect"
 grep -Fx 'claude: timed out after 5s' "$TMP/timeout-run.collect"
 grep -Fx 'BOUND: claude 5s' "$TMP/timeout-run.collect"
 
-# collect --started-only: the caller started only some prepared legs (a gate batch that prepares Claude and Codex
-# and starts only Codex outside the money path). A prepared leg with no bound, sentinel or result is recorded as
+# collect --started-only: the caller started only some prepared legs (a batch that prepares Claude and Codex
+# and starts only Codex). A prepared leg with no bound, sentinel or result is recorded as
 # not run and the started legs alone give the verdict. Plain collect still waits for it: a native leg in flight
 # leaves no trace in the run, so it cannot be told from one never started.
 oneleg() { GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$TMP/$1" bash "$RUNNER" "${@:2}"; }

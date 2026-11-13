@@ -1,4 +1,4 @@
-"""Unit tests for nontest_lines.py's moved-line discount (TRA-470): the colour
+"""Unit tests for nontest_lines.py's moved-line discount: the colour
 parser, the pairing rule, the numstat check and each fallback reason."""
 import contextlib, io, os, shutil, stat, subprocess, sys, tempfile, unittest
 
@@ -247,7 +247,7 @@ class LiteralEscapeTest(unittest.TestCase):
             self.assertIn("SIZE NOTE: over 600", out)
 
 class DocumentationTest(unittest.TestCase):
-    """TRA-1033: Markdown never counts; code in a docs folder does; code moved into a document is not discounted."""
+    """Markdown never counts; code in a docs folder does; code moved into a document is not discounted."""
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp()

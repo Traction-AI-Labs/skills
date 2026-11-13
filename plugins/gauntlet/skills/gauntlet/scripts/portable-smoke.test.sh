@@ -26,6 +26,6 @@ echo 'gauntlet portable smoke: OK'
 # Retro ruling O1 (17 Oct 2026): the budget lives in the skill and the open-ended repair sentence is gone.
 if grep -Fq 'whatever the fix needs' "$SKILL_DIR/SKILL.md"; then echo 'O1: open-ended repair sentence is back' >&2; exit 1; fi
 grep -Fq '## Review budget' "$SKILL_DIR/SKILL.md"
-grep -Fq '| Code that can place a bet, move money or touch credentials | 3 |' "$SKILL_DIR/SKILL.md"
+grep -Fq '| Code that can move money or touch credentials | 3 |' "$SKILL_DIR/SKILL.md"
 grep -Fq '`FIXES CHECKED @ <sha>`' "$SKILL_DIR/SKILL.md"
 grep -Fq '**The recurrence ladder.**' "$SKILL_DIR/SKILL.md"

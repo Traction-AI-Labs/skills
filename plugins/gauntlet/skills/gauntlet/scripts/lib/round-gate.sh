@@ -99,7 +99,7 @@ PY
 
 # O6: changed lines (added plus removed) outside tests, snapshots, lockfiles,
 # generated files and documentation (Markdown at the root or in a docs, changelog
-# or evidence folder that does not instruct agents; TRA-1033, nontest_lines.py). Measured from the passed base when that commit is on the
+# or evidence folder that does not instruct agents; nontest_lines.py). Measured from the passed base when that commit is on the
 # default branch or is a head this machine recorded as reviewed (a split stack
 # on a reviewed parent, including one squash-merged since); otherwise from the
 # merge-base with the default branch, so an unreviewed stacked parent counts.

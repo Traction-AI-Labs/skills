@@ -101,10 +101,8 @@ open-source writing skills; see [NOTICE.md](NOTICE.md).
   `--run-once` can run a repository's own CI; a standing approval is recognised when main is brought in; a finding is
   dropped or downgraded only through `dispose` with a passing test; a large round can split its reviewers by file group
   (`prepare --group`); the changed-line count leaves out tests, generated files and documentation, and a large round 1
-  is a note, never a refusal. doc-gauntlet: the client-draft review's procedure file is restated in full (derivation
-  ledger, ordering, wording, read-only reviewers, what someone said, depth and stops, questions worth asking), the
-  review kernel's provenance record is included, a document's round count defers to the repository's own review
-  budget, and Grok may substitute for either engine while it has usage. This refresh follows the source, so three
+  is a note, never a refusal. doc-gauntlet: a document's round count defers to the repository's own review budget,
+  and Grok may substitute for either engine while it has usage. This refresh follows the source, so three
   small fixes made only in these copies for 0.6.0 are not in it (a symlinked home folder denied by its target, test
   fixtures that own their home and a launchctl stand-in, and the timeout check before the leg lock); they return
   once the source carries them.

@@ -9,7 +9,7 @@
 # still prefixes disposition tests.
 # A run-once field `none` means the repo has no run-once (no test workflow to run): round 1 still needs a
 # recorded pre-review, and nothing is run. Size is a printed note only (12 Nov 2026).
-# The wrapper prefixes the run-once command and every disposition test: cibox-slot.sh <name>, which runs it in a
-# test VM. Never box-test-slot.sh, which runs type checks only and refuses tests (TRA-459).
+# The wrapper prefixes the run-once command and every disposition test, for example a script that runs it in a
+# test VM.
 # The run-once boot uses local or test services only: no tunnel, no production environment.
 # A line starting with # is off. Going live is uncommenting a line with its agreed command.
