@@ -1,5 +1,6 @@
 # Checks that the README, marketplace.json and the README's pictures are current with the plugins, once per
-# finished pull request: it runs only when a label is added, and passes only when the label is `ready`.
+# finished pull request: it runs only when a label is added, and passes only when the label added is `ready`
+# (adding any other label, even to a pull request already labelled ready, gives a red check).
 # A push after `ready` leaves the new head with no run, so the merge stays blocked until `ready` is removed and
 # added again: the commit that merges is the commit that was checked. Read any change under .github/ before
 # adding `ready` (a pull request from a fork could edit this file).
@@ -21,12 +22,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Run only for the ready label
+      - name: Run only when the ready label is added
         env:
-          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          ADDED: ${{ github.event.label.name }}
         run: |
-          if ! printf '%s' "$LABELS" | python3 -I -c 'import json, sys; sys.exit(0 if "ready" in json.load(sys.stdin) else 1)'; then
-            echo "::error::This check passes only on a pull request labelled ready. Add the ready label when the pull request is finished."
+          if [ "$ADDED" != "ready" ]; then
+            echo "::error::This check passes only when the ready label is added. Remove and re-add ready when the pull request is finished."
             exit 1
           fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
