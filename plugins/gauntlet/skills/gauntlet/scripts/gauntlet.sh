@@ -718,6 +718,9 @@ PY
   printf '%s\n' "$base" > "$RUN/scope/base"
   printf '%s\n' "$head" > "$RUN/scope/head"
   cp "$prep_tmp/excludes" "$RUN/scope/excludes"
+  # The files left out because the approval before this round still covers
+  # them (O5); the verdict counts them as covered, unlike a plain --exclude.
+  if [[ -f "$prep_tmp/approval-excludes" ]]; then cp "$prep_tmp/approval-excludes" "$RUN/scope/standing"; else : > "$RUN/scope/standing"; fi
   cp "$prep_tmp/diff.patch" "$RUN/scope/diff.patch"
   # Reviewers read the diff from a file, so a large diff never has to fit in a
   # prompt. A CLI leg gets its own copy as ./diff.patch in its private working

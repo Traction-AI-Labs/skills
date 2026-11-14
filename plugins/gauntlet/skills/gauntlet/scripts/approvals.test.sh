@@ -271,6 +271,42 @@ grep -Fq 'PRIOR-FINDINGS: the runner' "$TMP/partial2.out"
 grep -Fq 'app.txt:5' "$RUN_DIR/scope/prior-findings.snapshot"
 grep -Fq '"status": "open"' "$RUN_DIR/scope/prior-findings.snapshot"
 
+# 6i. O5, enforced: an approval covers only what its round reviewed. A round
+#     prepared with --exclude b.txt approves a.txt alone; once main is brought
+#     in, a full-scope request must still review b.txt (no standing approval),
+#     and a merge fix to a.txt must never exclude the never-reviewed b.txt.
+new_repo partscope https://github.com/example-org/example-dashboard.git
+edit a.txt one; edit b.txt two
+prep --identity partscope --pre-review --builder deepseek --engines grok > /dev/null; result "$RUN_DIR" grok APPROVE
+prep --identity partscope --run-once --exclude b.txt > /dev/null
+refute grep -Fq 'b.txt' "$RUN_DIR/scope/diff.patch"
+result "$RUN_DIR" claude APPROVE; result "$RUN_DIR" codex APPROVE; run collect > /dev/null
+bring_main_in p
+prep --identity partscope > "$TMP/part.out" 2> "$TMP/part.err" || true
+refute grep -Fq 'APPROVAL STANDS' "$TMP/part.out"
+grep -Fq 'b/b.txt' "$RUN_DIR/scope/diff.patch"
+refute grep -Fxq 'b.txt' "$RUN_DIR/scope/excludes"
+grep -Fxq '  b.txt' "$TMP/part.out"
+# a.txt was reviewed and is unchanged, so it keeps its standing and is the exclude.
+grep -Fxq 'a.txt' "$RUN_DIR/scope/excludes"
+# The next approval, of b.txt alone, covers b.txt and inherits a.txt's standing.
+result "$RUN_DIR" claude APPROVE; result "$RUN_DIR" codex APPROVE; run collect > /dev/null
+bring_main_in p2
+if prep --identity partscope > "$TMP/part2.out" 2> /dev/null; then echo 'O5 prepared a round over an approval that now covers the whole diff' >&2; exit 1; fi
+grep -Fq "APPROVAL STANDS @ $(git -C "$R" rev-parse HEAD)" "$TMP/part2.out"
+# A merge fix to the reviewed a.txt never excludes the unreviewed b.txt.
+new_repo partfix https://github.com/example-org/example-dashboard.git
+edit a.txt one; edit b.txt two
+prep --identity partfix --pre-review --builder deepseek --engines grok > /dev/null; result "$RUN_DIR" grok APPROVE
+prep --identity partfix --run-once --exclude b.txt > /dev/null
+result "$RUN_DIR" claude APPROVE; result "$RUN_DIR" codex APPROVE; run collect > /dev/null
+bring_main_in f
+edit a.txt merge-fix
+prep --identity partfix > "$TMP/partfix.out" 2> /dev/null || true
+refute grep -Fxq 'b.txt' "$RUN_DIR/scope/excludes"
+grep -Fq 'b/b.txt' "$RUN_DIR/scope/diff.patch"
+grep -Fq 'b/a.txt' "$RUN_DIR/scope/diff.patch"
+
 # 7. Older readers of the round record skip the verdict lines quietly.
 python3 - "$TMP/rounds.jsonl" <<'PY'
 import json, sys

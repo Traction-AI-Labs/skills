@@ -48,15 +48,20 @@ PY
 
 # O5. When the identity's latest verdict is APPROVE (or BLOCK with only P2 or P3
 # findings left: reviewers report every defect, so a nit-only round blocks) and main has since been brought
-# in (the merge-base moved), compare the PR's own diff. Unchanged: the approval
-# stands and no round is prepared. Changed: only the files still in the diff
-# whose own patch differs are the merge fix; on an enforced repo the scope
-# narrows to them. A file that left the diff (main now carries the same change,
-# or it was undone) is named; when it is the only difference, the whole diff is
-# reviewed. Appends exclude paths to the file named by $5. Nothing merges
+# in (the merge-base moved), compare the PR's own diff. An approval covers only
+# the files its round reviewed (the verdict line's "covered"): a file its scope
+# left out (--exclude) never gains standing from it. Unchanged and every file
+# covered: the approval stands and no round is prepared. Otherwise the files
+# still in the diff whose own patch differs are the merge fix, the files the
+# approval never covered still need review, and on an enforced repo the scope
+# narrows to those two sets. A file that left the diff (main now carries the
+# same change, or it was undone) is named; when it is the only difference, the
+# whole diff is reviewed. A verdict line without "covered" (written before
+# coverage was recorded) gives no standing. Appends exclude paths to the file
+# named by $5; those are the files that keep their standing. Nothing merges
 # automatically.
 approval_check() {
-  local repo_key="$1" identity="$2" base="$3" head="$4" excludes_out="$5" last now delta changed gone arch findings='[]'
+  local repo_key="$1" identity="$2" base="$3" head="$4" excludes_out="$5" last now delta changed unreviewed gone arch findings='[]'
   last="$(last_verdict "$repo_key" "$identity")"
   [[ -n "$last" ]] || return 0
   arch="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("archive",""))' "$last")"
@@ -76,10 +81,15 @@ PY
   delta="$(python3 - "$last" "$now" <<'PY'
 import json, sys
 old, new = json.loads(sys.argv[1]), json.loads(sys.argv[2])
-if old.get("patch_id") == new["patch_id"]:
+if not isinstance(old.get("covered"), list):
+    print(json.dumps({"legacy": True}))
     raise SystemExit(0)
-a, b = old.get("files", {}), new["files"]
-print(json.dumps({"changed": sorted(p for p in b if a.get(p) != b[p]), "gone": sorted(p for p in a if p not in b)}))
+a, b, covered = old.get("files", {}), new["files"], set(old["covered"])
+changed = sorted(p for p in b if a.get(p) != b[p])
+unreviewed = sorted(p for p in b if a.get(p) == b[p] and p not in covered)
+if old.get("patch_id") == new["patch_id"] and not unreviewed:
+    raise SystemExit(0)
+print(json.dumps({"changed": changed, "unreviewed": unreviewed, "gone": sorted(p for p in a if p not in b)}))
 PY
 )"
   if [[ -z "$delta" ]]; then
@@ -87,32 +97,63 @@ PY
     gate "the approval stands, so no new round is prepared; the orchestrator merges (nothing merges automatically)"
     return 0
   fi
+  if [[ "$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("legacy", False))' "$delta")" == True ]]; then
+    echo 'NOTE: the approved round'"'"'s record does not say which files it reviewed, so the whole diff is reviewed'
+    return 0
+  fi
   changed="$(python3 -c 'import json,sys; print("\n".join(json.loads(sys.argv[1])["changed"]))' "$delta")"
+  unreviewed="$(python3 -c 'import json,sys; print("\n".join(json.loads(sys.argv[1])["unreviewed"]))' "$delta")"
   gone="$(python3 -c 'import json,sys; print("\n".join(json.loads(sys.argv[1])["gone"]))' "$delta")"
   if [[ -n "$gone" ]]; then
     echo "NOTE: no longer in the PR's own diff (main now carries the same change, or it was undone):"
     sed 's/^/  gone: /' <<<"$gone"
   fi
-  if [[ -z "$changed" ]]; then
+  if [[ -z "$changed" && -z "$unreviewed" ]]; then
     echo 'NOTE: no file still in the diff differs from the approved one, so the whole diff is reviewed'
     return 0
   fi
-  printf 'MERGE FIX: the PR'"'"'s own diff changed after main was brought in; only these files differ:\n'
-  sed 's/^/  /' <<<"$changed"
-  echo 'Review only the merge fix: as a round if the budget has one left, otherwise the orchestrator checks it (FIXES CHECKED).'
+  if [[ -n "$changed" ]]; then
+    printf 'MERGE FIX: the PR'"'"'s own diff changed after main was brought in; only these files differ:\n'
+    sed 's/^/  /' <<<"$changed"
+  fi
+  if [[ -n "$unreviewed" ]]; then
+    echo 'NOT REVIEWED: the approved round'"'"'s scope left these files out, so its approval does not cover them:'
+    sed 's/^/  /' <<<"$unreviewed"
+  fi
+  echo 'Review only these files: as a round if the budget has one left, otherwise the orchestrator checks a merge fix (FIXES CHECKED); a file never reviewed needs a round.'
   if [[ "$ENFORCED" == true ]]; then
-    python3 - "$now" "$changed" >> "$excludes_out" <<'PY'
+    python3 - "$now" "$changed" "$unreviewed" >> "$excludes_out" <<'PY'
 import json, sys
-keep = set(sys.argv[2].splitlines())
+keep = set(sys.argv[2].splitlines()) | set(sys.argv[3].splitlines())
 print("\n".join(p for p in json.loads(sys.argv[1])["files"] if p not in keep))
 PY
   else
-    gate "on an enforced repo the scope would narrow to the merge fix"
+    gate "on an enforced repo the scope would narrow to the merge fix and the files the approval did not cover"
   fi
 }
 
+# The files of the PR's own diff (as patch_ids lists them) that this run's
+# round covers: those its scope reviewed (scope/excludes applied, literal, as
+# scope_diff does) plus those that kept their standing from the approval before
+# it (scope/standing, written by prepare from approval_check's excludes).
+# Prints a JSON list.
+covered_files() {
+  python3 - "$REPO" "$1" "$2" "$RUN/scope/excludes" "$RUN/scope/standing" "$3" <<'PY'
+import json, os, subprocess, sys
+repo, base, head, excludes, standing, ids = sys.argv[1:]
+def lines(path):
+    return [p for p in open(path, encoding="utf-8", errors="surrogateescape").read().splitlines() if p] if os.path.isfile(path) else []
+spec = ["--", "."] + [":(exclude,literal)" + p for p in lines(excludes)]
+out = subprocess.run(["git", "-C", repo, "diff", "--name-only", "-z", "--no-renames", base, head, *spec], capture_output=True, check=True).stdout
+files = json.loads(ids).get("files", {})
+covered = {p for p in out.decode("utf-8", "surrogateescape").split("\0") if p} | set(lines(standing))
+print(json.dumps(sorted(p for p in covered if p in files)))
+PY
+}
+
 # Appends this run's verdict line once all legs are in (collect), with the
-# patch-ids O5 compares and the archive O7 reads prior findings from. The
+# patch-ids O5 compares, the files the round covered, and the archive O7 reads
+# prior findings from. The
 # marker is set only after the append, so a failed write is retried by the next
 # collect (collect holds the lifecycle lock; a repeated line is the same round).
 # A round that FAILED with at least one valid leg is recorded too, so that
@@ -123,17 +164,21 @@ record_verdict() {
   local verdict="$1" archive="$2"
   [[ -f "$RUN/rows.json" && ! -d "$RUN/verdict-recorded-$verdict" ]] || return 0
   [[ "$(config_value_or kind)" != pre-review ]] || return 0
-  local base head ids
+  local base head ids covered
   base="$(<"$RUN/scope/base")"; head="$(<"$RUN/scope/head")"
   ids="$(patch_ids "$REPO" "$base" "$head")" || ids='{}'
-  if ! python3 - "$RUN/rows.json" "$verdict" "$archive" "$base" "$ids" "$RUN/not-run" <<'PY'
+  # What the round reviewed, apart from the whole PR patch: an approval never
+  # stands for a file its scope left out. Unknown coverage is recorded as none.
+  covered="$(covered_files "$base" "$head" "$ids")" || covered='[]'
+  if ! python3 - "$RUN/rows.json" "$verdict" "$archive" "$base" "$ids" "$RUN/not-run" "$covered" <<'PY'
 import datetime, json, os, sys
 rows = json.load(open(sys.argv[1])); verdict, archive, base, ids = sys.argv[2], sys.argv[3], sys.argv[4], json.loads(sys.argv[5])
 not_run = open(sys.argv[6]).read().split() if os.path.isfile(sys.argv[6]) else []
+covered = json.loads(sys.argv[7])
 if "identity" in rows:
     e = {"ts": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat(), "runner": "gauntlet-verdict",
          "repo": rows["repo"], "identity": rows["identity"], "digest": rows["digest"], "head": rows["head"], "round": rows["round"],
-         "base": base, "verdict": verdict, "patch_id": ids.get("patch_id"), "files": ids.get("files", {}), "archive": archive}
+         "base": base, "verdict": verdict, "patch_id": ids.get("patch_id"), "files": ids.get("files", {}), "covered": covered, "archive": archive}
     if not_run:
         e["not_run"] = not_run
     fd = os.open(rows["round_record"], os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
