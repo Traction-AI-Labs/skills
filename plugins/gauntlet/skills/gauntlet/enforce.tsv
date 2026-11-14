@@ -1,0 +1,15 @@
+# Gauntlet enforcement list (retro rulings O5, O6, O7, O19; 17-18 Oct 2026).
+# A repo listed on a live line gets the new refusals: round 1 without a
+# runner-recorded pre-review or a passing run-once, a new round after an approval that still stands, and a finding
+# dropped or downgraded without a passing test. Every other repo gets the same checks as warnings only.
+# One live line per repo, three tab-separated fields:
+#   owner/repo <TAB> slot wrapper or - <TAB> run-once command (full tests, then a production-config boot)
+# A run-once field `ci:<workflow file> [input=value ...]` runs the repo's own CI at the reviewed head instead
+# (scripts/ci-run-once.sh: dispatch, then one GitHub read every 10 minutes), outside the slot; the wrapper
+# still prefixes disposition tests.
+# A run-once field `none` means the repo has no run-once (no test workflow to run): round 1 still needs a
+# recorded pre-review, and nothing is run. Size is a printed note only (12 Nov 2026).
+# The wrapper prefixes the run-once command and every disposition test, for example a script that runs it in a
+# test VM.
+# The run-once boot uses local or test services only: no tunnel, no production environment.
+# A line starting with # is off. Going live is uncommenting a line with its agreed command.

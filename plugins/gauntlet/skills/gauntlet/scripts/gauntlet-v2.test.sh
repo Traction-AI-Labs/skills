@@ -400,7 +400,7 @@ grep -Fx 'FAILED: claude' "$TMP/timeout-run.collect"
 grep -Fx 'claude: timed out after 5s' "$TMP/timeout-run.collect"
 grep -Fx 'BOUND: claude 5s' "$TMP/timeout-run.collect"
 
-# collect --started-only: the caller started only some prepared legs (a batch prepares Claude and Codex
+# collect --started-only: the caller started only some prepared legs (a batch that prepares Claude and Codex
 # and starts only Codex). A prepared leg with no bound, sentinel or result is recorded as
 # not run and the started legs alone give the verdict. Plain collect still waits for it: a native leg in flight
 # leaves no trace in the run, so it cannot be told from one never started.
@@ -422,6 +422,7 @@ one_archive="$(sed -n 's/^ARCHIVE: //p' "$TMP/one-leg.collect")"
 test "$(cat "$one_archive/not-run")" = claude
 test -f "$one_archive/results/codex.json"
 test ! -e "$one_archive/results/claude.json"
+tail -n 1 "$GAUNTLET_ROUND_RECORD" | python3 -c 'import json, sys; e = json.loads(sys.stdin.read()); assert e["runner"] == "gauntlet-verdict" and "oneleg" in e["identity"] and e["verdict"] == "APPROVE" and e["not_run"] == ["claude"], e'
 # The leg recorded as not run can still be started; the round then waits for it and archives afresh.
 PATH="$TMP/bin:$PATH" REAL_TIMEOUT="$REAL_TIMEOUT" FAKE_CLAUDE_TIMEOUT="$TMP/one-claude.timeout" FAKE_CLAUDE_ARGS="$TMP/one-claude.args" oneleg one-leg run-cli --engine claude > /dev/null
 test ! -e "$TMP/one-leg/not-run"
@@ -432,6 +433,7 @@ refute grep -q '^NOT RUN' "$TMP/one-leg-both.collect"
 both_archive="$(sed -n 's/^ARCHIVE: //p' "$TMP/one-leg-both.collect")"
 test "$both_archive" != "$one_archive"
 test ! -e "$both_archive/not-run"
+refute grep -Fq '"not_run"' <(tail -n 1 "$GAUNTLET_ROUND_RECORD")
 # One leg started and still running: RUNNING, whatever the flag. Once it finishes, clean needs no --force.
 oneleg one-leg-running prepare --authorize-provider --base main --profile fast --identity onelegrunning > /dev/null
 PATH="$TMP/bin:$PATH" REAL_TIMEOUT="$REAL_TIMEOUT" FAKE_CLAUDE_SLEEP=3 FAKE_CLAUDE_TIMEOUT="$TMP/run-claude.timeout" FAKE_CLAUDE_ARGS="$TMP/run-claude.args" oneleg one-leg-running run-cli --engine claude > /dev/null
@@ -487,6 +489,7 @@ oneleg one-leg-native collect > "$TMP/one-leg-native-both.collect"
 grep -Fx 'GAUNTLET: APPROVE' "$TMP/one-leg-native-both.collect"
 refute grep -q '^NOT RUN' "$TMP/one-leg-native-both.collect"
 test "$(sed -n 's/^ARCHIVE: //p' "$TMP/one-leg-native-both.collect")" != "$native_first"
+refute grep -Fq '"not_run"' <(tail -n 1 "$GAUNTLET_ROUND_RECORD")
 
 # Pair substitution is exactly two distinct engines; Grok can replace one slot.
 if GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$TMP/three-engines" bash "$RUNNER" prepare --authorize-provider --base main --identity engines --engines claude,codex,grok > /dev/null 2> "$TMP/three.err"; then exit 1; fi
@@ -770,7 +773,8 @@ scratch_cli() {
   done
   [[ ! -d "$dir/locks/$engine.lock" ]] || { printf 'timed out waiting for the %s leg to settle in %s\n' "$engine" "$dir" >&2; exit 1; }
 }
-record_lines() { if [[ -f "$1" ]]; then awk 'END {print NR}' "$1"; else printf '0\n'; fi; }
+# Round lines only: collect also appends gauntlet-verdict lines (O5), which are not rounds.
+record_lines() { if [[ -f "$1" ]]; then grep -vc '"runner":"gauntlet-verdict"' "$1" || true; else printf '0\n'; fi; }
 file_mode() { python3 -c 'import os,stat,sys; print(f"{stat.S_IMODE(os.lstat(sys.argv[1]).st_mode):o}")' "$1"; }
 
 new_scratch_repo "$ROUNDS/repo"
