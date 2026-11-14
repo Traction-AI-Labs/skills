@@ -410,7 +410,7 @@ Clone the repo. From `plugins/gauntlet` or `plugins/doc-gauntlet`, follow that d
 
 - The plugin sections, the install list and `marketplace.json` are written by [`scripts/readme/build.py`](scripts/readme/build.py) from each plugin's `plugin.json` and `card.toml`.
 - Every picture is rendered by [`scripts/media/render.sh`](scripts/media/render.sh) from a made-up input in [`docs/examples/`](docs/examples/); [`docs/media/manifest.json`](docs/media/manifest.json) records the fingerprint of each input and picture and the plugin version it was checked at.
-- `build.py --check` writes nothing and exits 1, naming the file and the fix, when the README, `marketplace.json` or the pictures have fallen behind the plugins.
+- `build.py --check` writes nothing and exits 1, naming the file and the fix, when the README, `marketplace.json` or the pictures have fallen behind the plugins. [`readme-check.yml`](.github/workflows/readme-check.yml) runs it once per pull request, when the pull request is labelled `ready`.
 
 ## Latest changes
 
