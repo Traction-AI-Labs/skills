@@ -234,24 +234,26 @@ class BuildCheck(unittest.TestCase):
         self.assertIn("Nothing was recorded", out)
         self.assertEqual(before, p.read_bytes())
 
-    def test_a_second_writer_waits_for_the_lock_and_keeps_the_first_writers_entry(self):
-        import fcntl, time
+    def test_a_second_writer_is_refused_while_the_manifest_is_locked(self):
+        import fcntl
         p = self.root / "docs/media/manifest.json"
+        before = p.read_bytes()
         with open(p.with_name(".manifest.lock"), "w") as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX)
-            proc = subprocess.Popen([sys.executable, "-I", str(self.root / "scripts/readme/build.py"), "--accept",
-                                     "banner", "--reason", "Second writer."], cwd=self.root,
-                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-            time.sleep(1.5)
-            self.assertIsNone(proc.poll(), "the second writer did not wait for the lock")
-            m = json.loads(p.read_text())  # the first writer's update, made while it holds the lock
-            m["ruling-page"]["reason"] = "First writer."
-            p.write_text(json.dumps(m, indent=2) + "\n")
-            fcntl.flock(lock, fcntl.LOCK_UN)
-        out, _ = proc.communicate(timeout=30)
-        self.assertEqual(proc.returncode, 0, out)
+            fcntl.flock(lock, fcntl.LOCK_EX)  # another writer holds the manifest
+            rc, out = self.run_build("--accept", "banner", "--reason", "Second writer.")
+        self.assertNotEqual(rc, 0, out)
+        self.assertIn("another render or accept is recording", out)
+        self.assertEqual(before, p.read_bytes())
+        rc, out = self.run_build("--accept", "banner", "--reason", "Second writer, after the first.")
+        self.assertEqual(rc, 0, out)
+
+    def test_invalid_recorded_version_names_the_file_and_the_fix(self):
+        p = self.root / "docs/media/manifest.json"
         m = json.loads(p.read_text())
-        self.assertEqual((m["ruling-page"]["reason"], m["banner"]["reason"]), ("First writer.", "Second writer."))
+        m["ruling-page"]["checked_at_version"] = "bad"
+        p.write_text(json.dumps(m))
+        out = self.assertRed("docs/media/manifest.json", "checked_at_version of the form x.y.z", "Fix: git checkout")
+        self.assertNotIn("Traceback", out)
 
     # rule 5: cards
 

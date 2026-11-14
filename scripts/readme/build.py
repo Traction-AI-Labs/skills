@@ -366,15 +366,16 @@ def load_manifest():
     try:
         m = json.loads(MANIFEST.read_text())
     except json.JSONDecodeError as e:
-        raise Stale(f"docs/media/manifest.json: not valid JSON ({e}). Fix: scripts/media/render.sh all.")
+        raise Stale(f"docs/media/manifest.json: not valid JSON ({e}). Fix: git checkout -- docs/media/manifest.json, then scripts/media/render.sh <name> for any picture it names as stale.")
     ok = isinstance(m, dict) and all(
         isinstance(e, dict) and isinstance(e.get("inputs"), dict) and isinstance(e.get("outputs"), dict)
         and all(isinstance(v, str) for v in list(e["inputs"].values()) + list(e["outputs"].values()))
-        and isinstance(e.get("checked_at_version", ""), str) and isinstance(e.get("reason", ""), str)
-        for e in m.values())
+        and isinstance(e.get("reason", ""), str)
+        and (k == "banner" or re.fullmatch(r"\d+\.\d+\.\d+", str(e.get("checked_at_version"))))
+        for k, e in m.items())
     if not ok:
-        raise Stale("docs/media/manifest.json: each entry needs inputs and outputs objects of path to SHA-256. "
-                    "Fix: scripts/media/render.sh all.")
+        raise Stale("docs/media/manifest.json: each entry needs inputs and outputs objects of path to SHA-256, and "
+                    "each plugin entry a checked_at_version of the form x.y.z. Fix: git checkout -- docs/media/manifest.json, then scripts/media/render.sh <name> for any picture it names as stale.")
     return m
 
 
@@ -426,7 +427,11 @@ def record(name, plugins, reason):
         raise SystemExit(f"build.py: {name} has no picture (its card's kind is text, or it is not a plugin).")
     MANIFEST.parent.mkdir(parents=True, exist_ok=True)
     with open(MANIFEST.with_name(".manifest.lock"), "w") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)  # two renders or accepts at once each keep the other's entry
+        try:  # one writer at a time, so two renders or accepts never drop each other's entry
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise SystemExit(f"build.py: another render or accept is recording in docs/media/manifest.json; "
+                             f"nothing was recorded for {name}. Run the same command again when it has finished.")
         try:
             m = load_manifest()
         except Stale as e:
