@@ -1,0 +1,18 @@
+# The README card for reading-page. scripts/readme/build.py writes the card from this file; see README.md, "How this README stays right".
+group = "pages"
+order = 1
+tagline = "Turns a long agent answer into one page you can read."
+gets = "A self-contained HTML page built from markdown: the bottom line first, a contents rail, callouts, sortable tables, folded evidence, light and dark, and a phone layout."
+try = "Write up what you found about the flaky sign-in test as a reading page."
+runs_in = ["Claude Code", "the Claude app", "Codex"]
+needs = "[uv](https://docs.astral.sh/uv/), to run its build script."
+scan_needs = "Needs uv."
+
+[visual]
+kind = "page"
+light = "docs/media/reading-page/light.webp"
+dark = "docs/media/reading-page/dark.webp"
+light_phone = "docs/media/reading-page/phone-light.webp"
+dark_phone = "docs/media/reading-page/phone-dark.webp"
+sources = ["plugins/reading-page/skills/reading-page/scripts/build.py", "plugins/reading-page/skills/reading-page/references/template.html"]
+alt = "A made-up reading page about a flaky sign-in test: the title, the bottom-line box and the contents rail, with the first section below them."

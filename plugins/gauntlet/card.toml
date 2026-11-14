@@ -1,0 +1,19 @@
+# The README card for gauntlet. scripts/readme/build.py writes the card from this file; see README.md, "How this README stays right".
+group = "reviews"
+order = 1
+tagline = "Reviews a committed code change with two models at once."
+gets = "Findings from Claude and Codex by default (Grok can take either slot), merged into one verdict with each finding's file and line, and every run archived on your machine."
+try = "Run a gauntlet on this branch."
+runs_in = ["Claude Code", "Codex", "Grok", "or the portable CLI"]
+needs = "Bash, Git, Python 3, GNU `timeout`, and two reviewer CLIs signed in: Claude Code and Codex by default, Grok in either slot."
+scan_needs = "Needs two signed-in reviewer CLIs (Claude Code and Codex by default). Sends the diff, and whatever the reviewers can read in the worktree, to those two model companies through your own logins."
+prerequisites = true
+
+[visual]
+kind = "gif"
+gif = "docs/media/gauntlet/round.gif"
+gif_phone = "docs/media/gauntlet/round-phone.gif"
+light = "docs/media/gauntlet/poster.webp"
+light_phone = "docs/media/gauntlet/poster-phone.webp"
+sources = ["scripts/media/terminal.html"]
+alt = "A made-up terminal session: one gauntlet round prepares a pull request, starts the Claude and Codex reviewers, and collects a BLOCK verdict with two findings."

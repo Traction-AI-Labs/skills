@@ -1,0 +1,18 @@
+# The README card for ruling-page. scripts/readme/build.py writes the card from this file; see README.md, "How this README stays right".
+group = "pages"
+order = 2
+tagline = "Puts several decisions with trade-offs on one page you click through."
+gets = "One HTML page with a card per decision, the agent's pick already selected, the other options as buttons, and Copy my answers to paste the result back into chat."
+try = "I need to decide how the renamed commands behave, where the upgrade guide lives and when version 2 ships. Give me a ruling page."
+runs_in = ["Claude Code", "the Claude app"]
+needs = "Nothing to install."
+scan_needs = "Nothing to install."
+
+[visual]
+kind = "page"
+light = "docs/media/ruling-page/light.webp"
+dark = "docs/media/ruling-page/dark.webp"
+light_phone = "docs/media/ruling-page/phone-light.webp"
+dark_phone = "docs/media/ruling-page/phone-dark.webp"
+sources = ["plugins/ruling-page/skills/ruling-page/references/template.html"]
+alt = "A made-up ruling page with three decision cards about a command-line tool's version 2 release, each with a recommended option selected."

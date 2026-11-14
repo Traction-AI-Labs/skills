@@ -1,0 +1,22 @@
+# Made-up example: one gauntlet round on a toy repository. Lines starting "$ " are typed; the rest is output.
+# Runner lines follow gauntlet.sh at 19fc323 (prepare, run-cli, collect); the two findings are shortened from the results.
+# title: gauntlet, one round on a made-up pull request
+$ scripts/gauntlet.sh prepare --authorize-provider --identity retry-webhooks --base main --profile balanced
+ROUND: 1 identity=retry-webhooks repo=example/webhooks
+GAUNTLET_DIR=/tmp/gauntlet.Q7c2
+$ scripts/gauntlet.sh run-cli --engine claude
+STARTED: claude
+leg claude started: bound 1800s
+$ scripts/gauntlet.sh run-cli --engine codex
+STARTED: codex
+leg codex started: bound 1800s
+$ scripts/gauntlet.sh collect
+GAUNTLET: BLOCK
+SCOPE: 3f9a1c2
+BOUND: claude 1800s
+BOUND: codex 1800s
+ARCHIVE: ~/.gauntlet/runs/20261114-gauntlet-retry-webhooks-3f9a1c2/
+
+Findings, shortened:
+  claude P1 retry.py:48  a retried delivery reuses the expired signature, so the receiver rejects it
+  codex  P2 retry.py:71  the backoff cap is read from the environment on every retry

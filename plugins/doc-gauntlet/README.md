@@ -4,6 +4,8 @@ These examples are for a clone of this package directory. If you installed the C
 
 Document Gauntlet runs six independent breadth lenses followed by two independent adversarial reviews of one committed document revision, and returns two outputs: a short list of errors the document must fix and a sparring memo for the author. The default pair is Claude and Codex. Pass `--engines grok,codex` or `--engines claude,grok` to substitute Grok for one engine. Breadth uses Claude when Claude is in the pair; otherwise Grok. A row is `RUNNING` until its reviewer exits, then `FAILED` if it has no valid result; neither state is convergence.
 
+What it sends: the pinned document, and whatever the reviewer can read in the worktree, goes to each engine's provider (Anthropic for Claude, OpenAI for Codex, xAI for Grok) through your own signed-in CLI. Nothing is sent until you pass `prepare --authorize-provider`.
+
 ## Quickstart
 
 Open a terminal in the extracted package directory, the one containing this README and `skills/doc-gauntlet`. The portable runner runs from the package and does not need to be copied into an Agent Skills directory. Install the requirements below, authenticate the `claude` and `codex` CLIs, and commit the document you want reviewed in a dedicated clean worktree. Replace `docs/plan.md` with your document's path, use `--type requirements` for a requirements or specification document, then run:
