@@ -19,6 +19,27 @@ def steps(text):
     return re.split(r"\n      - ", "\n" + body)[1:]
 
 
+def gate_env(text, event):
+    """The first step's env, with each ${{ github.event.<path> }} evaluated against a webhook event fixture."""
+    first = steps(text)[0]
+    m = re.search(r"\n        env:\n((?:          .*\n)+)", "\n" + first)
+    env = {}
+    for line in m.group(1).rstrip("\n").split("\n"):
+        name, value = line.strip().split(": ", 1)
+        e = re.fullmatch(r"\$\{\{ github\.event\.([a-z_.]+) \}\}", value)
+        if not e:
+            raise AssertionError(f"the gate's env {name} uses an expression this test cannot evaluate: {value}")
+        v = event
+        for key in e.group(1).split("."):
+            v = v.get(key, "") if isinstance(v, dict) else ""
+        env[name] = v if isinstance(v, str) else ""
+    return env
+
+
+def labelled(added, labels):
+    return {"action": "labeled", "label": {"name": added}, "pull_request": {"labels": [{"name": n} for n in labels]}}
+
+
 def gate_script(text):
     first = steps(text)[0]
     m = re.search(r"run: \|\n((?:          .*\n?)+)", first)
@@ -44,6 +65,11 @@ class Workflow(unittest.TestCase):
         self.assertNotRegex(job, r"\n    if:", "a job-level if: makes a skipped required job count as passed")
         self.assertNotIn("secrets.", self.text)
 
+    def test_no_step_can_be_skipped_or_fail_quietly(self):
+        for s in steps(self.text):
+            self.assertNotRegex(s, r"(^|\n)        if:|^if:", "a step-level if: could skip the gate")
+            self.assertNotIn("continue-on-error", s)
+
     def test_steps_in_order(self):
         s = steps(self.text)
         self.assertEqual(len(s), 3)
@@ -52,19 +78,27 @@ class Workflow(unittest.TestCase):
         self.assertIn("persist-credentials: false", s[1])
         self.assertIn("run: python3 -I scripts/readme/build.py --check", s[2])
 
-    def gate(self, added):
+    def gate(self, event):
         with tempfile.TemporaryDirectory() as d:
             marker = Path(d) / "builder-ran"
             script = gate_script(self.text) + f"\ntouch {marker}\n"   # stands in for the steps after the gate
-            r = subprocess.run(["bash", "-e", "-c", script], env={**os.environ, "ADDED": added},
+            r = subprocess.run(["bash", "-e", "-c", script], env={**os.environ, **gate_env(self.text, event)},
                                capture_output=True, text=True)
             return r.returncode, marker.exists(), r.stdout
 
     def test_gate_passes_only_when_ready_is_the_label_added(self):
-        self.assertEqual(self.gate("ready")[:2], (0, True))
-        for added in ("documentation", "", "Ready", "ready ", "not-ready"):
-            with self.subTest(added=added):
-                rc, ran, out = self.gate(added)
+        self.assertEqual(self.gate(labelled("ready", ["ready"]))[:2], (0, True))
+        self.assertEqual(self.gate(labelled("ready", ["documentation", "ready"]))[:2], (0, True))
+        refused = {
+            "another label on a pull request already labelled ready": labelled("documentation", ["ready", "documentation"]),
+            "another label alone": labelled("documentation", ["documentation"]),
+            "no label name": labelled("", []),
+            "a near miss": labelled("Ready", ["Ready"]),
+            "trailing space": labelled("ready ", ["ready "]),
+        }
+        for why, event in refused.items():
+            with self.subTest(why):
+                rc, ran, out = self.gate(event)
                 self.assertEqual((rc, ran), (1, False), out)
                 self.assertIn("::error::", out)
 
