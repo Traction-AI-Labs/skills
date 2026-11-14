@@ -1,0 +1,105 @@
+{
+  "banner": {
+    "reason": "",
+    "inputs": {
+      "scripts/media/render.sh": "b8a8a2f58883072098f7c6616f5885afe5f8dd980f8f55c5fc24675cbe495333",
+      "scripts/media/fill.py": "375e19a31456c54374c4e1d5eb2ce3f2632aaef851b0b8f7ccdfa106c0f16157",
+      "scripts/media/freeze.js": "b64fe84179b0a389c88a7ac5d473b7792ad964b849e6227123275603f0d6f88c",
+      "docs/media/banner/banner.html": "8a8a893e3f97a7b5d0374d138721fe9f7675432061ae598ec5e6edff23b85df8",
+      "docs/media/banner/traction-studio-logo-white-transparent.png": "3981416b0627e429bc0ab05612ceb4f3f020ca66ec4b10a4e98b96f29a465e72",
+      "docs/media/fonts/spectral-300.woff2": "3ff652c63672dac64699f04465d7e679045d8cdddfb2a2a1a8762d28866e2891",
+      "docs/media/fonts/spectral-300-italic.woff2": "b1dc3c4e4bebc0768c8bc9b4662ea2ad7f9fb2b19f98b3b023cf2fbb6e8e362e",
+      "docs/media/fonts/inter-400.woff2": "8909904ab6c872eb994093482a88a28eca2cd95912d7b6fecd72103b0dc07edc",
+      "docs/media/fonts/jetbrains-mono-400.woff2": "14425ba9c695763c1547f48a206b7aa60350a33ae23de09f0407877f3fcd89eb"
+    },
+    "outputs": {
+      "docs/media/banner.webp": "b7a931bfa600348f41ee18db6a2cadac10396701d44ed0b4b933e7f96f2b40c8",
+      "docs/media/banner-phone.webp": "4f3024d69a0eeb7fe78acf05e9bf32c384d3aeb6cde9440d383653f08ccc8254"
+    }
+  },
+  "call-prep": {
+    "checked_at_version": "0.3.0",
+    "reason": "",
+    "inputs": {
+      "docs/examples/call-prep/prep-region.html": "ab22a0c65e82ecfa3608011c16213e69fda18d617e582ce292c9f3e7cf0dba46",
+      "plugins/call-prep/skills/call-prep/references/prep-template.html": "e43200e8d54bf1ccee7e45c970683e0732031b34c4395036164931ec05ef2c7c",
+      "plugins/call-prep/skills/call-prep/scripts/check_prep.py": "6d3740893c7008c921f37f7e7151452726daa406224352c9dcb1615e7d533940",
+      "scripts/media/render.sh": "b8a8a2f58883072098f7c6616f5885afe5f8dd980f8f55c5fc24675cbe495333",
+      "scripts/media/fill.py": "375e19a31456c54374c4e1d5eb2ce3f2632aaef851b0b8f7ccdfa106c0f16157",
+      "scripts/media/freeze.js": "b64fe84179b0a389c88a7ac5d473b7792ad964b849e6227123275603f0d6f88c"
+    },
+    "outputs": {
+      "docs/media/call-prep/light.webp": "e1783a7df89a01c76041f6956dcd427d188e53768946a2fe97e2a713e76d3e84",
+      "docs/media/call-prep/dark.webp": "1364387bb34744f89caa926e10f112e3a5f22d57fc2e7d088eba54bbd8af1991",
+      "docs/media/call-prep/phone-light.webp": "944800689fa271e7d6d0bc0d6452af0d8d21f9cd522e4fd837ce6956d757f127",
+      "docs/media/call-prep/phone-dark.webp": "408ab99c5782efa4a51c44821346e6ca4aa056cb84e7318b5e12bc3cbbfd7972"
+    }
+  },
+  "doc-gauntlet": {
+    "checked_at_version": "0.6.2",
+    "reason": "",
+    "inputs": {
+      "docs/examples/doc-gauntlet/session.txt": "9f2ea1cce0a53102cea70f832850f302d66ed9a9a1bfc310fcad5dbf6d781e35",
+      "scripts/media/terminal.html": "96f2657a651860516588a88899bcf135ed23e92dcc414e85e425e344e25ffac0",
+      "scripts/media/render.sh": "b8a8a2f58883072098f7c6616f5885afe5f8dd980f8f55c5fc24675cbe495333",
+      "scripts/media/fill.py": "375e19a31456c54374c4e1d5eb2ce3f2632aaef851b0b8f7ccdfa106c0f16157",
+      "scripts/media/freeze.js": "b64fe84179b0a389c88a7ac5d473b7792ad964b849e6227123275603f0d6f88c"
+    },
+    "outputs": {
+      "docs/media/doc-gauntlet/round.webp": "689b1c306308b8cea3fe0df2be912856a12e2b18533917435e56968ee8d08ecb",
+      "docs/media/doc-gauntlet/round-phone.webp": "5b558439ca84cdf68c72be894e216d5a27125c9be67030f166efc1821217dc9c"
+    }
+  },
+  "gauntlet": {
+    "checked_at_version": "0.7.0",
+    "reason": "",
+    "inputs": {
+      "docs/examples/gauntlet/session.txt": "22aaf132d45c347c7cd1c57ded1daa57b853742383f27a9f45eefc2cae9e0981",
+      "scripts/media/terminal.html": "96f2657a651860516588a88899bcf135ed23e92dcc414e85e425e344e25ffac0",
+      "scripts/media/render.sh": "b8a8a2f58883072098f7c6616f5885afe5f8dd980f8f55c5fc24675cbe495333",
+      "scripts/media/fill.py": "375e19a31456c54374c4e1d5eb2ce3f2632aaef851b0b8f7ccdfa106c0f16157",
+      "scripts/media/freeze.js": "b64fe84179b0a389c88a7ac5d473b7792ad964b849e6227123275603f0d6f88c"
+    },
+    "outputs": {
+      "docs/media/gauntlet/poster.webp": "f9641810d0e0a32ed146eef650d6b59207a42c1439622f4223532d8411037330",
+      "docs/media/gauntlet/poster-phone.webp": "6d018a35963810c01dc631a1fa46a99858ac7eeee2cf835beb3dc29f9fc047e6",
+      "docs/media/gauntlet/round.gif": "a0a3b50dd2e5c5c62f47ae38e0cafcc05750798886c254d00e38ce5ca0645860",
+      "docs/media/gauntlet/round-phone.gif": "66772da4d915899e48e84976f641945d2d64910a091023b428ddcb04d3269b30"
+    }
+  },
+  "reading-page": {
+    "checked_at_version": "0.3.1",
+    "reason": "",
+    "inputs": {
+      "docs/examples/reading-page/flaky-test.md": "9ab7dc04873f95bb1002be515932d8fdf0f81a7cc5779c44dbd69f3f156fb367",
+      "plugins/reading-page/skills/reading-page/scripts/build.py": "56554480361336557f6ccc1b8f44599e7c00b71cde9898e3176707618cedf286",
+      "plugins/reading-page/skills/reading-page/references/template.html": "c4af0d831cd6c2bf9c9f2137ecd29afa86abe74048721275cf0b54748e759ea1",
+      "scripts/media/render.sh": "b8a8a2f58883072098f7c6616f5885afe5f8dd980f8f55c5fc24675cbe495333",
+      "scripts/media/fill.py": "375e19a31456c54374c4e1d5eb2ce3f2632aaef851b0b8f7ccdfa106c0f16157",
+      "scripts/media/freeze.js": "b64fe84179b0a389c88a7ac5d473b7792ad964b849e6227123275603f0d6f88c"
+    },
+    "outputs": {
+      "docs/media/reading-page/light.webp": "1364950ec0adaf446cf11ad36601b70837cbcc9c524db086fb13a7d4478df73d",
+      "docs/media/reading-page/dark.webp": "ebfe1fcc43dbe0c6b61cb4a6b20e5babd4d96eb57eba9153e2eb9e6e83c3a48b",
+      "docs/media/reading-page/phone-light.webp": "693f3bbad54c23ccdc131ef08c28de0779503f66f58869401e393ace617a16d6",
+      "docs/media/reading-page/phone-dark.webp": "cb0193c1b0a7cc4c89254b637d1e9b756314877880caa8dd3b6d99b80e16e4b1"
+    }
+  },
+  "ruling-page": {
+    "checked_at_version": "0.3.1",
+    "reason": "",
+    "inputs": {
+      "docs/examples/ruling-page/data.js": "a9d5e87632b2b98290c466ba5ae0eaf941b608e130bd8c2183e9d67efbd209e4",
+      "plugins/ruling-page/skills/ruling-page/references/template.html": "b2667adc0a2524c99e7d7ef078a6f9e1d22496a092ae0657020d4dd4dc7e4542",
+      "scripts/media/render.sh": "b8a8a2f58883072098f7c6616f5885afe5f8dd980f8f55c5fc24675cbe495333",
+      "scripts/media/fill.py": "375e19a31456c54374c4e1d5eb2ce3f2632aaef851b0b8f7ccdfa106c0f16157",
+      "scripts/media/freeze.js": "b64fe84179b0a389c88a7ac5d473b7792ad964b849e6227123275603f0d6f88c"
+    },
+    "outputs": {
+      "docs/media/ruling-page/light.webp": "1eb4f014ba6e75b4f4d5268a030b03dff3f92e9f9d6efcb4b0230cf177d0cc4e",
+      "docs/media/ruling-page/dark.webp": "72f42a2ebadad97d099999bb88e5793b80807800d2cb866cf833eb4d91da4a03",
+      "docs/media/ruling-page/phone-light.webp": "105af6b3f9d3ebdbc368ea7e37fadcc178cacfd038ba23286a92a175dc41c22b",
+      "docs/media/ruling-page/phone-dark.webp": "280bce71a2da63e5bbc58a40d870bb59a4cdcf9efb32a9cbf84afda2f7365b42"
+    }
+  }
+}

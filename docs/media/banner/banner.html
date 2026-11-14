@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Traction skills banner</title>
+<style>
+  /* The README banner, rendered to docs/media/banner.webp and banner-phone.webp by scripts/media/render.sh.
+     Traction Studio's brand, dark only: the studio's own logo file (beside this page), its site colours
+     (ground #0f0f0f, heading #fff, subline #c4c4c4, eyebrow #a8a8a8, hairline 12% white, coral #ff6f61 for the
+     full stop) and its site fonts (Spectral 300 normal and italic, Inter 400, JetBrains Mono 400), committed
+     under docs/media/fonts/ from Google Fonts under the SIL Open Font Licence 1.1. */
+  @font-face{font-family:Spectral;font-weight:300;font-style:normal;src:url(../fonts/spectral-300.woff2) format("woff2")}
+  @font-face{font-family:Spectral;font-weight:300;font-style:italic;src:url(../fonts/spectral-300-italic.woff2) format("woff2")}
+  @font-face{font-family:Inter;font-weight:400;src:url(../fonts/inter-400.woff2) format("woff2")}
+  @font-face{font-family:"JetBrains Mono";font-weight:400;src:url(../fonts/jetbrains-mono-400.woff2) format("woff2")}
+  :root{--bg:#0f0f0f;--ink:#ffffff;--mid:#c4c4c4;--muted:#a8a8a8;--line:rgba(255,255,255,.12);--coral:#ff6f61}
+  html,body{margin:0;background:var(--bg)}
+  body{width:1280px;height:220px;box-sizing:border-box;padding:40px 56px;display:grid;grid-template-columns:300px 1fr;
+       gap:40px;align-items:start;overflow:hidden;color:var(--ink);border-bottom:1px solid var(--line)}
+  .logo{display:block;height:64px;width:auto;margin:-6px 0 0 -14px}
+  .eyebrow{font:400 12px/1 "JetBrains Mono",monospace;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin:0 0 14px}
+  h1{font:300 46px/1.05 Spectral,serif;letter-spacing:-.02em;margin:0 0 14px}
+  h1 em{font-style:italic}
+  h1 .dot{color:var(--coral)}
+  p.sub{font:400 17px/1.5 Inter,system-ui,sans-serif;color:var(--mid);margin:0}
+  /* phone: stacked, read at 324 px wide in the README column */
+  body.phone{width:640px;height:400px;padding:40px 40px;grid-template-columns:1fr;gap:28px}
+  body.phone .logo{height:72px;margin:-10px 0 0 -16px}
+  body.phone h1{font-size:50px}
+  body.phone p.sub{font-size:24px}
+  body.phone .eyebrow{font-size:16px}
+</style></head>
+<body>
+  <img class="logo" src="traction-studio-logo-white-transparent.png" alt="traction studio">
+  <div class="txt">
+    <p class="eyebrow">Open source, MIT licence</p>
+    <h1><em>Plugins</em> for Claude Code, Codex, Grok and the Claude app<span class="dot">.</span></h1>
+    <p class="sub">Pages you read and rule on, reviews by two models at once, and edits to your writing.</p>
+  </div>
+  <script>if (location.search.includes("phone")) document.body.classList.add("phone");</script>
+</body></html>

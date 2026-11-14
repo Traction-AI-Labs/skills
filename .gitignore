@@ -6,3 +6,7 @@ plugins/*/dist/
 __pycache__/
 .worktrees/
 node_modules/
+
+# build.py --record's lock and temporary file
+docs/media/.manifest.lock
+docs/media/.manifest.*.tmp

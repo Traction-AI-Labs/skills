@@ -1,0 +1,19 @@
+# The README card for doc-gauntlet. scripts/readme/build.py writes the card from this file; see README.md, "How this README stays right".
+group = "reviews"
+order = 2
+tagline = "Reviews a plan or spec before you build from it."
+gets = "Six single-angle reviews (coherence, feasibility, scope, product, security, design), then the same two-model pair, returning a short list of errors to fix and a memo of points for you to decide on."
+try = "Run a doc-gauntlet on docs/migration-plan.md."
+runs_in = ["Claude Code", "Codex", "Grok", "or the portable CLI"]
+needs = "Bash, Git, Python 3, GNU `timeout`, and two reviewer CLIs signed in: Claude Code and Codex by default, Grok in either slot."
+scan_needs = "Needs two signed-in reviewer CLIs (Claude Code and Codex by default). Sends the document, and whatever the reviewers can read in the worktree, to those two model companies through your own logins."
+prerequisites = true
+
+[visual]
+kind = "terminal"
+light = "docs/media/doc-gauntlet/round.webp"
+dark = "docs/media/doc-gauntlet/round.webp"
+light_phone = "docs/media/doc-gauntlet/round-phone.webp"
+dark_phone = "docs/media/doc-gauntlet/round-phone.webp"
+sources = ["scripts/media/terminal.html"]
+alt = "A made-up terminal session: one doc-gauntlet round on a migration plan ends in a BLOCK verdict with two errors to fix and a four-point sparring memo."

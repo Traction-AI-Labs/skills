@@ -1,0 +1,18 @@
+# The README card for call-prep. scripts/readme/build.py writes the card from this file; see README.md, "How this README stays right".
+group = "pages"
+order = 3
+tagline = "Writes what to say on a call, word for word."
+gets = "One HTML page to read on a second screen during the call: a line of what not to say, numbered beats with the exact words, a send box with its own Copy button, and answers to the hardest questions."
+try = "Prep me for a 20-minute renewal call with our hosting vendor on Tuesday at 10am. I want a lower price or a longer term."
+runs_in = ["Claude Code", "the Claude app"]
+needs = "Nothing to install."
+scan_needs = "Nothing to install."
+
+[visual]
+kind = "page"
+light = "docs/media/call-prep/light.webp"
+dark = "docs/media/call-prep/dark.webp"
+light_phone = "docs/media/call-prep/phone-light.webp"
+dark_phone = "docs/media/call-prep/phone-dark.webp"
+sources = ["plugins/call-prep/skills/call-prep/references/prep-template.html", "plugins/call-prep/skills/call-prep/scripts/check_prep.py"]
+alt = "A made-up call script for a hosting renewal call: the line of what not to say at the top, the one thing to send, and the opening words of the first beat."

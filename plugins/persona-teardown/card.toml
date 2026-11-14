@@ -1,0 +1,19 @@
+# The README card for persona-teardown. scripts/readme/build.py writes the card from this file; see README.md, "How this README stays right".
+group = "reviews"
+order = 3
+tagline = "Walks your prototype as three to five cold personas in a real browser."
+gets = "One report per persona: a ledger of every screen, control and state it reached, one finding per line with a screenshot, merged into one amendment prompt for your design tool."
+try = "Tear down the prototype at localhost:8787 as a first-time buyer, a support agent and the shop owner."
+runs_in = ["Claude Code", "Codex"]
+needs = "`agent-browser` installed. It starts one subagent per persona, so the screens it walks go to the model company of the session you run it in."
+scan_needs = "Needs agent-browser. The screens it walks go to the model company of your own session."
+
+[visual]
+kind = "text"
+label = "Made-up example. Two ledger rows and two findings from a walk"
+text = '''
+ledger   checkout  "Pay now"      error  390   dark   reached
+ledger   orders    "Load more"    empty  1440  light  reached
+
+major        CONTRAST-SUSPECT  checkout  "Card declined" is red text on a dark red panel (390, dark)
+wrong-claim  WRONG-CLAIM       orders    "No orders yet" shows for a customer with 2 orders while the list loads'''
