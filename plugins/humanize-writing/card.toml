@@ -1,0 +1,36 @@
+# The README card for humanize-writing. scripts/readme/build.py writes the card from this file; see README.md, "How this README stays right".
+group = "writing"
+order = 1
+tagline = "Rewrites a draft so it reads like a person wrote it, adding nothing."
+gets = "The draft back in full with the template phrases cut and each point said once in the writer's voice; every date, figure and ask kept. It returns a clean draft unchanged."
+try = "Humanize this email before I send it."
+runs_in = ["Claude Code", "the Claude app", "Codex"]
+needs = "Nothing to install."
+scan_needs = "Nothing to install."
+
+[visual]
+kind = "text"
+label = "Made-up example. From the skill's own worked examples, about an invented business"
+before = '''
+Hi Mei,
+
+I hope this email finds you well! I'm writing to give you a quick update on the bathroom renovation at your Coogee property.
+
+I know delays can be really frustrating, so I wanted to reach out as soon as possible. Unfortunately, the tiles you selected are back-ordered, and the supplier now expects them on 14 March. This means tiling will start on 17 March instead of 3 March, so the bathroom will be ready around 28 March rather than 14 March.
+
+If you'd prefer, we can switch to a similar in-stock tile and keep the original dates. Just let me know by Friday so we can lock things in.
+
+Please don't hesitate to reach out if you have any questions. We truly appreciate your patience and understanding!
+
+Warm regards,
+Dan'''
+after = '''
+Hi Mei,
+
+The tiles you selected for the Coogee bathroom are back-ordered, and the supplier now expects them on 14 March. Tiling will start on 17 March instead of 3 March, so the bathroom will be ready around 28 March rather than 14 March.
+
+If you'd prefer, we can switch to a similar in-stock tile and keep the original dates. Could you let me know by Friday so we can lock things in?
+
+Thanks for your patience.
+
+Dan'''

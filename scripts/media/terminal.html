@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>__TITLE__</title>
+<style>
+  html,body{margin:0;background:#0d1117;}
+  body{font:15px/1.55 "DejaVu Sans Mono","Liberation Mono",ui-monospace,monospace;color:#c9d1d9;}
+  .win{margin:0;min-height:100vh;box-sizing:border-box;border:1px solid #30363d;}
+  .bar{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:10px 18px;background:#161b22;border-bottom:1px solid #30363d;color:#8b949e;font-size:13px;}
+  .bar b{color:#c9d1d9;font-weight:normal;}
+  .tag{flex-shrink:0;border:1px solid #30363d;padding:1px 8px;color:#8b949e;}
+  pre{margin:0;padding:18px 22px;font:inherit;white-space:pre-wrap;word-break:break-word;}
+  .p{color:#7ee787;} .c{color:#f0f6fc;} .o{color:#8b949e;}
+  .bad{color:#ff7b72;} .ok{color:#7ee787;} .p1{color:#ffa657;} .arch{color:#79c0ff;} .head{color:#f0f6fc;}
+  .cur{display:inline-block;width:.6em;background:#c9d1d9;}
+</style></head>
+<body><div class="win"><div class="bar"><b>__TITLE__</b><span class="tag">Made-up example</span></div><pre id="t"></pre></div>
+<script>
+const S = __STEPS__;
+const n = Math.max(0, Math.min(S.length, parseInt(new URLSearchParams(location.search).get("step") ?? S.length, 10)));
+const esc = s => s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const cls = l => /BLOCK|FAILED/.test(l) ? "bad" : /APPROVE|CONVERGED/.test(l) ? "ok" : /\bP1\b/.test(l) ? "p1"
+  : /^ARCHIVE:/.test(l) ? "arch" : /^(Errors to fix|Sparring memo)/.test(l) ? "head" : "o";
+let h = "";
+S.slice(0, n).forEach(s => { h += `<span class="p">$</span> <span class="c">${esc(s.cmd)}</span>\n`;
+  s.out.forEach(l => { h += `<span class="${cls(l)}">${esc(l)}</span>\n`; }); });
+if (n < S.length) h += `<span class="p">$</span> <span class="cur">&nbsp;</span>`;
+document.getElementById("t").innerHTML = h;
+</script></body></html>

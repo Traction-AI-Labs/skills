@@ -2,6 +2,8 @@
 
 A panel of persona agents walks a prototype, UI kit, design-tool export or live screen in a real browser, every screen by every control by every state by every ground, and reports defects one per line with a screenshot each. The orchestrator merges the reports and emits one amendment prompt for the design tool. It is a search heuristic for defects, not evidence about users.
 
+What it sends: the screens and text of the artefact it walks, and the spec and screen inventory you give it, go to the model provider of the agent session that runs the personas (Anthropic in Claude Code, OpenAI in Codex), through your own login. On Codex the personas run with full access, so see the note under "What it needs".
+
 Once installed (Claude Code plugin, or the skill copied into Codex), ask for a teardown in session ("tear this down as the paying customer, the operator and the product lead"). The skill carries the orchestrator's checklist, the persona template, the per-agent protocol, the finding template, the severity scale, the consolidation steps and a dispatch prompt skeleton; `skills/persona-teardown/references/persona-teardown-sop.md` is the full procedure with the reasoning.
 
 ## What it needs

@@ -1,0 +1,17 @@
+# The README card for go-deeper. scripts/readme/build.py writes the card from this file; see README.md, "How this README stays right".
+group = "writing"
+order = 2
+tagline = "Rewrites a task to ask for what a top professional in the field would do."
+gets = "What a top professional would do that you didn't ask for, the rawest material they'd start from, their methods, an outside judge for the result, and the task rewritten as a prompt you can run."
+try = "Go deeper on this before you start: write a monthly report on why customers cancel."
+runs_in = ["Claude Code", "the Claude app", "Codex"]
+needs = "Nothing to install."
+scan_needs = "Nothing to install."
+
+[visual]
+kind = "text"
+label = "Made-up example. A task and the prompt it becomes"
+before = '''
+Write a monthly report on why customers cancel.'''
+after = '''
+Read every cancellation from the last six months at the event level: the reason given, the last 30 days of use, and any support tickets before it. Group the reasons by what the customer was trying to do. For the biggest group, find the earliest sign in usage that predicts a cancel, test it on a month you did not use to find it, and say how many cancels it would have flagged a week early.'''

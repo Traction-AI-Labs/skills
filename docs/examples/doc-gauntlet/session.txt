@@ -1,0 +1,24 @@
+# Made-up example: one doc-gauntlet round on a made-up migration plan. Lines starting "$ " are typed; the rest is output.
+# Runner lines follow doc-gauntlet.sh at 19fc323; the last block is the summary the skill writes from the results.
+# title: doc-gauntlet, one round on a made-up plan
+$ scripts/doc-gauntlet.sh prepare --authorize-provider --doc docs/migration-plan.md --type plan
+ROUND: 1 identity=doc:docs/migration-plan.md repo=example/billing
+WORKDIR=/tmp/doc-gauntlet.Lm3e
+$ scripts/doc-gauntlet.sh run-cli --lens coherence   # and five more lenses
+STARTED: coherence
+leg coherence started: bound 1800s (source: default)
+$ scripts/doc-gauntlet.sh run-cli --engine claude && scripts/doc-gauntlet.sh run-cli --engine codex
+STARTED: claude
+leg claude started: bound 1800s (source: default)
+STARTED: codex
+leg codex started: bound 1800s (source: default)
+$ scripts/doc-gauntlet.sh collect
+ADVERSARIAL: BLOCK
+ARCHIVE: ~/.gauntlet/runs/20261114-doc-gauntlet-migration-plan/
+
+Errors to fix (2)
+  1. Step 4 drops the old column, but section 2 calls the migration reversible.
+  2. The rollout table counts 12 regions; the list under it names 11.
+Sparring memo, first of 4 points for the author:
+  The rollback depends on a backup nobody has restored. Restore last night's backup to a scratch
+  database once before the window, and time it.

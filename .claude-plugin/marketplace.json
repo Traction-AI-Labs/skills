@@ -23,7 +23,7 @@
     {
       "name": "persona-teardown",
       "source": "./plugins/persona-teardown",
-      "description": "Tears down a prototype with a panel of cold persona agents driving a browser and consolidates the findings into one design-tool amendment prompt.",
+      "description": "Tears down a prototype, UI kit or live screen with a panel of cold persona agents driving a browser, then consolidates the findings into one design-tool amendment prompt.",
       "version": "0.2.0"
     },
     {
@@ -41,7 +41,7 @@
     {
       "name": "reading-page",
       "source": "./plugins/reading-page",
-      "description": "Turns anything longer than a chat message into one polished, self-contained HTML page to read instead of markdown: the bottom line first, a contents rail, callouts, sortable tables, folded evidence, light and dark.",
+      "description": "Turns anything longer than a chat message (a report, plan, brief or handoff) into one polished, self-contained HTML page to read instead of markdown: the bottom line first, a contents rail, callouts, sortable tables, folded evidence, light and dark.",
       "version": "0.3.1"
     },
     {
@@ -53,7 +53,7 @@
     {
       "name": "go-deeper",
       "source": "./plugins/go-deeper",
-      "description": "Rewrites a task to be more ambitious before doing it: what a top professional would do, the rawest material, the methods, and an outside judge.",
+      "description": "Rewrites a task to be more ambitious before doing it: what a top professional would do, the rawest material they'd start from, the methods they'd use and an outside judge, plus altitude (the outcome behind the deliverable) and range (methods borrowed from other fields).",
       "version": "0.1.0"
     }
   ]
