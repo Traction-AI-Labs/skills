@@ -99,7 +99,8 @@ open-source writing skills; see [NOTICE.md](NOTICE.md).
   ladder for a class of finding that keeps returning); a round-1 gate that checks for a pre-review and a run-once, with
   an enforcement list (`enforce.tsv`) that turns the refusals on per repository and everything else a warning;
   `--run-once` can run a repository's own CI; a standing approval is recognised when main is brought in, and covers
-  only the files its round reviewed (a file the round's scope left out with `--exclude` still needs review); a finding is
+  only the files its round reviewed (a file the round's scope left out with `--exclude` still needs review, and a file name holding a line break
+  gives no standing); a finding is
   dropped or downgraded only through `dispose` with a passing test; a large round can split its reviewers by file group
   (`prepare --group`); the changed-line count leaves out tests, generated files and documentation, and a large round 1
   is a note, never a refusal. doc-gauntlet: a document's round count defers to the repository's own review budget,

@@ -307,6 +307,43 @@ refute grep -Fxq 'b.txt' "$RUN_DIR/scope/excludes"
 grep -Fq 'b/b.txt' "$RUN_DIR/scope/diff.patch"
 grep -Fq 'b/a.txt' "$RUN_DIR/scope/diff.patch"
 
+# 6j. O5, enforced: a file name holding a line feed never forges standing.
+#     Round 1 reviews only $'safe\nvictim.txt'; once main is brought in, the
+#     unreviewed victim.txt must be in scope, and no later approval stands
+#     while such a name is in the diff.
+printf 'example-org/line-break-names\t-\tbash run-once.sh\n' > "$TMP/lb.tsv"
+export GAUNTLET_ENFORCE_LIST="$TMP/lb.tsv"
+new_repo lf https://github.com/example-org/line-break-names.git
+edit $'safe\nvictim.txt' one; edit victim.txt two; edit other.txt three
+prep --identity lf --pre-review --builder deepseek --engines grok > /dev/null; result "$RUN_DIR" grok APPROVE
+prep --identity lf --run-once --exclude victim.txt --exclude other.txt > /dev/null
+refute grep -Fq 'diff --git a/victim.txt b/victim.txt' "$RUN_DIR/scope/diff.patch"
+result "$RUN_DIR" claude APPROVE; result "$RUN_DIR" codex APPROVE; run collect > /dev/null
+bring_main_in lf1
+prep --identity lf > "$TMP/lf.out" 2> /dev/null || true
+grep -Fq 'diff --git a/victim.txt b/victim.txt' "$RUN_DIR/scope/diff.patch"
+refute grep -Fxq 'victim.txt' "$RUN_DIR/scope/excludes"
+result "$RUN_DIR" claude APPROVE; result "$RUN_DIR" codex APPROVE; run collect > /dev/null
+bring_main_in lf2
+prep --identity lf > "$TMP/lf2.out" 2> /dev/null || true
+refute grep -Fq 'APPROVAL STANDS' "$TMP/lf2.out"
+grep -Fq 'diff --git a/victim.txt b/victim.txt' "$RUN_DIR/scope/diff.patch"
+
+# 6k. O5, enforced: coverage reads excludes as the review does (line feeds
+#     only), and a name holding a carriage return gives no standing. Round 1
+#     excludes $'secret\rpart.txt'; after main it is still reviewed.
+new_repo cr https://github.com/example-org/line-break-names.git
+edit app.txt one; edit $'secret\rpart.txt' two
+prep --identity cr --pre-review --builder deepseek --engines grok > /dev/null; result "$RUN_DIR" grok APPROVE
+prep --identity cr --run-once --exclude $'secret\rpart.txt' > /dev/null
+refute grep -Fq 'secret\rpart.txt' "$RUN_DIR/scope/diff.patch"
+result "$RUN_DIR" claude APPROVE; result "$RUN_DIR" codex APPROVE; run collect > /dev/null
+bring_main_in cr1
+prep --identity cr > "$TMP/cr.out" 2> /dev/null || true
+refute grep -Fq 'APPROVAL STANDS' "$TMP/cr.out"
+grep -Fq 'secret\rpart.txt' "$RUN_DIR/scope/diff.patch"
+export GAUNTLET_ENFORCE_LIST="$TMP/on.tsv"
+
 # 7. Older readers of the round record skip the verdict lines quietly.
 python3 - "$TMP/rounds.jsonl" <<'PY'
 import json, sys

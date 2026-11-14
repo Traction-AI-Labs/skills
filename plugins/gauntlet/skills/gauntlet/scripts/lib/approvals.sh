@@ -57,7 +57,8 @@ PY
 # narrows to those two sets. A file that left the diff (main now carries the
 # same change, or it was undone) is named; when it is the only difference, the
 # whole diff is reviewed. A verdict line without "covered" (written before
-# coverage was recorded) gives no standing. Appends exclude paths to the file
+# coverage was recorded) gives no standing, nor does a diff or record holding
+# a file name with a line break (path lists are one name per line). Appends exclude paths to the file
 # named by $5; those are the files that keep their standing. Nothing merges
 # automatically.
 approval_check() {
@@ -85,6 +86,11 @@ if not isinstance(old.get("covered"), list):
     print(json.dumps({"legacy": True}))
     raise SystemExit(0)
 a, b, covered = old.get("files", {}), new["files"], set(old["covered"])
+# Path lists travel one name per line, so a name holding a line break could
+# split into other names' standing: such a diff gets no standing at all.
+if any("\n" in p or "\r" in p for p in [*a, *b, *covered]):
+    print(json.dumps({"line_break": True}))
+    raise SystemExit(0)
 changed = sorted(p for p in b if a.get(p) != b[p])
 unreviewed = sorted(p for p in b if a.get(p) == b[p] and p not in covered)
 if old.get("patch_id") == new["patch_id"] and not unreviewed:
@@ -99,6 +105,10 @@ PY
   fi
   if [[ "$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("legacy", False))' "$delta")" == True ]]; then
     echo 'NOTE: the approved round'"'"'s record does not say which files it reviewed, so the whole diff is reviewed'
+    return 0
+  fi
+  if [[ "$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("line_break", False))' "$delta")" == True ]]; then
+    echo 'NOTE: a file name in the diff or the approved record holds a line break, so no approval stands and the whole diff is reviewed'
     return 0
   fi
   changed="$(python3 -c 'import json,sys; print("\n".join(json.loads(sys.argv[1])["changed"]))' "$delta")"
@@ -124,7 +134,7 @@ PY
   if [[ "$ENFORCED" == true ]]; then
     python3 - "$now" "$changed" "$unreviewed" >> "$excludes_out" <<'PY'
 import json, sys
-keep = set(sys.argv[2].splitlines()) | set(sys.argv[3].splitlines())
+keep = set(sys.argv[2].split("\n")) | set(sys.argv[3].split("\n"))
 print("\n".join(p for p in json.loads(sys.argv[1])["files"] if p not in keep))
 PY
   else
@@ -142,11 +152,15 @@ covered_files() {
 import json, os, subprocess, sys
 repo, base, head, excludes, standing, ids = sys.argv[1:]
 def lines(path):
-    return [p for p in open(path, encoding="utf-8", errors="surrogateescape").read().splitlines() if p] if os.path.isfile(path) else []
+    # Line feeds only, as Bash's `read` splits them for scope_diff.
+    return [p for p in open(path, encoding="utf-8", errors="surrogateescape").read().split("\n") if p] if os.path.isfile(path) else []
 spec = ["--", "."] + [":(exclude,literal)" + p for p in lines(excludes)]
 out = subprocess.run(["git", "-C", repo, "diff", "--name-only", "-z", "--no-renames", base, head, *spec], capture_output=True, check=True).stdout
 files = json.loads(ids).get("files", {})
 covered = {p for p in out.decode("utf-8", "surrogateescape").split("\0") if p} | set(lines(standing))
+# A name holding a line break cannot be carried one per line: cover nothing.
+if any("\n" in p or "\r" in p for p in [*files, *covered, *lines(excludes)]):
+    covered = set()
 print(json.dumps(sorted(p for p in covered if p in files)))
 PY
 }
