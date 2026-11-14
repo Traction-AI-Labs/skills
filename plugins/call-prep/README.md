@@ -31,7 +31,7 @@ Never screen-share the window the prep is in.
 **Claude app** (desktop or web)
 
 1. Get `Call prep by Traction Studio.zip`. If someone has sent it to you, skip to step 2. To build it
-   from this repository, run `bash plugins/call-prep/scripts/build-zip.sh` from the repository root;
+   from this repository, run `bash scripts/build-zip.sh call-prep` from the repository root;
    it lands in `plugins/call-prep/dist/`.
 2. In the Claude app, open **Customize**, then **Skills**, upload the zip and check it is switched on.
 

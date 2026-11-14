@@ -24,7 +24,7 @@ The build script needs [uv](https://docs.astral.sh/uv/); its Python dependencies
 
 **Claude app** (desktop or web)
 
-1. Get `Reading page by Traction Studio.zip`. If someone has sent it to you, skip to step 2. To build it from this repository, run `bash plugins/reading-page/scripts/build-zip.sh` from the repository root; it lands in `plugins/reading-page/dist/`.
+1. Get `Reading page by Traction Studio.zip`. If someone has sent it to you, skip to step 2. To build it from this repository, run `bash scripts/build-zip.sh reading-page` from the repository root; it lands in `plugins/reading-page/dist/`.
 2. In the Claude app, open **Customize**, then **Skills**, upload the zip and check it is switched on.
 
 **Codex:** copy `plugins/reading-page/skills/reading-page` to `~/.codex/skills/reading-page`.

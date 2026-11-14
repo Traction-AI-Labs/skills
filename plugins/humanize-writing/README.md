@@ -26,7 +26,7 @@ It edits for a human reader. It does not aim to beat AI detectors and makes no c
 **Claude app** (desktop or web)
 
 1. Get `Humanize writing by Traction Studio.zip`. If someone has sent it to you, skip to step 2. To
-   build it from this repository, run `bash plugins/humanize-writing/scripts/build-zip.sh` from the
+   build it from this repository, run `bash scripts/build-zip.sh humanize-writing` from the
    repository root; it lands in `plugins/humanize-writing/dist/`.
 2. In the Claude app, open **Customize**, then **Skills**, upload the zip and check it is switched on.
 
