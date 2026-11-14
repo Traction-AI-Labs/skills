@@ -1,5 +1,7 @@
 # Changelog
 
+- **All eight plugins** (14 November 2026). Each plugin has an icon, `.claude-plugin/icon.png` (the Traction
+  Studio "t." mark, 512 by 512), for its listing in the Claude plugin directory. No behaviour change.
 - **gauntlet 0.7.1** (14 November 2026). `scripts/lib/approvals.sh` parses on macOS's own bash 3.2 again: 0.7.0 put an
   apostrophe in a comment inside a heredoc inside a command substitution, which bash 3.2 reads as an open quote, so
   every `prepare` failed with "unexpected EOF while looking for matching". No behaviour change.
