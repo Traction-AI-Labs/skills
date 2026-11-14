@@ -20,6 +20,6 @@ mkdir -p "$OUT"
 words="${NAME//-/ }"
 first="$(printf '%s' "${words:0:1}" | tr '[:lower:]' '[:upper:]')"
 zipfile="$OUT/${first}${words:1} by Traction Studio.zip"
-rm -f "$zipfile"
+rm -f "${zipfile:?}"
 (cd "$HERE/skills" && zip -qrX "$zipfile" "$NAME" -x "*/__pycache__/*" "*.pyc" "*/.pytest_cache/*")
 echo "$zipfile"
