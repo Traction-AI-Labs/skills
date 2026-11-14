@@ -71,7 +71,7 @@ class BuildCheck(unittest.TestCase):
         self.assertEqual(before, tree_digest(self.root))
 
     def test_red_check_writes_nothing(self):
-        p = self.root / "plugins/reading-page/card.toml"
+        p = self.root / "scripts/readme/cards/reading-page.toml"
         p.write_text(re.sub(r'^tagline = .*$', 'tagline = "Changed for a test."', p.read_text(), count=1, flags=re.M))
         before = tree_digest(self.root)
         self.check()
@@ -80,7 +80,7 @@ class BuildCheck(unittest.TestCase):
     # rule 1: generated regions
 
     def test_tagline_change_makes_regions_stale_until_built(self):
-        p = self.root / "plugins/reading-page/card.toml"
+        p = self.root / "scripts/readme/cards/reading-page.toml"
         p.write_text(re.sub(r'^tagline = .*$', 'tagline = "Builds one page, for a test."', p.read_text(), count=1, flags=re.M))
         self.assertRed("cards:pages", "plugins:list")
         self.assertEqual(self.run_build()[0], 0)
@@ -195,8 +195,8 @@ class BuildCheck(unittest.TestCase):
 
     def test_wrong_field_types_are_diagnostics(self):
         cases = [
-            ("plugins/gauntlet/card.toml", r'^alt = .*$', "alt = 42", "[visual] alt must be text"),
-            ("plugins/call-prep/card.toml", r'^tagline = .*$', "tagline = 7", "tagline must be text"),
+            ("scripts/readme/cards/gauntlet.toml", r'^alt = .*$', "alt = 42", "[visual] alt must be text"),
+            ("scripts/readme/cards/call-prep.toml", r'^tagline = .*$', "tagline = 7", "tagline must be text"),
         ]
         for rel, rx, new, needle in cases:
             with self.subTest(rel=rel):
@@ -261,19 +261,19 @@ class BuildCheck(unittest.TestCase):
         d = self.root / "plugins/new-thing/.claude-plugin"
         d.mkdir(parents=True)
         (d / "plugin.json").write_text('{"name": "new-thing", "version": "0.1.0", "description": "x"}\n')
-        self.assertRed("plugins/new-thing: no card.toml")
+        self.assertRed("plugins/new-thing: no card (scripts/readme/cards/new-thing.toml)")
 
     def test_card_missing_a_field_is_red(self):
-        p = self.root / "plugins/call-prep/card.toml"
+        p = self.root / "scripts/readme/cards/call-prep.toml"
         p.write_text(re.sub(r"^gets = .*\n", "", p.read_text(), flags=re.M))
-        self.assertRed("plugins/call-prep/card.toml: the card lacks 'gets'")
+        self.assertRed("scripts/readme/cards/call-prep.toml: the card lacks 'gets'")
 
     def test_text_example_must_be_labelled_made_up(self):
-        self.edit("plugins/go-deeper/card.toml", 'label = "Made-up example. ', 'label = "')
+        self.edit("scripts/readme/cards/go-deeper.toml", 'label = "Made-up example. ', 'label = "')
         self.assertRed("label must start")
 
     def test_picture_alt_must_say_what_it_shows(self):
-        p = self.root / "plugins/gauntlet/card.toml"
+        p = self.root / "scripts/readme/cards/gauntlet.toml"
         p.write_text(re.sub(r'^alt = .*$', 'alt = "round.gif"', p.read_text(), flags=re.M))
         self.assertRed("[visual] alt must say what the picture shows")
 
@@ -292,9 +292,9 @@ class BuildCheck(unittest.TestCase):
         self.assertRed("docs/examples/gauntlet/session.txt: holds a home-directory path")
 
     def test_token_shape_in_a_card_is_red(self):
-        self.edit("plugins/gauntlet/card.toml", 'try = "Run a gauntlet on this branch."',
+        self.edit("scripts/readme/cards/gauntlet.toml", 'try = "Run a gauntlet on this branch."',
                   'try = "Run a gauntlet with sk-abcdefghijklmnopqrstu."')
-        self.assertRed("plugins/gauntlet/card.toml: holds an API key shape")
+        self.assertRed("scripts/readme/cards/gauntlet.toml: holds an API key shape")
 
 
 if __name__ == "__main__":

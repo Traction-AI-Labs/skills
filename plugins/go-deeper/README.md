@@ -22,7 +22,7 @@ When a substantial brief is phrased as a deliverable, it offers a short depth pa
 **Claude app** (desktop or web)
 
 1. Get `Go deeper by Traction Studio.zip`. If someone has sent it to you, skip to step 2. To build it
-   from this repository, run `bash plugins/go-deeper/scripts/build-zip.sh` from the repository root; it
+   from this repository, run `bash scripts/build-zip.sh go-deeper` from the repository root; it
    lands in `plugins/go-deeper/dist/`.
 2. In the Claude app, open **Customize**, then **Skills**, upload the zip and check it is switched on.
 

@@ -11,7 +11,8 @@ Usage, from anywhere in the repository (standard library only, no network):
 
 One source per fact:
   plugins/<name>/.claude-plugin/plugin.json   name, version, description (description feeds marketplace.json only)
-  plugins/<name>/card.toml                    the README card
+  scripts/readme/cards/<name>.toml            the README card (kept outside plugins/: the plugin directory takes only
+                                              Markdown, text, JSON, YAML and images from an unverified organisation)
   CHANGELOG.md                                the history; the README shows the three newest heads
   docs/examples/<name>/                       the made-up inputs the pictures are rendered from
   docs/media/manifest.json                    the fingerprint of every picture and every file its render read
@@ -33,6 +34,7 @@ MARKET = ROOT / ".claude-plugin" / "marketplace.json"
 MANIFEST = ROOT / "docs" / "media" / "manifest.json"
 PREREQ = ROOT / "docs" / "cards" / "gauntlet-prerequisites.md"
 PLUGINS = ROOT / "plugins"
+CARDS = ROOT / "scripts" / "readme" / "cards"
 
 GROUPS = ("pages", "reviews", "writing")
 KINDS = ("page", "gif", "terminal", "text")
@@ -105,9 +107,9 @@ def load_plugins(problems, files=True):
         if meta.get("name") != d.name:
             problems.append(f"{rel(manifest)}: name {meta.get('name')!r} is not the folder name {d.name!r}.")
             continue
-        card_path = d / "card.toml"
+        card_path = CARDS / f"{d.name}.toml"
         if not card_path.is_file():
-            problems.append(f"{rel(d)}: no card.toml. Fix: add {rel(card_path)} (copy another plugin's and edit it), "
+            problems.append(f"{rel(d)}: no card ({rel(card_path)}). Fix: add {rel(card_path)} (copy another plugin's and edit it), "
                             "then run python3 -I scripts/readme/build.py.")
             continue
         try:
@@ -501,7 +503,7 @@ def build(check):
     shape = marketplace_shape(current)
     new_market = marketplace(plugins, current if isinstance(current, dict) else {})
     unusable = sorted(d.name for d in PLUGINS.iterdir()
-                      if d.is_dir() and (d / "card.toml").is_file() and d.name not in plugins)
+                      if d.is_dir() and (CARDS / f"{d.name}.toml").is_file() and d.name not in plugins)
     if check and unusable:
         problems.append("Fix the card above first (" + ", ".join(unusable) + "): README.md, marketplace.json and the "
                         "manifest were not compared while a card is unusable.")

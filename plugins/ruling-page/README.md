@@ -30,7 +30,7 @@ Simple yes/no questions stay in chat.
 **Claude app** (desktop or web)
 
 1. Get `Ruling page by Traction Studio.zip`. If someone has sent it to you, skip to step 2. To build
-   it from this repository, run `bash plugins/ruling-page/scripts/build-zip.sh` from the repository
+   it from this repository, run `bash scripts/build-zip.sh ruling-page` from the repository
    root; it lands in `plugins/ruling-page/dist/`.
 2. In the Claude app, open **Customize**, then **Skills**, upload the zip and check it is switched on.
 
