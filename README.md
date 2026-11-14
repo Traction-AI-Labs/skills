@@ -415,9 +415,9 @@ Clone the repo. From `plugins/gauntlet` or `plugins/doc-gauntlet`, follow that d
 ## Latest changes
 
 <!-- changes:latest:start -->
+- **All eight plugins** (14 November 2026)
 - **gauntlet 0.7.1** (14 November 2026)
 - **gauntlet 0.7.0 and doc-gauntlet 0.6.2** (14 November 2026)
-- **ruling-page 0.3.1 and reading-page 0.3.1** (13 November 2026)
 
 Full history: [CHANGELOG.md](CHANGELOG.md)
 <!-- changes:latest:end -->
