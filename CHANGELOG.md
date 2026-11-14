@@ -1,5 +1,7 @@
 # Changelog
 
+- **reading-page 0.3.2** (15 November 2026). Inline code in body text and in tables is never smaller than 11.5px
+  (was 11px), so it stays readable on a phone. No other change.
 - **All eight plugins** (14 November 2026). Each plugin has an icon, `.claude-plugin/icon.png` (the Traction
   Studio "t." mark, 512 by 512), for its listing in the Claude plugin directory. No behaviour change.
 - **gauntlet 0.7.1** (14 November 2026). `scripts/lib/approvals.sh` parses on macOS's own bash 3.2 again: 0.7.0 put an

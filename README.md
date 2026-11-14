@@ -38,7 +38,7 @@ Start with ruling-page and reading-page: neither needs a key or an account. ruli
 ## The plugins
 
 <!-- plugins:list:start -->
-- [**reading-page**](#reading-page) 0.3.1: Turns a long agent answer into one page you can read. Needs uv.
+- [**reading-page**](#reading-page) 0.3.2: Turns a long agent answer into one page you can read. Needs uv.
 - [**ruling-page**](#ruling-page) 0.3.1: Puts several decisions with trade-offs on one page you click through. Nothing to install.
 - [**call-prep**](#call-prep) 0.3.0: Writes what to say on a call, word for word. Nothing to install.
 - [**gauntlet**](#gauntlet) 0.7.1: Reviews a committed code change with two models at once. Needs two signed-in reviewer CLIs (Claude Code and Codex by default). Sends the diff, and whatever the reviewers can read in the worktree, to those two model companies through your own logins.
@@ -83,7 +83,7 @@ Turns a long agent answer into one page you can read.
 **Runs in:** Claude Code, the Claude app, Codex  
 **Needs:** [uv](https://docs.astral.sh/uv/), to run its build script.
 
-Version 0.3.1 · [Plugin README](plugins/reading-page/README.md) · [Changelog](CHANGELOG.md)
+Version 0.3.2 · [Plugin README](plugins/reading-page/README.md) · [Changelog](CHANGELOG.md)
 
 ### ruling-page
 
@@ -415,9 +415,9 @@ Clone the repo. From `plugins/gauntlet` or `plugins/doc-gauntlet`, follow that d
 ## Latest changes
 
 <!-- changes:latest:start -->
+- **reading-page 0.3.2** (15 November 2026)
 - **All eight plugins** (14 November 2026)
 - **gauntlet 0.7.1** (14 November 2026)
-- **gauntlet 0.7.0 and doc-gauntlet 0.6.2** (14 November 2026)
 
 Full history: [CHANGELOG.md](CHANGELOG.md)
 <!-- changes:latest:end -->
