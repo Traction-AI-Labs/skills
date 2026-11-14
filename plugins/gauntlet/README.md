@@ -4,7 +4,7 @@ These examples are for a clone of this package directory. If you installed the C
 
 Gauntlet runs two independent reviews of one committed code diff. The default pair is Claude and Codex. Pass `--engines grok,codex` or `--engines claude,grok` to substitute Grok for one engine. It pins the base, HEAD, diff, prompts, models and reviewer rows in a private run directory, then accepts one validated result from each prepared engine.
 
-What it sends: the pinned diff, and whatever the reviewer can read in the worktree, goes to each engine's provider (Anthropic for Claude, OpenAI for Codex, xAI for Grok) through your own signed-in CLI. Nothing is sent until you pass `prepare --authorize-provider`.
+What it sends: the pinned diff, any `--prior-findings` files, and whatever the reviewer can read in the worktree go to each engine's provider (Anthropic for Claude, OpenAI for Codex, xAI for Grok), through your own signed-in CLI or, for a native reviewer, your own session. Nothing is sent until you pass `prepare --authorize-provider`.
 
 ## Quickstart
 

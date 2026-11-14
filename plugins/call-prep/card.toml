@@ -15,4 +15,4 @@ dark = "docs/media/call-prep/dark.webp"
 light_phone = "docs/media/call-prep/phone-light.webp"
 dark_phone = "docs/media/call-prep/phone-dark.webp"
 sources = ["plugins/call-prep/skills/call-prep/references/prep-template.html", "plugins/call-prep/skills/call-prep/scripts/check_prep.py"]
-alt = "A made-up call script for a hosting renewal call, with the line of what not to say at the top and three numbered beats in large type."
+alt = "A made-up call script for a hosting renewal call: the line of what not to say at the top, the one thing to send, and the opening words of the first beat."

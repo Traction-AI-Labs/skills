@@ -93,7 +93,7 @@ Puts several decisions with trade-offs on one page you click through.
   <source media="(max-width: 767px) and (prefers-color-scheme: dark)" srcset="docs/media/ruling-page/phone-dark.webp">
   <source media="(max-width: 767px)" srcset="docs/media/ruling-page/phone-light.webp">
   <source media="(prefers-color-scheme: dark)" srcset="docs/media/ruling-page/dark.webp">
-  <img alt="A made-up ruling page with three decision cards about a command-line tool's version 2 release, each with a recommended option selected." src="docs/media/ruling-page/light.webp" width="100%">
+  <img alt="A made-up ruling page on a command-line tool's version 2 release: the first of its three decision cards, with the recommended option selected and the reason for it." src="docs/media/ruling-page/light.webp" width="100%">
 </picture>
 
 <sub>Made-up example, rendered from the plugin's own template by a script.</sub>
@@ -123,7 +123,7 @@ Writes what to say on a call, word for word.
   <source media="(max-width: 767px) and (prefers-color-scheme: dark)" srcset="docs/media/call-prep/phone-dark.webp">
   <source media="(max-width: 767px)" srcset="docs/media/call-prep/phone-light.webp">
   <source media="(prefers-color-scheme: dark)" srcset="docs/media/call-prep/dark.webp">
-  <img alt="A made-up call script for a hosting renewal call, with the line of what not to say at the top and three numbered beats in large type." src="docs/media/call-prep/light.webp" width="100%">
+  <img alt="A made-up call script for a hosting renewal call: the line of what not to say at the top, the one thing to send, and the opening words of the first beat." src="docs/media/call-prep/light.webp" width="100%">
 </picture>
 
 <sub>Made-up example, rendered from the plugin's own template by a script.</sub>

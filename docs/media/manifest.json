@@ -40,14 +40,14 @@
     "reason": "",
     "inputs": {
       "docs/examples/doc-gauntlet/session.txt": "9f2ea1cce0a53102cea70f832850f302d66ed9a9a1bfc310fcad5dbf6d781e35",
-      "scripts/media/terminal.html": "098524af2d419dd078e9c7387a792293cf6267f44dd144e761ac261d3ccacd13",
+      "scripts/media/terminal.html": "96f2657a651860516588a88899bcf135ed23e92dcc414e85e425e344e25ffac0",
       "scripts/media/render.sh": "b8a8a2f58883072098f7c6616f5885afe5f8dd980f8f55c5fc24675cbe495333",
       "scripts/media/fill.py": "375e19a31456c54374c4e1d5eb2ce3f2632aaef851b0b8f7ccdfa106c0f16157",
       "scripts/media/freeze.js": "b64fe84179b0a389c88a7ac5d473b7792ad964b849e6227123275603f0d6f88c"
     },
     "outputs": {
       "docs/media/doc-gauntlet/round.webp": "689b1c306308b8cea3fe0df2be912856a12e2b18533917435e56968ee8d08ecb",
-      "docs/media/doc-gauntlet/round-phone.webp": "9cf20f0abdda6f74aa4dc905f7fa29ead74c2c4f9fc279e8a15c60b16dcf392f"
+      "docs/media/doc-gauntlet/round-phone.webp": "5b558439ca84cdf68c72be894e216d5a27125c9be67030f166efc1821217dc9c"
     }
   },
   "gauntlet": {
@@ -55,16 +55,16 @@
     "reason": "",
     "inputs": {
       "docs/examples/gauntlet/session.txt": "22aaf132d45c347c7cd1c57ded1daa57b853742383f27a9f45eefc2cae9e0981",
-      "scripts/media/terminal.html": "098524af2d419dd078e9c7387a792293cf6267f44dd144e761ac261d3ccacd13",
+      "scripts/media/terminal.html": "96f2657a651860516588a88899bcf135ed23e92dcc414e85e425e344e25ffac0",
       "scripts/media/render.sh": "b8a8a2f58883072098f7c6616f5885afe5f8dd980f8f55c5fc24675cbe495333",
       "scripts/media/fill.py": "375e19a31456c54374c4e1d5eb2ce3f2632aaef851b0b8f7ccdfa106c0f16157",
       "scripts/media/freeze.js": "b64fe84179b0a389c88a7ac5d473b7792ad964b849e6227123275603f0d6f88c"
     },
     "outputs": {
       "docs/media/gauntlet/poster.webp": "f9641810d0e0a32ed146eef650d6b59207a42c1439622f4223532d8411037330",
-      "docs/media/gauntlet/poster-phone.webp": "4fde96c8537d81f14d9881301c78c25b259e91576b9dc600758bae6b62b78fb8",
+      "docs/media/gauntlet/poster-phone.webp": "6d018a35963810c01dc631a1fa46a99858ac7eeee2cf835beb3dc29f9fc047e6",
       "docs/media/gauntlet/round.gif": "a0a3b50dd2e5c5c62f47ae38e0cafcc05750798886c254d00e38ce5ca0645860",
-      "docs/media/gauntlet/round-phone.gif": "61903d6fa2f3895e0f5e21afbfe90b29be3fcc364675f6c0b61f4525d960ab44"
+      "docs/media/gauntlet/round-phone.gif": "66772da4d915899e48e84976f641945d2d64910a091023b428ddcb04d3269b30"
     }
   },
   "reading-page": {

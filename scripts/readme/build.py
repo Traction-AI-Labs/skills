@@ -92,7 +92,14 @@ def load_plugins(problems, files=True):
         if not manifest.is_file():
             problems.append(f"{rel(d)}: no .claude-plugin/plugin.json. Fix: add one, or remove the folder.")
             continue
-        meta = json.loads(manifest.read_text())
+        try:
+            meta = json.loads(manifest.read_text())
+        except json.JSONDecodeError as e:
+            problems.append(f"{rel(manifest)}: not valid JSON ({e}).")
+            continue
+        if not isinstance(meta, dict) or not all(isinstance(meta.get(k), str) for k in ("name", "version", "description")):
+            problems.append(f"{rel(manifest)}: needs string fields name, version and description.")
+            continue
         if meta.get("name") != d.name:
             problems.append(f"{rel(manifest)}: name {meta.get('name')!r} is not the folder name {d.name!r}.")
             continue
@@ -259,12 +266,21 @@ def regions(plugins, readme):
     return out
 
 
-def render_readme(readme, gen, problems):
-    found = {m.group("name") for m in REGION_RX.finditer(readme)}
+def region_problems(readme):
+    errs = []
     for name in REGIONS:
-        if name not in found:
-            problems.append(f"README.md: the generated region {name} is missing. Fix: add "
-                            f"<!-- {name}:start --> and <!-- {name}:end --> where it belongs.")
+        starts, ends = readme.count(f"<!-- {name}:start -->"), readme.count(f"<!-- {name}:end -->")
+        if starts == 0 and ends == 0:
+            errs.append(f"README.md: the generated region {name} is missing. Fix: add "
+                        f"<!-- {name}:start --> and <!-- {name}:end --> where it belongs.")
+        elif starts != 1 or ends != 1 or len([m for m in REGION_RX.finditer(readme) if m.group("name") == name]) != 1:
+            errs.append(f"README.md: the generated region {name} must appear exactly once, start and end "
+                        f"(found {starts} start and {ends} end markers). Fix: keep one of each.")
+    return errs
+
+
+def render_readme(readme, gen, problems):
+    problems += region_problems(readme)
     return REGION_RX.sub(lambda m: (f"<!-- {m.group('name')}:start -->\n{gen[m.group('name')]}\n<!-- {m.group('name')}:end -->"
                                     if m.group("name") in gen else m.group(0)), readme)
 
@@ -273,9 +289,14 @@ PINNED_OWNER = {"name": "Traction Studio", "url": "https://github.com/Traction-A
 
 
 def marketplace(plugins, current):
-    order = [e.get("name") for e in current.get("plugins", []) if e.get("name") in plugins]
+    order = []
+    listed = current.get("plugins") if isinstance(current.get("plugins"), list) else []
+    for e in listed:
+        if isinstance(e, dict) and e.get("name") in plugins and e["name"] not in order:
+            order.append(e["name"])
     order += sorted(n for n in plugins if n not in order)
-    data = {"name": "traction", "owner": PINNED_OWNER, "metadata": current.get("metadata", {}),
+    metadata = current.get("metadata") if isinstance(current.get("metadata"), dict) else {}
+    data = {"name": "traction", "owner": PINNED_OWNER, "metadata": metadata,
             "plugins": [{"name": n, "source": f"./plugins/{n}", "description": plugins[n]["meta"]["description"],
                          "version": plugins[n]["meta"]["version"]} for n in order]}
     return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
@@ -283,6 +304,13 @@ def marketplace(plugins, current):
 
 def marketplace_shape(current):
     errs = []
+    if not isinstance(current, dict):
+        return ["it must be a JSON object"]
+    if not isinstance(current.get("plugins"), list) or not all(isinstance(e, dict) for e in current["plugins"]):
+        return ["plugins must be a list of objects"]
+    names = [e.get("name") for e in current["plugins"]]
+    for n in sorted({n for n in names if names.count(n) > 1}, key=str):
+        errs.append(f"plugin {n!r} is listed {names.count(n)} times; each plugin is listed once")
     if set(current) != {"name", "owner", "metadata", "plugins"}:
         errs.append("top-level keys must be exactly name, owner, metadata, plugins")
     if current.get("name") != "traction":
@@ -318,7 +346,20 @@ def picture_names(plugins):
 
 
 def load_manifest():
-    return json.loads(MANIFEST.read_text()) if MANIFEST.is_file() else {}
+    if not MANIFEST.is_file():
+        return {}
+    try:
+        m = json.loads(MANIFEST.read_text())
+    except json.JSONDecodeError as e:
+        raise Stale(f"docs/media/manifest.json: not valid JSON ({e}). Fix: scripts/media/render.sh all.")
+    ok = isinstance(m, dict) and all(
+        isinstance(e, dict) and isinstance(e.get("inputs"), dict) and isinstance(e.get("outputs"), dict)
+        and all(isinstance(v, str) for v in list(e["inputs"].values()) + list(e["outputs"].values()))
+        for e in m.values())
+    if not ok:
+        raise Stale("docs/media/manifest.json: each entry needs inputs and outputs objects of path to SHA-256. "
+                    "Fix: scripts/media/render.sh all.")
+    return m
 
 
 def write_manifest(m):
@@ -365,7 +406,10 @@ def manifest_problems(plugins, manifest):
 def record(name, plugins, reason):
     if name not in picture_names(plugins):
         raise SystemExit(f"build.py: {name} has no picture (its card's kind is text, or it is not a plugin).")
-    m = load_manifest()
+    try:
+        m = load_manifest()
+    except Stale:
+        m = {}
     inputs, outputs = picture_entry_files(name, plugins)
     entry = {}
     if name != "banner":
@@ -418,8 +462,14 @@ def build(check):
     except Stale as e:
         problems.append(str(e))
         gen, new_readme = {}, readme
-    current = json.loads(MARKET.read_text())
-    new_market = marketplace(plugins, current)
+    try:
+        current = json.loads(MARKET.read_text())
+    except json.JSONDecodeError as e:
+        problems.append(f".claude-plugin/marketplace.json: not valid JSON ({e}). Fix: restore it from git, then run "
+                        "python3 -I scripts/readme/build.py.")
+        current = {}
+    shape = marketplace_shape(current)
+    new_market = marketplace(plugins, current if isinstance(current, dict) else {})
     unusable = sorted(d.name for d in PLUGINS.iterdir()
                       if d.is_dir() and (d / "card.toml").is_file() and d.name not in plugins)
     if check and unusable:
@@ -433,13 +483,15 @@ def build(check):
         if MARKET.read_text() != new_market:
             problems.append(".claude-plugin/marketplace.json differs from what the generator writes from each "
                             "plugin.json. Fix: python3 -I scripts/readme/build.py (never edit it by hand).")
-        problems += [f".claude-plugin/marketplace.json: {e}." for e in marketplace_shape(current)]
+        problems += [f".claude-plugin/marketplace.json: {e}." for e in shape]
         try:
             problems += manifest_problems(plugins, load_manifest())
         except Stale as e:
             problems.append(str(e))
         problems += changelog_problems(plugins)
-        problems += leak_problems(plugins, gen)
+        committed = {f"{m.group('name')} (as committed, occurrence {i})": m.group("body")
+                     for i, m in enumerate(REGION_RX.finditer(readme), 1)}
+        problems += leak_problems(plugins, {**gen, **committed})
     if check:
         if problems:
             for p in problems:
