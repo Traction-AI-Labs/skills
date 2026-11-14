@@ -87,7 +87,7 @@ if not isinstance(old.get("covered"), list):
     raise SystemExit(0)
 a, b, covered = old.get("files", {}), new["files"], set(old["covered"])
 # Path lists travel one name per line, so a name holding a line break could
-# split into other names' standing: such a diff gets no standing at all.
+# split into the standing of other names: such a diff gets no standing at all.
 if any("\n" in p or "\r" in p for p in [*a, *b, *covered]):
     print(json.dumps({"line_break": True}))
     raise SystemExit(0)

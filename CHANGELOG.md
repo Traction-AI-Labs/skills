@@ -1,5 +1,8 @@
 # Changelog
 
+- **gauntlet 0.7.1** (14 November 2026). `scripts/lib/approvals.sh` parses on macOS's own bash 3.2 again: 0.7.0 put an
+  apostrophe in a comment inside a heredoc inside a command substitution, which bash 3.2 reads as an open quote, so
+  every `prepare` failed with "unexpected EOF while looking for matching". No behaviour change.
 - **gauntlet 0.7.0 and doc-gauntlet 0.6.2** (14 November 2026). gauntlet: a review budget by kind of change (rounds
   per change, one raise past it for a demonstrated consequence, `FIXES CHECKED` after the last round, a recurrence
   ladder for a class of finding that keeps returning); a round-1 gate that checks for a pre-review and a run-once, with

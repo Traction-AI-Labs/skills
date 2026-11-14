@@ -51,8 +51,8 @@
     }
   },
   "gauntlet": {
-    "checked_at_version": "0.7.0",
-    "reason": "",
+    "checked_at_version": "0.7.1",
+    "reason": "0.7.1 changes one comment in scripts/lib/approvals.sh so it parses on bash 3.2; the round the picture shows is unchanged",
     "inputs": {
       "docs/examples/gauntlet/session.txt": "22aaf132d45c347c7cd1c57ded1daa57b853742383f27a9f45eefc2cae9e0981",
       "scripts/media/terminal.html": "96f2657a651860516588a88899bcf135ed23e92dcc414e85e425e344e25ffac0",
