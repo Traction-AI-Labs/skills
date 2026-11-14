@@ -17,8 +17,10 @@ One source per fact:
   docs/media/manifest.json                    the fingerprint of every picture and every file its render read
 """
 import argparse
+import fcntl
 import hashlib
 import json
+import os
 import re
 import sys
 import tomllib
@@ -125,6 +127,9 @@ def check_card(name, card, path, files=True):
     """Returns (errors that make the card unusable, picture files it names that do not exist)."""
     errs, missing = [], []
     where = rel(path)
+    for f in ("group", "tagline", "gets", "try", "needs", "scan_needs"):
+        if f in card and not isinstance(card[f], str):
+            errs.append(f"{where}: {f} must be text.")
     for f in CARD_FIELDS:
         v = card.get(f)
         if v is None or (isinstance(v, str) and not v.strip()) or (isinstance(v, list) and not v):
@@ -141,6 +146,14 @@ def check_card(name, card, path, files=True):
     kind = vis.get("kind")
     if kind not in KINDS:
         return errs + [f"{where}: [visual] kind {kind!r} is not one of {', '.join(KINDS)}."], missing
+    for f, v in vis.items():
+        if f == "sources":
+            if not (isinstance(v, list) and all(isinstance(x, str) for x in v)):
+                errs.append(f"{where}: [visual] sources must be a list of paths.")
+        elif not isinstance(v, str):
+            errs.append(f"{where}: [visual] {f} must be text.")
+    if errs:
+        return errs, missing
     for f in VISUAL_FIELDS[kind]:
         v = vis.get(f)
         if v is None or (isinstance(v, str) and not v.strip()) or (isinstance(v, list) and not v):
@@ -292,7 +305,7 @@ def marketplace(plugins, current):
     order = []
     listed = current.get("plugins") if isinstance(current.get("plugins"), list) else []
     for e in listed:
-        if isinstance(e, dict) and e.get("name") in plugins and e["name"] not in order:
+        if isinstance(e, dict) and isinstance(e.get("name"), str) and e["name"] in plugins and e["name"] not in order:
             order.append(e["name"])
     order += sorted(n for n in plugins if n not in order)
     metadata = current.get("metadata") if isinstance(current.get("metadata"), dict) else {}
@@ -308,6 +321,8 @@ def marketplace_shape(current):
         return ["it must be a JSON object"]
     if not isinstance(current.get("plugins"), list) or not all(isinstance(e, dict) for e in current["plugins"]):
         return ["plugins must be a list of objects"]
+    if not all(isinstance(e.get(k), str) for e in current["plugins"] for k in ("name", "source", "description", "version")):
+        return ["every plugins[] entry needs string name, source, description and version"]
     names = [e.get("name") for e in current["plugins"]]
     for n in sorted({n for n in names if names.count(n) > 1}, key=str):
         errs.append(f"plugin {n!r} is listed {names.count(n)} times; each plugin is listed once")
@@ -355,6 +370,7 @@ def load_manifest():
     ok = isinstance(m, dict) and all(
         isinstance(e, dict) and isinstance(e.get("inputs"), dict) and isinstance(e.get("outputs"), dict)
         and all(isinstance(v, str) for v in list(e["inputs"].values()) + list(e["outputs"].values()))
+        and isinstance(e.get("checked_at_version", ""), str) and isinstance(e.get("reason", ""), str)
         for e in m.values())
     if not ok:
         raise Stale("docs/media/manifest.json: each entry needs inputs and outputs objects of path to SHA-256. "
@@ -363,7 +379,9 @@ def load_manifest():
 
 
 def write_manifest(m):
-    MANIFEST.write_text(json.dumps(dict(sorted(m.items())), indent=2) + "\n")
+    tmp = MANIFEST.with_name(f".manifest.{os.getpid()}.tmp")
+    tmp.write_text(json.dumps(dict(sorted(m.items())), indent=2) + "\n")
+    os.replace(tmp, MANIFEST)
 
 
 def manifest_problems(plugins, manifest):
@@ -406,10 +424,17 @@ def manifest_problems(plugins, manifest):
 def record(name, plugins, reason):
     if name not in picture_names(plugins):
         raise SystemExit(f"build.py: {name} has no picture (its card's kind is text, or it is not a plugin).")
-    try:
-        m = load_manifest()
-    except Stale:
-        m = {}
+    MANIFEST.parent.mkdir(parents=True, exist_ok=True)
+    with open(MANIFEST.with_name(".manifest.lock"), "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)  # two renders or accepts at once each keep the other's entry
+        try:
+            m = load_manifest()
+        except Stale as e:
+            raise SystemExit(f"build.py: {e} Nothing was recorded.")
+        record_entry(name, plugins, reason, m)
+
+
+def record_entry(name, plugins, reason, m):
     inputs, outputs = picture_entry_files(name, plugins)
     entry = {}
     if name != "banner":

@@ -193,6 +193,66 @@ class BuildCheck(unittest.TestCase):
         out = self.assertRed("docs/media/manifest.json: each entry needs inputs and outputs")
         self.assertNotIn("Traceback", out)
 
+    def test_wrong_field_types_are_diagnostics(self):
+        cases = [
+            ("plugins/gauntlet/card.toml", r'^alt = .*$', "alt = 42", "[visual] alt must be text"),
+            ("plugins/call-prep/card.toml", r'^tagline = .*$', "tagline = 7", "tagline must be text"),
+        ]
+        for rel, rx, new, needle in cases:
+            with self.subTest(rel=rel):
+                p = self.root / rel
+                old = p.read_text()
+                p.write_text(re.sub(rx, new, old, count=1, flags=re.M))
+                try:
+                    out = self.assertRed(needle)
+                    self.assertNotIn("Traceback", out)
+                finally:
+                    p.write_text(old)
+        p = self.root / ".claude-plugin/marketplace.json"
+        m = json.loads(p.read_text())
+        m["plugins"][0]["name"] = []
+        p.write_text(json.dumps(m, indent=2))
+        out = self.assertRed("needs string name, source, description and version")
+        self.assertNotIn("Traceback", out)
+        p = self.root / "docs/media/manifest.json"
+        m = json.loads(p.read_text())
+        m["ruling-page"]["checked_at_version"] = 42
+        p.write_text(json.dumps(m))
+        out = self.assertRed("docs/media/manifest.json: each entry needs")
+        self.assertNotIn("Traceback", out)
+
+    # recording: never loses history
+
+    def test_record_against_a_malformed_manifest_changes_nothing(self):
+        p = self.root / "docs/media/manifest.json"
+        m = json.loads(p.read_text())
+        m["ruling-page"]["inputs"] = None
+        p.write_text(json.dumps(m))
+        before = p.read_bytes()
+        rc, out = self.run_build("--accept", "banner", "--reason", "Should not be recorded.")
+        self.assertNotEqual(rc, 0, out)
+        self.assertIn("Nothing was recorded", out)
+        self.assertEqual(before, p.read_bytes())
+
+    def test_a_second_writer_waits_for_the_lock_and_keeps_the_first_writers_entry(self):
+        import fcntl, time
+        p = self.root / "docs/media/manifest.json"
+        with open(p.with_name(".manifest.lock"), "w") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            proc = subprocess.Popen([sys.executable, "-I", str(self.root / "scripts/readme/build.py"), "--accept",
+                                     "banner", "--reason", "Second writer."], cwd=self.root,
+                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            time.sleep(1.5)
+            self.assertIsNone(proc.poll(), "the second writer did not wait for the lock")
+            m = json.loads(p.read_text())  # the first writer's update, made while it holds the lock
+            m["ruling-page"]["reason"] = "First writer."
+            p.write_text(json.dumps(m, indent=2) + "\n")
+            fcntl.flock(lock, fcntl.LOCK_UN)
+        out, _ = proc.communicate(timeout=30)
+        self.assertEqual(proc.returncode, 0, out)
+        m = json.loads(p.read_text())
+        self.assertEqual((m["ruling-page"]["reason"], m["banner"]["reason"]), ("First writer.", "Second writer."))
+
     # rule 5: cards
 
     def test_plugin_without_a_card_is_red(self):
