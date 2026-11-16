@@ -41,7 +41,7 @@ Start with ruling-page and reading-page: neither needs a key or an account. ruli
 - [**reading-page**](#reading-page) 0.3.2: Turns a long agent answer into one page you can read. Needs uv.
 - [**ruling-page**](#ruling-page) 0.3.2: Puts several decisions with trade-offs on one page you click through. Nothing to install.
 - [**call-prep**](#call-prep) 0.3.0: Writes what to say on a call, word for word. Nothing to install.
-- [**gauntlet**](#gauntlet) 0.7.1: Reviews a committed code change with two models at once. Needs two signed-in reviewer CLIs (Claude Code and Codex by default). Sends the diff, and whatever the reviewers can read in the worktree, to those two model companies through your own logins.
+- [**gauntlet**](#gauntlet) 0.7.2: Reviews a committed code change with two models at once. Needs two signed-in reviewer CLIs (Claude Code and Codex by default). Sends the diff, and whatever the reviewers can read in the worktree, to those two model companies through your own logins.
 - [**doc-gauntlet**](#doc-gauntlet) 0.6.2: Reviews a plan or spec before you build from it. Needs two signed-in reviewer CLIs (Claude Code and Codex by default). Sends the document, and whatever the reviewers can read in the worktree, to those two model companies through your own logins.
 - [**persona-teardown**](#persona-teardown) 0.2.0: Walks your prototype as three to five cold personas in a real browser. Needs agent-browser. The screens it walks go to the model company of your own session.
 - [**humanize-writing**](#humanize-writing) 0.2.0: Rewrites a draft so it reads like a person wrote it, adding nothing. Nothing to install.
@@ -197,7 +197,7 @@ in one slot. Choose the pair at prepare.
 
 </details>
 
-Version 0.7.1 · [Plugin README](plugins/gauntlet/README.md) · [Changelog](CHANGELOG.md)
+Version 0.7.2 · [Plugin README](plugins/gauntlet/README.md) · [Changelog](CHANGELOG.md)
 
 ### doc-gauntlet
 
@@ -415,9 +415,9 @@ Clone the repo. From `plugins/gauntlet` or `plugins/doc-gauntlet`, follow that d
 ## Latest changes
 
 <!-- changes:latest:start -->
+- **gauntlet 0.7.2** (17 November 2026)
 - **ruling-page 0.3.2** (16 November 2026)
 - **reading-page 0.3.2** (15 November 2026)
-- **All eight plugins** (14 November 2026)
 
 Full history: [CHANGELOG.md](CHANGELOG.md)
 <!-- changes:latest:end -->
