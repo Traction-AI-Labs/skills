@@ -61,6 +61,9 @@ visual options in words alone.
      screenshots). Thumbnails sit under the question and enlarge on click, with arrow keys between them.
      `src` is a `data:image/...` URI (keeps the file self-contained) or a plain relative path beside the
      page; anything else is dropped. Use it whenever the options are visual.
+   - `link` (optional): `["label", "href"]`, or a list of such pairs: links under the question, each opening
+     in a new tab. The href goes through the same check as `BRIEF.source`; one it rejects is left out with a
+     console error.
    - Also optional: `chip` (a short flag beside the title, "Can wait"); `context` (background: a blank
      line between paragraphs, `- ` bullets, `**bold**`); `multi: true` ("choose any"; `pick` becomes a
      list of indexes); `input: "text"` with `placeholder` (a typed answer instead of options); `parts:

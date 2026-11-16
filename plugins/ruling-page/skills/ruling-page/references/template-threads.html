@@ -7,6 +7,7 @@
   Authors edit only the data script: RULER (optional), BRIEF (optional), T, STATE (optional), and the <h1>.
   Thread fields: id, group, title, asked, when, answer, owed (empty hides it), ev,
     branches [{id, q, opts [[label, effect, downside?], ...], pick, why, flip?, multi?}]
+    link (optional) ["label", "href"] or a list of them: links under the question, opening in a new tab
   Each thread is one card: what was asked, the answer, what is still owed, a "Got it" button, then the
   decisions that branch off it. Branch ids stay stable (Q1a). Saved answers from the old threads template
   carry over on first load. The sample below is made up; replace all of it.
@@ -146,6 +147,9 @@
   .tp .tp-brief-body ul, .tp .tp-ctx ul { margin:0 0 .8em; padding-left:1.25em; }
   .tp .tp-brief-body li, .tp .tp-ctx li { margin:0 0 .3em; }
   .tp .tp-source { margin:4px 0 0; font-size:.92rem; }
+  .tp .tp-links { display:flex; flex-wrap:wrap; gap:4px 18px; margin:-4px 0 14px; font-size:.95rem; line-height:1.5; }
+  .tp .tp-links a { display:inline-block; padding:4px 0; overflow-wrap:anywhere; text-decoration-thickness:1px; }
+  .tp .tp-links a::after { content:"\2197"; display:inline-block; margin-left:.25em; text-decoration:none; }
   .tp .tp-decided { margin:20px 0 0; background:var(--tp-surface); border:1px solid var(--tp-rule); border-radius:var(--tp-r-card); }
   .tp .tp-decided > summary { list-style:none; cursor:pointer; margin:0; padding:14px 18px; display:flex; gap:12px; align-items:baseline; min-height:44px; }
   .tp .tp-decided > summary::-webkit-details-marker { display:none; }
@@ -716,6 +720,18 @@ const T = [
       if (c.thread.answer) { var an = el("div", "tp-answer"); an.appendChild(el("small", null, "Answer")); var ap = el("div"); prose(ap, c.thread.answer); an.appendChild(ap); sec.appendChild(an); }
       if (c.thread.owed) { var ow = el("p", "tp-owed"); ow.appendChild(el("b", null, "Still owed: ")); ow.appendChild(doc.createTextNode(c.thread.owed)); sec.appendChild(ow); }
     } else if (c.d.q) sec.appendChild(el("p", "tp-q", c.d.q));
+    if (c.d.link != null) {
+      /* link: ["label", "href"] or a list of them, under the question. Each href goes through safeHref; one it
+         rejects is left out, loudly. Links open in a new tab and never pass this page on. */
+      var lks = Array.isArray(c.d.link) && Array.isArray(c.d.link[0]) ? c.d.link : [c.d.link], lw = el("p", "tp-links");
+      lks.forEach(function (l) {
+        var lh = Array.isArray(l) ? safeHref(l[1]) : "";
+        if (!lh) { console.error("Ruling page: card " + c.id + " has a link the page cannot open; it is left out: " + JSON.stringify(l)); return; }
+        var la = el("a", "tp-cardlink", String(l[0] || lh)); la.href = lh; la.target = "_blank"; la.rel = "noopener noreferrer";
+        la.appendChild(el("span", "tp-vh", " (opens in a new tab)")); lw.appendChild(la);
+      });
+      if (lw.childNodes.length) sec.appendChild(lw);
+    }
     if (c.d.context) {
       var long = String(c.d.context).length > 280, holder = long ? el("details", "tp-more") : sec, ctx = el("div", "tp-ctx");
       if (long) { holder.appendChild(el("summary", null, "Background")); sec.appendChild(holder); }

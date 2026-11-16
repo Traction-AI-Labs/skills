@@ -1,5 +1,8 @@
 # Changelog
 
+- **ruling-page 0.3.2** (16 November 2026). A card can carry `link`: `["label", "href"]`, or a list of such pairs,
+  shown under the question and opening in a new tab. Each href goes through the same check as `BRIEF.source`; one it
+  rejects is left out with a console error. Pages without `link` render exactly as before.
 - **reading-page 0.3.2** (15 November 2026). Inline code in body text and in tables is never smaller than 11.5px
   (was 11px), so it stays readable on a phone. No other change.
 - **All eight plugins** (14 November 2026). Each plugin has an icon, `.claude-plugin/icon.png` (the Traction
