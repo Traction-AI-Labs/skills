@@ -591,7 +591,8 @@ prepare() {
   local prep_tmp
   prep_tmp="$(mktemp -d "${TMPDIR:-/tmp}/gauntlet-prepare.XXXXXX")"
   chmod 700 "$prep_tmp"
-  trap 'rm -rf -- "$prep_tmp"' EXIT
+  # Expanded now: prep_tmp is local, so an EXIT after this function returns would find it unset (set -u).
+  trap "rm -rf -- '$prep_tmp'" EXIT
   resolve_round_record
   probe_round_record
   local repo_key repo_short head
