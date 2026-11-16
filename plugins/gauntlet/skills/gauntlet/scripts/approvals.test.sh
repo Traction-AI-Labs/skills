@@ -344,6 +344,24 @@ refute grep -Fq 'APPROVAL STANDS' "$TMP/cr.out"
 grep -Fq 'secret\rpart.txt' "$RUN_DIR/scope/diff.patch"
 export GAUNTLET_ENFORCE_LIST="$TMP/on.tsv"
 
+# 6c. O5, enforced: a diff too large to pass as one argument (Linux refuses an argument over 128 KiB, the Mac a
+#     total over 1 MiB). A large pull request, 16 Nov 2026: the comparison died with "Argument list too long",
+#     printed nothing, and nothing printed used to read as "unchanged", so the approval stood. Its own file changed
+#     after the approval, so the approval must not stand.
+new_repo big https://github.com/example-org/example-dashboard.git
+long="$(printf 'd%.0s' $(seq 1 180))"
+for i in $(seq 1 800); do printf 'x\n' > "$R/$long-$i.txt"; done
+git -C "$R" add . && git -C "$R" commit -qm 'many files'
+converge big
+edit app.txt changed-after-approval
+bring_main_in big1
+prep --identity big > "$TMP/big.out" 2> "$TMP/big.err" || true
+refute grep -Fq 'APPROVAL STANDS' "$TMP/big.out"
+refute grep -Fq 'Argument list too long' "$TMP/big.err"
+refute grep -Fq 'unbound variable' "$TMP/big.err"
+grep -Fq 'MERGE FIX' "$TMP/big.out"
+grep -Fq '  app.txt' "$TMP/big.out"
+
 # 7. Older readers of the round record skip the verdict lines quietly.
 python3 - "$TMP/rounds.jsonl" <<'PY'
 import json, sys

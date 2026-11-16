@@ -62,15 +62,18 @@ PY
 # named by $5; those are the files that keep their standing. Nothing merges
 # automatically.
 approval_check() {
-  local repo_key="$1" identity="$2" base="$3" head="$4" excludes_out="$5" last now delta changed unreviewed gone arch findings='[]'
+  local repo_key="$1" identity="$2" base="$3" head="$4" excludes_out="$5" last now delta changed unreviewed gone arch findings='[]' py
   last="$(last_verdict "$repo_key" "$identity")"
   [[ -n "$last" ]] || return 0
-  arch="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("archive",""))' "$last")"
+  # The records travel on stdin, never as arguments: on a large diff a JSON argument is over the kernel's argument
+  # limit ("Argument list too long") and python never runs (a large pull request, 16 Nov 2026). printf is a shell
+  # builtin, so it has no such limit.
+  arch="$(printf '%s' "$last" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("archive",""))')"
   if [[ -n "$arch" && -d "$arch" ]]; then findings="$(findings_with_dispositions "$arch")" || findings='[]'; fi
-  python3 - "$last" "$head" "$base" "$findings" <<'PY' || return 0
+  IFS= read -r -d '' py <<'PY' || true
 import json, re, sys
-e, items = json.loads(sys.argv[1]), json.loads(sys.argv[4])
-if e.get("head") == sys.argv[2] or e.get("base") == sys.argv[3]:
+e, items = json.load(sys.stdin)
+if e.get("head") == sys.argv[1] or e.get("base") == sys.argv[2]:
     sys.exit(1)
 if e.get("verdict") == "APPROVE":
     sys.exit(0)
@@ -78,10 +81,11 @@ if e.get("verdict") == "APPROVE":
 live = [i for i in items if not str(i.get("status", "")).startswith("disposed: drop")]
 sys.exit(0 if e.get("verdict") == "BLOCK" and items and all(re.match(r"\s*P[23]\b", str(i.get("severity", "")), re.I) for i in live) else 1)
 PY
+  printf '[%s,%s]' "$last" "$findings" | python3 -c "$py" "$head" "$base" || return 0
   now="$(patch_ids "$REPO" "$base" "$head")"
-  delta="$(python3 - "$last" "$now" <<'PY'
+  IFS= read -r -d '' py <<'PY' || true
 import json, sys
-old, new = json.loads(sys.argv[1]), json.loads(sys.argv[2])
+old, new = json.load(sys.stdin)
 if not isinstance(old.get("covered"), list):
     print(json.dumps({"legacy": True}))
     raise SystemExit(0)
@@ -94,26 +98,32 @@ if any("\n" in p or "\r" in p for p in [*a, *b, *covered]):
 changed = sorted(p for p in b if a.get(p) != b[p])
 unreviewed = sorted(p for p in b if a.get(p) == b[p] and p not in covered)
 if old.get("patch_id") == new["patch_id"] and not unreviewed:
+    print(json.dumps({"stands": True}))
     raise SystemExit(0)
 print(json.dumps({"changed": changed, "unreviewed": unreviewed, "gone": sorted(p for p in a if p not in b)}))
 PY
-)"
-  if [[ -z "$delta" ]]; then
-    printf 'APPROVAL STANDS @ %s (round %s approved %s; the PR'"'"'s own diff is unchanged after main was brought in)\n' "$head" "$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["round"])' "$last")" "$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["head"][:12])' "$last")"
+  # The approval stands only on the comparison's explicit answer. A comparison that fails or prints nothing gives
+  # no standing (it used to read as "unchanged", so a crash would have let an approval stand).
+  if [[ -z "$now" ]] || ! delta="$(printf '[%s,%s]' "$last" "$now" | python3 -c "$py")" || [[ -z "$delta" ]]; then
+    echo 'NOTE: the comparison with the approved round failed, so no approval stands and the whole diff is reviewed'
+    return 0
+  fi
+  if [[ "$(printf '%s' "$delta" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("stands", False))')" == True ]]; then
+    printf 'APPROVAL STANDS @ %s (round %s approved %s; the PR'"'"'s own diff is unchanged after main was brought in)\n' "$head" "$(printf '%s' "$last" | python3 -c 'import json,sys; print(json.load(sys.stdin)["round"])')" "$(printf '%s' "$last" | python3 -c 'import json,sys; print(json.load(sys.stdin)["head"][:12])')"
     gate "the approval stands, so no new round is prepared; the orchestrator merges (nothing merges automatically)"
     return 0
   fi
-  if [[ "$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("legacy", False))' "$delta")" == True ]]; then
+  if [[ "$(printf '%s' "$delta" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("legacy", False))')" == True ]]; then
     echo 'NOTE: the approved round'"'"'s record does not say which files it reviewed, so the whole diff is reviewed'
     return 0
   fi
-  if [[ "$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("line_break", False))' "$delta")" == True ]]; then
+  if [[ "$(printf '%s' "$delta" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("line_break", False))')" == True ]]; then
     echo 'NOTE: a file name in the diff or the approved record holds a line break, so no approval stands and the whole diff is reviewed'
     return 0
   fi
-  changed="$(python3 -c 'import json,sys; print("\n".join(json.loads(sys.argv[1])["changed"]))' "$delta")"
-  unreviewed="$(python3 -c 'import json,sys; print("\n".join(json.loads(sys.argv[1])["unreviewed"]))' "$delta")"
-  gone="$(python3 -c 'import json,sys; print("\n".join(json.loads(sys.argv[1])["gone"]))' "$delta")"
+  changed="$(printf '%s' "$delta" | python3 -c 'import json,sys; print("\n".join(json.load(sys.stdin)["changed"]))')"
+  unreviewed="$(printf '%s' "$delta" | python3 -c 'import json,sys; print("\n".join(json.load(sys.stdin)["unreviewed"]))')"
+  gone="$(printf '%s' "$delta" | python3 -c 'import json,sys; print("\n".join(json.load(sys.stdin)["gone"]))')"
   if [[ -n "$gone" ]]; then
     echo "NOTE: no longer in the PR's own diff (main now carries the same change, or it was undone):"
     sed 's/^/  gone: /' <<<"$gone"
@@ -132,11 +142,12 @@ PY
   fi
   echo 'Review only these files: as a round if the budget has one left, otherwise the orchestrator checks a merge fix (FIXES CHECKED); a file never reviewed needs a round.'
   if [[ "$ENFORCED" == true ]]; then
-    python3 - "$now" "$changed" "$unreviewed" >> "$excludes_out" <<'PY'
+    IFS= read -r -d '' py <<'PY' || true
 import json, sys
-keep = set(sys.argv[2].split("\n")) | set(sys.argv[3].split("\n"))
-print("\n".join(p for p in json.loads(sys.argv[1])["files"] if p not in keep))
+keep = set(sys.argv[1].split("\n")) | set(sys.argv[2].split("\n"))
+print("\n".join(p for p in json.load(sys.stdin)["files"] if p not in keep))
 PY
+    printf '%s' "$now" | python3 -c "$py" "$changed" "$unreviewed" >> "$excludes_out"
   else
     gate "on an enforced repo the scope would narrow to the merge fix and the files the approval did not cover"
   fi
@@ -148,9 +159,11 @@ PY
 # it (scope/standing, written by prepare from approval_check's excludes).
 # Prints a JSON list.
 covered_files() {
-  python3 - "$REPO" "$1" "$2" "$RUN/scope/excludes" "$RUN/scope/standing" "$3" <<'PY'
+  local py
+  IFS= read -r -d '' py <<'PY' || true
 import json, os, subprocess, sys
-repo, base, head, excludes, standing, ids = sys.argv[1:]
+repo, base, head, excludes, standing = sys.argv[1:]
+ids = sys.stdin.read()
 def lines(path):
     # Line feeds only, as Bash's `read` splits them for scope_diff.
     return [p for p in open(path, encoding="utf-8", errors="surrogateescape").read().split("\n") if p] if os.path.isfile(path) else []
@@ -163,6 +176,8 @@ if any("\n" in p or "\r" in p for p in [*files, *covered, *lines(excludes)]):
     covered = set()
 print(json.dumps(sorted(p for p in covered if p in files)))
 PY
+  # The patch-ids travel on stdin: as an argument they can pass the kernel's limit (approval_check).
+  printf '%s' "$3" | python3 -c "$py" "$REPO" "$1" "$2" "$RUN/scope/excludes" "$RUN/scope/standing"
 }
 
 # Appends this run's verdict line once all legs are in (collect), with the
@@ -184,11 +199,12 @@ record_verdict() {
   # What the round reviewed, apart from the whole PR patch: an approval never
   # stands for a file its scope left out. Unknown coverage is recorded as none.
   covered="$(covered_files "$base" "$head" "$ids")" || covered='[]'
-  if ! python3 - "$RUN/rows.json" "$verdict" "$archive" "$base" "$ids" "$RUN/not-run" "$covered" <<'PY'
+  local py
+  IFS= read -r -d '' py <<'PY' || true
 import datetime, json, os, sys
-rows = json.load(open(sys.argv[1])); verdict, archive, base, ids = sys.argv[2], sys.argv[3], sys.argv[4], json.loads(sys.argv[5])
-not_run = open(sys.argv[6]).read().split() if os.path.isfile(sys.argv[6]) else []
-covered = json.loads(sys.argv[7])
+rows = json.load(open(sys.argv[1])); verdict, archive, base = sys.argv[2], sys.argv[3], sys.argv[4]
+ids, covered = json.load(sys.stdin)
+not_run = open(sys.argv[5]).read().split() if os.path.isfile(sys.argv[5]) else []
 if "identity" in rows:
     e = {"ts": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat(), "runner": "gauntlet-verdict",
          "repo": rows["repo"], "identity": rows["identity"], "digest": rows["digest"], "head": rows["head"], "round": rows["round"],
@@ -201,6 +217,8 @@ if "identity" in rows:
     finally:
         os.close(fd)
 PY
+  # The patch-ids and coverage travel on stdin: as arguments they can pass the kernel's limit (approval_check).
+  if ! printf '[%s,%s]' "$ids" "$covered" | python3 -c "$py" "$RUN/rows.json" "$verdict" "$archive" "$base" "$RUN/not-run"
   then
     echo 'VERDICT-RECORD: WRITE FAILED (approvals and the next round'"'"'s prior findings cannot see this round); collect again to retry'
     return 0
@@ -255,30 +273,35 @@ PY
 
 # O7, at collect: prints the open findings, which the verdict carries.
 print_open_findings() {
-  python3 - "$(findings_with_dispositions "$RUN")" <<'PY'
+  local py
+  IFS= read -r -d '' py <<'PY' || true
 import json, sys
-items = json.loads(sys.argv[1])
+items = json.load(sys.stdin)
 open_ = [i for i in items if i["status"] == "open"]
 print(f"FINDINGS: {len(items)} as written, {len(open_)} open, {len(items) - len(open_)} disposed with a passing runner test")
 for i in open_:
     print(f"  OPEN {i['engine']}#{i['index']} {i.get('severity','')} {i.get('location','')}")
 PY
+  # On stdin, never as an argument (approval_check says why).
+  findings_with_dispositions "$RUN" | python3 -c "$py"
 }
 
 # O7, at a later round's prepare: the runner's own prior findings, built from
 # the identity's last recorded round before this one ($3), every undisposed
 # finding marked open. A retried round still finds the round before it.
 runner_prior_findings() {
-  local repo_key="$1" identity="$2" round="$3" out="$4" last archive
+  local repo_key="$1" identity="$2" round="$3" out="$4" last archive py
   last="$(last_verdict "$repo_key" "$identity" "$round")"
   [[ -n "$last" ]] || return 1
-  archive="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("archive",""))' "$last")"
+  # The record and the findings travel on stdin, never as arguments (approval_check says why).
+  archive="$(printf '%s' "$last" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("archive",""))')"
   [[ -d "$archive" ]] || return 1
-  python3 - "$(findings_with_dispositions "$archive")" "$archive" > "$out" <<'PY'
+  IFS= read -r -d '' py <<'PY' || true
 import json, sys
-print(json.dumps({"source": "gauntlet runner record (findings as the reviewers wrote them)", "archive": sys.argv[2],
-                  "findings": json.loads(sys.argv[1])}, indent=1))
+print(json.dumps({"source": "gauntlet runner record (findings as the reviewers wrote them)", "archive": sys.argv[1],
+                  "findings": json.load(sys.stdin)}, indent=1))
 PY
+  findings_with_dispositions "$archive" | python3 -c "$py" "$archive" > "$out"
 }
 
 # O7: drop or downgrade one finding, only with a test the runner runs in the

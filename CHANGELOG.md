@@ -1,5 +1,11 @@
 # Changelog
 
+- **gauntlet 0.7.2** (17 November 2026). On a large diff, `prepare` passed the approval comparison's records to
+  python as one command-line argument; Linux refused it as too long, the comparison printed nothing, and nothing
+  printed read as "unchanged", so an approval stood that should not have. Every record, patch-id map and findings list
+  now goes on standard input, an approval stands only on the comparison's explicit answer, and `prepare`'s exit trap
+  no longer fails on its temporary folder. New test 6c covers it (800 long-named files, a file changed after the
+  approval).
 - **ruling-page 0.3.2** (16 November 2026). A card can carry `link`: `["label", "href"]`, or a list of such pairs,
   shown under the question and opening in a new tab. Each href goes through the same check as `BRIEF.source`; one it
   rejects is left out with a console error. Pages without `link` render exactly as before.
