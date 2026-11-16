@@ -7,6 +7,7 @@
   Authors edit only the data script below the header comment: RULER, BRIEF (optional), D, STATE (optional), and the <h1>.
   Card fields: id, group, title, q, opts [[label, effect, downside?], ...], pick, why, ev,
     text / textLabel / textOpen, frames [{src, cap}]
+    link     ["label", "href"] or a list of them: links under the question, opening in a new tab
   Optional:
     chip     a short flag beside the title ("Can wait")
     context  background in plain text: blank line between paragraphs, "- " bullets, **bold**, `code`
@@ -157,6 +158,9 @@
   .tp .tp-brief-body ul, .tp .tp-ctx ul { margin:0 0 .8em; padding-left:1.25em; }
   .tp .tp-brief-body li, .tp .tp-ctx li { margin:0 0 .3em; }
   .tp .tp-source { margin:4px 0 0; font-size:.92rem; }
+  .tp .tp-links { display:flex; flex-wrap:wrap; gap:4px 18px; margin:-4px 0 14px; font-size:.95rem; line-height:1.5; }
+  .tp .tp-links a { display:inline-block; padding:4px 0; overflow-wrap:anywhere; text-decoration-thickness:1px; }
+  .tp .tp-links a::after { content:"\2197"; display:inline-block; margin-left:.25em; text-decoration:none; }
   .tp .tp-decided { margin:20px 0 0; background:var(--tp-surface); border:1px solid var(--tp-rule); border-radius:var(--tp-r-card); }
   .tp .tp-decided > summary { list-style:none; cursor:pointer; margin:0; padding:14px 18px; display:flex; gap:12px; align-items:baseline; min-height:44px; }
   .tp .tp-decided > summary::-webkit-details-marker { display:none; }
@@ -411,7 +415,7 @@ const BRIEF = {
 const svg = s => "data:image/svg+xml," + encodeURIComponent(s);
 const D = [
   {"id": "S1", "group": "Support desk", "title": "Where customer emails land", "q": "Where should customer emails go once the support desk is running?", "opts": [["A shared inbox", "Everyone on the team sees every email; nothing new to learn."], ["A help-desk tool", "Each email becomes a ticket with an owner and a status.", "A monthly fee per person, and a week to set it up."], ["Each person's own inbox", "As today."]], "pick": 0, "why": "A shared inbox fixes the lost emails at no cost, and about 40 emails a day doesn't need a ticket system.", "ev": "Last month: 1,180 support emails across five inboxes; 23 were answered twice and 2 waited over a week."},
-  {"id": "S2", "group": "Support desk", "title": "How fast we promise to reply", "q": "What reply time should the website promise customers?", "opts": [["One working day", "Easy to keep with the team we have."], ["Four working hours", "Faster than most of our competitors.", "Someone has to watch the inbox all day."], ["No promise", "As today."]], "pick": 0, "why": "We answer 9 in 10 emails within a working day already, so the promise is one we can keep from the first week.", "flip": "a second person joins the support team.", "ev": "Median first reply last month: 5 working hours; 91% inside one working day."},
+  {"id": "S2", "group": "Support desk", "title": "How fast we promise to reply", "q": "What reply time should the website promise customers?", "link": ["Last month's reply times, inbox by inbox", "https://example.com/reply-times"], "opts": [["One working day", "Easy to keep with the team we have."], ["Four working hours", "Faster than most of our competitors.", "Someone has to watch the inbox all day."], ["No promise", "As today."]], "pick": 0, "why": "We answer 9 in 10 emails within a working day already, so the promise is one we can keep from the first week.", "flip": "a second person joins the support team.", "ev": "Median first reply last month: 5 working hours; 91% inside one working day."},
   {"id": "S3", "group": "Support desk", "title": "Weekend cover", "q": "Should anyone answer support emails at the weekend?", "opts": [["Nobody at the weekend", "The website says replies resume on Monday."], ["One person on call", "Urgent emails get an answer within the day.", "A weekend roster to run and pay for."]], "pick": 0, "why": "Weekend emails are 4% of the total, and none last month was urgent.", "ev": "Weekend emails last month: 47 of 1,180."},
   {"id": "S4", "group": "Support desk", "title": "The questions customers ask most", "q": "Which three questions do customers ask most often? They go at the top of the new help page.", "input": "text", "placeholder": "One per line. Leave it empty and I'll use last month's top three.", "ev": "Last month's top three by count: delivery times, refunds, changing an order."},
   {"id": "W1", "group": "Website", "title": "When the new website goes live", "chip": "Can wait",
@@ -736,6 +740,18 @@ const D = [
       if (c.thread.answer) { var an = el("div", "tp-answer"); an.appendChild(el("small", null, "Answer")); var ap = el("div"); prose(ap, c.thread.answer); an.appendChild(ap); sec.appendChild(an); }
       if (c.thread.owed) { var ow = el("p", "tp-owed"); ow.appendChild(el("b", null, "Still owed: ")); ow.appendChild(doc.createTextNode(c.thread.owed)); sec.appendChild(ow); }
     } else if (c.d.q) sec.appendChild(el("p", "tp-q", c.d.q));
+    if (c.d.link != null) {
+      /* link: ["label", "href"] or a list of them, under the question. Each href goes through safeHref; one it
+         rejects is left out, loudly. Links open in a new tab and never pass this page on. */
+      var lks = Array.isArray(c.d.link) && Array.isArray(c.d.link[0]) ? c.d.link : [c.d.link], lw = el("p", "tp-links");
+      lks.forEach(function (l) {
+        var lh = Array.isArray(l) ? safeHref(l[1]) : "";
+        if (!lh) { console.error("Ruling page: card " + c.id + " has a link the page cannot open; it is left out: " + JSON.stringify(l)); return; }
+        var la = el("a", "tp-cardlink", String(l[0] || lh)); la.href = lh; la.target = "_blank"; la.rel = "noopener noreferrer";
+        la.appendChild(el("span", "tp-vh", " (opens in a new tab)")); lw.appendChild(la);
+      });
+      if (lw.childNodes.length) sec.appendChild(lw);
+    }
     if (c.d.context) {
       var long = String(c.d.context).length > 280, holder = long ? el("details", "tp-more") : sec, ctx = el("div", "tp-ctx");
       if (long) { holder.appendChild(el("summary", null, "Background")); sec.appendChild(holder); }
