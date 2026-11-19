@@ -18,8 +18,8 @@
     }
   },
   "call-prep": {
-    "checked_at_version": "0.3.0",
-    "reason": "",
+    "checked_at_version": "0.3.1",
+    "reason": "0.3.1 adds one rule to SKILL.md step 2 on matching earlier asks to replies; the picture shows a prep page, which is unchanged",
     "inputs": {
       "docs/examples/call-prep/prep-region.html": "ab22a0c65e82ecfa3608011c16213e69fda18d617e582ce292c9f3e7cf0dba46",
       "plugins/call-prep/skills/call-prep/references/prep-template.html": "e43200e8d54bf1ccee7e45c970683e0732031b34c4395036164931ec05ef2c7c",

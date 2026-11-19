@@ -1,5 +1,9 @@
 # Changelog
 
+- **call-prep 0.3.1** (19 November 2026). `SKILL.md`: before a prep asks the client to do anything, every earlier ask
+  (each message, email and piece of homework, not only the last) is matched to their replies. A bare "3 - Done", a
+  screenshot or a "Done" under a numbered message counts as a reply, something reported done is never asked for again,
+  and a summary that says it is not done is checked against their replies first.
 - **ruling-page 0.3.3** (19 November 2026). `SKILL.md`: a question about changing how something works shows the
   problem first (what is broken, how, when, which cases), with a live example the person can open or an annotated
   screenshot, and each option shows what would change as a picture. In chat too. No template change.
