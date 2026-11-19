@@ -1,5 +1,9 @@
 # Changelog
 
+- **call-prep 0.3.1** (20 November 2026). `SKILL.md`, "Before drafting": before a prep asks the counterpart to do
+  anything, it lists every earlier ask (every chat message, email and piece of homework) and matches each to their
+  replies, a bare "3 - Done" or a screenshot under a numbered message included, and never asks again for something
+  they reported done. No template or script change.
 - **ruling-page 0.3.3** (19 November 2026). `SKILL.md`: a question about changing how something works shows the
   problem first (what is broken, how, when, which cases), with a live example the person can open or an annotated
   screenshot, and each option shows what would change as a picture. In chat too. No template change.
