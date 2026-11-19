@@ -2,7 +2,7 @@
 name: call-prep
 description: Use BEFORE writing any talking track, call prep, meeting prep, standup prep, briefing script or "what do I say on the call" doc, for any counterpart (client, candidate, recruiter, cofounder, vendor). Produces a verbatim script as one interactive HTML page the caller reads live off a second window, with a guard line of what not to say, numbered beats with the exact lines in quotes, fallbacks for pushback and answers to the hardest questions, not a list of points to cover.
 ---
-<!-- SOURCE-REVISION 9c099e97 -->
+<!-- SOURCE-REVISION b1d9a067 -->
 
 # Call prep
 
@@ -45,6 +45,13 @@ which never makes this window safe to share.
    set out under the shape below. Nothing comes from an earlier
    prep alone. The counterpart's own number can be quoted as theirs ("in your email you proposed 10%"); stating it as fact needs your own record that agrees. Anything said on an earlier call (a quote, a figure, "you agreed") is read from that call's raw transcript, never from a summary of it: summaries turn "that would be a great outcome" into "the target you agreed". First call with this
    counterpart: anchor the first beat on what put the call in the diary, in their words.
+   **Before the prep asks the counterpart to do anything, match every earlier ask to their replies.** List what
+   your earlier messages to them asked (every chat message, email and piece of homework, not only the last one),
+   then find their reply to each. A bare "3 - Done", a screenshot or a "Done" under a numbered message is a reply:
+   match the number back to the item it answers. Never ask again for something they have reported done, and check
+   any summary or status record that says it isn't done against their replies before the prep repeats it. A prep
+   that makes "set up a budget alert" a beat, weeks after they posted "3 - Done" to that ask, because an older
+   record said there was no alert, costs the caller credibility in the first minute.
 3. **Save it where the call's notes live**, somewhere the counterpart cannot see: next to the
    client's internal notes, or in the call's own dated folder. Never in a folder shared with them.
 4. **If the call hands the counterpart a task, try the task as them first.** Open what they will

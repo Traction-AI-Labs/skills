@@ -40,7 +40,7 @@ Start with ruling-page and reading-page: neither needs a key or an account. ruli
 <!-- plugins:list:start -->
 - [**reading-page**](#reading-page) 0.3.2: Turns a long agent answer into one page you can read. Needs uv.
 - [**ruling-page**](#ruling-page) 0.3.3: Puts several decisions with trade-offs on one page you click through. Nothing to install.
-- [**call-prep**](#call-prep) 0.3.0: Writes what to say on a call, word for word. Nothing to install.
+- [**call-prep**](#call-prep) 0.3.1: Writes what to say on a call, word for word. Nothing to install.
 - [**gauntlet**](#gauntlet) 0.7.2: Reviews a committed code change with two models at once. Needs two signed-in reviewer CLIs (Claude Code and Codex by default). Sends the diff, and whatever the reviewers can read in the worktree, to those two model companies through your own logins.
 - [**doc-gauntlet**](#doc-gauntlet) 0.6.3: Reviews a plan or spec before you build from it. Needs two signed-in reviewer CLIs (Claude Code and Codex by default). Sends the document, and whatever the reviewers can read in the worktree, to those two model companies through your own logins.
 - [**persona-teardown**](#persona-teardown) 0.2.0: Walks your prototype as three to five cold personas in a real browser. Needs agent-browser. The screens it walks go to the model company of your own session.
@@ -143,7 +143,7 @@ Writes what to say on a call, word for word.
 **Runs in:** Claude Code, the Claude app  
 **Needs:** Nothing to install.
 
-Version 0.3.0 · [Plugin README](plugins/call-prep/README.md) · [Changelog](CHANGELOG.md)
+Version 0.3.1 · [Plugin README](plugins/call-prep/README.md) · [Changelog](CHANGELOG.md)
 <!-- cards:pages:end -->
 
 ## Reviews before you merge
@@ -415,9 +415,9 @@ Clone the repo. From `plugins/gauntlet` or `plugins/doc-gauntlet`, follow that d
 ## Latest changes
 
 <!-- changes:latest:start -->
+- **call-prep 0.3.1** (20 November 2026)
 - **ruling-page 0.3.3** (19 November 2026)
 - **doc-gauntlet 0.6.3** (19 November 2026)
-- **gauntlet 0.7.2** (17 November 2026)
 
 Full history: [CHANGELOG.md](CHANGELOG.md)
 <!-- changes:latest:end -->
