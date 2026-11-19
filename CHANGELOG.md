@@ -1,5 +1,9 @@
 # Changelog
 
+- **doc-gauntlet 0.6.3** (19 November 2026). The client-draft procedure (`references/derivation-ledger.md`) caps every
+  message review at two rounds: a round is both legs on one version of the text, a redraft sent back to review
+  counts as one, and after the second round findings are applied with no re-run and anything still open goes to
+  the sender in one line. A short message keeps its one round. No other change.
 - **gauntlet 0.7.2** (17 November 2026). On a large diff, `prepare` passed the approval comparison's records to
   python as one command-line argument; Linux refused it as too long, the comparison printed nothing, and nothing
   printed read as "unchanged", so an approval stood that should not have. Every record, patch-id map and findings list

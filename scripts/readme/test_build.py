@@ -142,14 +142,18 @@ class BuildCheck(unittest.TestCase):
     # rule 3: version against the picture
 
     def test_version_bump_needs_a_picture_check_then_accept_clears_it(self):
-        self.bump("ruling-page", "0.3.1", "0.3.2")
+        # Read the version the copy holds, so a real bump of ruling-page never breaks this test's setup.
+        cur = json.loads((self.root / "plugins/ruling-page/.claude-plugin/plugin.json").read_text())["version"]
+        major, minor, patch = cur.split(".")
+        nxt = f"{major}.{minor}.{int(patch) + 1}"
+        self.bump("ruling-page", cur, nxt)
         self.run_build()
-        self.assertRed("ruling-page picture checked at 0.3.1, plugin at 0.3.2")
+        self.assertRed(f"ruling-page picture checked at {cur}, plugin at {nxt}")
         rc, out = self.run_build("--accept", "ruling-page", "--reason", "The bump changed no pixel.")
         self.assertEqual(rc, 0, out)
         self.assertGreen()
         e = json.loads((self.root / "docs/media/manifest.json").read_text())["ruling-page"]
-        self.assertEqual((e["checked_at_version"], e["reason"]), ("0.3.2", "The bump changed no pixel."))
+        self.assertEqual((e["checked_at_version"], e["reason"]), (nxt, "The bump changed no pixel."))
 
     def test_accept_needs_a_reason(self):
         rc, out = self.run_build("--accept", "ruling-page")
