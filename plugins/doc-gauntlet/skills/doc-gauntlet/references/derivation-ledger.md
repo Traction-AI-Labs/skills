@@ -97,7 +97,7 @@ review; both run.
 The review runs on a scratch file, never on a draft that already sits somewhere the sender can edit (their
 mailbox drafts, a shared doc). Sequence: write to the scratch file, leg one, leg two, apply, style-check and one read of the whole as the
 recipient, the final figures check (below), then hand over (create the email draft once, or give the text in chat). If a round finds a P1,
-the fix is made in the scratch file and the legs re-run there. Nothing is created, deleted or replaced in
+the fix is made in the scratch file and the legs re-run there, at most two rounds in all (below). Nothing is created, deleted or replaced in
 the sender's mailbox during the loop, and once a draft is in their mailbox it is theirs: a session never
 edits, deletes or replaces it. A session that deletes "its own" draft to post a revision can delete a
 message the sender has already edited and sent.
@@ -155,6 +155,10 @@ These rules override the paragraphs above where they differ.
 
 ## Depth, short messages and when a reviewer stops
 
+- **Every message review stops at two rounds.** A round is both legs on one version of the text; a redraft
+  that goes back to review counts as a round. After the second round, findings are applied with no re-run and
+  anything still open goes to the sender named in one line, as on a short message. A short message keeps its one
+  round.
 - **One round only on a short message** (a heads-up or status note). The two legs run once, findings are
   applied without a re-run, and anything still open goes to the sender named in one line. A figure behind a
   manifest gap is not left open: the final figures check cuts it, as it cuts any figure the ledger does not

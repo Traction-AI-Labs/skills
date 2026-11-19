@@ -36,8 +36,8 @@
     }
   },
   "doc-gauntlet": {
-    "checked_at_version": "0.6.2",
-    "reason": "",
+    "checked_at_version": "0.6.3",
+    "reason": "0.6.3 changes only the client-draft procedure's round cap in references/derivation-ledger.md; the picture shows a review round, which is unchanged",
     "inputs": {
       "docs/examples/doc-gauntlet/session.txt": "9f2ea1cce0a53102cea70f832850f302d66ed9a9a1bfc310fcad5dbf6d781e35",
       "scripts/media/terminal.html": "96f2657a651860516588a88899bcf135ed23e92dcc414e85e425e344e25ffac0",
