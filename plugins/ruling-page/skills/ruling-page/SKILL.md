@@ -2,7 +2,7 @@
 name: ruling-page
 description: Use when you need the person you're working with to rule on a COMPLICATED decision (several decisions at once, or options with trade-offs that need explaining), or when asks from several threads need one answer. Builds a clickable one-file HTML ruling page with your recommendation pre-selected on every card and a "Copy my answers" button, instead of asking them to read a markdown file or a long chat message. Simple yes/no decisions stay in chat.
 ---
-<!-- SOURCE-REVISION 9c099e97 -->
+<!-- SOURCE-REVISION 45fb651f -->
 
 # Ruling page
 
@@ -13,6 +13,12 @@ in chat: an HTML page for a yes/no is noise.
 **Simple or complicated?** One yes/no, or a pick between two options whose difference fits on one
 line: ask in chat, with your recommendation and a one-line why. Several decisions, or options with
 real trade-offs: build a page.
+
+**A question about changing how something works shows the problem first**, with a live example or a screenshot.
+Before the options, the page says what is broken, how, and when it happens (which cases, how many), with a link to a
+live example the person can open and exactly where to look, or an annotated screenshot (sensitive data masked). Each
+option then shows what would change as a picture. This holds in chat too: a change question with no example or
+screenshot is not sent, because without one the person can only guess.
 
 **A design decision shows each option as a picture**, even a two-way pick that would otherwise stay in chat: a page
 with a frame or screenshot per option (the card's `frames`, step 2; a `data:` URI in the Claude app, where there is
