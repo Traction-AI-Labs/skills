@@ -1,5 +1,8 @@
 # Changelog
 
+- **ruling-page 0.3.3** (19 November 2026). `SKILL.md`: a question about changing how something works shows the
+  problem first (what is broken, how, when, which cases), with a live example the person can open or an annotated
+  screenshot, and each option shows what would change as a picture. In chat too. No template change.
 - **doc-gauntlet 0.6.3** (19 November 2026). The client-draft procedure (`references/derivation-ledger.md`) caps every
   message review at two rounds: a round is both legs on one version of the text, a redraft sent back to review
   counts as one, and after the second round findings are applied with no re-run and anything still open goes to

@@ -86,8 +86,8 @@
     }
   },
   "ruling-page": {
-    "checked_at_version": "0.3.2",
-    "reason": "The picture is rendered from docs/examples/ruling-page/data.js, which sets no link; the only change is a new optional card field, so the card as drawn is unchanged.",
+    "checked_at_version": "0.3.3",
+    "reason": "0.3.3 adds one SKILL.md rule on change questions; the template and the example data the picture renders are unchanged",
     "inputs": {
       "docs/examples/ruling-page/data.js": "a9d5e87632b2b98290c466ba5ae0eaf941b608e130bd8c2183e9d67efbd209e4",
       "plugins/ruling-page/skills/ruling-page/references/template.html": "469c3694aac90744befae9e5948f4216c641465d01ee2fb88dd981e6bab884c7",
