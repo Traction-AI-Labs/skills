@@ -12,7 +12,9 @@ it. In Claude, each reviewer is a `general-purpose` subagent with an explicit hi
 a `fork` (a fork inherits the building session's context and ignores the model, which voids the review).
 In Codex, it is the configured high-capability read-only review route. The reviewers re-open every
 source, check every figure and claim against what the recipient already knows and has been told, and,
-when the draft asks the recipient to do something, attempt that task cold as the recipient.
+when the draft asks the recipient to do something, attempt that task cold as the recipient, who brings
+their screen and vocabulary, their own field and role, and everything they wrote or were sent on the matter,
+and none of the building session's context.
 
 **Why a derivation ledger.** Two cold reads can pass a message whose row count, row list and a dropdown
 option name are all wrong, when the reviewers were handed the author's counts and a description of the
@@ -57,7 +59,8 @@ commands cannot expose is recorded as a cannot-derive, never guessed.
 4. Checks that each manifest line's predicate implements the draft claim it stands for. A predicate that
    counts the wrong thing gives a clean ledger for a wrong draft; a mismatch means a corrected manifest and
    a fresh leg one.
-5. Runs the cold task as the recipient.
+5. Runs the cold task as the recipient. A stall is a P1; a step they can do, answer or pass on from their own
+   field or role is not one.
 6. Tests every question for whether it is worth asking, and on a relayed message also runs the cold read as
    the person who relays it (see "Questions worth asking" below).
 
@@ -66,7 +69,7 @@ Leg two reports one line per checkable item in the draft, so its coverage is vis
 ## What counts as a P1, and what "done" means
 
 Every wrong value, every missing, extra or duplicate member, every manifest gap, every predicate that does
-not implement its claim, and every item leg one could not derive is a P1.
+not implement its claim, and every item leg one could not derive that the draft states is a P1.
 
 - A wrong value with its derivation shown, a missing, extra or duplicate member, and a manifest gap are
   applied as found, never dispositioned by the author. A gap is closed only by adding the manifest line and
@@ -107,15 +110,21 @@ message the sender has already edited and sent.
 These rules override the paragraphs above where they differ.
 
 - **Leg two names the fault, never the sentence.** Each finding states what is wrong, the right value or
-  member from the ledger, and why it matters to the recipient. It carries no "Replace with" or "Add" text.
-  The writer writes the fix in natural sentences.
+  member from the ledger, and why it matters to the recipient. It carries no "Replace with" or "Add" text,
+  and no brief for leg two, the final figures check or a check on a later change asks for any. The writer writes the fix in natural sentences.
 - **A fix corrects or cuts; it never adds a reconciling, hedging or explaining sentence.** A missing member
-  or fact is a correction: it goes into the sentence or list that carries it. The ask stays a direct
-  question.
+  or fact is a correction: it goes into the sentence or list that carries it. The ask stays one direct
+  request for the outcome, with its reason, never a question about who should act or whether they need
+  something when they can act or route it themselves.
 - **Only facts are P1:** a wrong value; a missing, extra or duplicate member; a manifest gap; a predicate
-  that does not implement its claim; a cannot-derive; a claim about what someone said whose ledger source is
-  not their own words (below); an ask the recipient cannot act on. Tone and wording notes are advisory and
-  the writer may decline them.
+  that does not implement its claim; a cannot-derive on a claim the draft makes; a claim about what someone
+  said whose ledger source is not their own words (below); an ask the recipient cannot act on; a line the
+  recipient's own knowledge makes unnecessary (it explains their field, re-tells what they wrote or were
+  sent, or answers a question nobody asked) or a label they did not use, fixed by a cut or the plain name.
+  Tone and wording notes are advisory and the writer may decline them. So is a finding resting on inference
+  (the reviewer's own, or a ledger line marked as interpretation) and a can't-check on something the draft
+  does not say; neither adds a sentence, a condition or a question, and the message that hands the sender
+  the draft names each one in a plain line, so it is flagged to them, never dropped silently.
 - **The style check runs after the fixes**, with one read of the whole message as the recipient, so every
   applied fix is style-checked. It does not run before the legs.
 - **The final figures check.** A fresh reviewer of the same kind as the legs, never the writer, reconciles
@@ -123,8 +132,9 @@ These rules override the paragraphs above where they differ.
   existing ledger, one to one, with no wording notes; it gets leg two's findings with the ledger. It also
   reports a ledger item the final text dropped and a figure the ledger does not hold. A mismatch is set back
   to the ledger value and an item dropped by accident goes back in; an item cut to resolve a finding, or
-  whose ledger line leg two found wrong, stays as the writer left it. A figure the ledger does not hold,
-  other than a scheduling date or time, comes out. What it finds is applied with no re-run of the legs, and
+  whose ledger line leg two found wrong, stays as the writer left it. A figure or factual claim the ledger does
+  not hold as a sourced value (a line marked as interpretation is not one), other than a scheduling date or
+  time, comes out. What it finds is applied with no re-run of the legs, and
   that closes the round. A natural rewrite can drop a fact, and the author's own re-check does not count.
 
 ## Reviewers are read-only
@@ -137,7 +147,7 @@ These rules override the paragraphs above where they differ.
 - Leg two runs the recipient's task as a read-only walk, or on a preview or copy the author made before
   dispatch, in a place the recipient cannot see, passed to it by id. It never runs the task on the
   recipient's live sheet, form, document or mailbox, and never makes a copy itself.
-- Every reviewer's brief states the first point in its opening lines, and leg two's brief also states the
+- Every reviewer's brief states the first point in its opening lines and asks for no replacement words, and leg two's brief also states the
   second, because the subagent works from its brief.
 
 ## What someone said, and a cannot-derive at the final check
@@ -156,8 +166,10 @@ These rules override the paragraphs above where they differ.
 ## Depth, short messages and when a reviewer stops
 
 - **Every message review stops at two rounds.** A round is both legs on one version of the text; a redraft
-  that goes back to review counts as a round. After the second round, findings are applied with no re-run and
-  anything still open goes to the sender named in one line, as on a short message. A short message keeps its one
+  that goes back to review counts as a round. After the second round, findings are applied with no re-run of the legs
+  and anything still open goes to the sender named in one line, as on a short message; text changed after the
+  final figures check, on the sender's word or as a line given in chat for them to paste, goes through that
+  check again first. A short message keeps its one
   round.
 - **One round only on a short message** (a heads-up or status note). The two legs run once, findings are
   applied without a re-run, and anything still open goes to the sender named in one line. A figure behind a

@@ -1,5 +1,11 @@
 # Changelog
 
+- **doc-gauntlet 0.6.4** (20 November 2026). The client-draft procedure (`references/derivation-ledger.md`), after a
+  review of six client emails: a finding resting on inference, or a can't-check on something the draft does not say,
+  is advisory, adds no text and is named to the sender in one line; the cold run credits the recipient with their own
+  field, role and correspondence, and a line their own knowledge makes unnecessary is a P1 fixed by a cut; an ask is
+  one direct request for the outcome; no reviewer brief asks for replacement words; the final figures check removes a
+  claim the ledger does not hold and runs again on text changed after it. No script change.
 - **call-prep 0.3.1** (20 November 2026). `SKILL.md`, "Before drafting": before a prep asks the counterpart to do
   anything, it lists every earlier ask (every chat message, email and piece of homework) and matches each to their
   replies, a bare "3 - Done" or a screenshot under a numbered message included, and never asks again for something
