@@ -7,7 +7,7 @@ description: "Use for a review of a plan, specification, strategy, or requiremen
 
 Use this skill for a consequential requirements, specification, plan, or strategy document. It is independent of the code gauntlet. One run produces two outputs: a sparring memo the author decides on, and a short list of true errors the document must fix (see Two outputs).
 
-This gauntlet is a verification gate on a candidate-final SHA, never a discovery instrument. Enter only after the branch is frozen, one independent whole-scope review against the full contract or specification is complete, and every accepted finding from that review has been repaired in one batch. Every gauntlet round reviews the whole pinned scope, never only the latest delta or repair.
+The round reviews the whole pinned document, never only a delta or a repair. Nothing reviews the document before it (the separate review before round 1 was retired on 23 Nov 2026).
 
 Obtain explicit provider authorisation and use a dedicated clean worktree with no concurrent writer. Reviewers can inspect the repository, so it must be trusted for provider read access and contain no provider-readable secrets. Native requires additional trust in the host boundary. Path checks are only a backstop.
 
@@ -22,14 +22,14 @@ DOC_GAUNTLET_REPO="<absolute review worktree>" scripts/doc-gauntlet.sh prepare \
   --authorize-provider --doc <document> --type requirements|plan \
   [--engines claude,codex|grok,codex|claude,grok] \
   [--origin <path>|none] [--ledger <path>|none] [--prior-findings <previous-results-file>]... \
-  [--pair-only]
+  [--pair-only] [--second-review proposal|asked]
 ~~~
 
 The default pair is Claude and Codex. When one cannot run, run it on another login of the same family, or substitute Grok while Grok has usage left: prepare with `--engines grok,codex` when Claude cannot run and `--engines claude,grok` when Codex cannot run. A Grok leg that failed for lack of usage (a usage or payment error such as `402 Payment Required` in its failure file) is not retried: prepare a fresh run on that engine's own family, on another login, or wait for it. Whether Grok has usage left is a usage question for whoever routes usage. Grok legs always run by `run-cli`; there is no native Grok reviewer. A fresh run on an unchanged document is a retry of the same round. Do not auto-failover after prepare. Override the Grok model with `--grok-model`; the default is `grok-4.6`.
 
 Use `requirements` for requirements or specifications, and `plan` for plans or strategies. `--origin` names the committed source from which the target derives. `--ledger` names an optional committed decision record. Selected inputs must be tracked non-symlink files in the worktree.
 
-`prepare` creates one private run directory, snapshots selected inputs, pins HEAD, and writes prompts. `--prior-findings` takes one results file and may be repeated; `prepare` snapshots every file given and tells every reviewer to omit settled findings unless they persist. Reuse its printed WORKDIR. A scope change requires a fresh run.
+`prepare` creates one private run directory, snapshots selected inputs, pins HEAD, and writes prompts. `--prior-findings` takes one results file and may be repeated (on a `--pair-only` retry of the pair, the round's lens results); `prepare` snapshots every file given and tells every reviewer to omit settled findings unless they persist. Reuse its printed WORKDIR. A scope change requires a fresh run.
 
 The runner has five commands: `prepare`, `run-cli`, `ingest`, `collect`, and `clean`. `run-cli` constrains Claude and Codex output with the prepared schema (Grok's reply is checked against it at ingest, and a one-turn Grok reply is refused), starts a detached provider leg with a 1800-second default bound, and returns; pass `--timeout-seconds N` to `prepare` to pin a different bound for the whole run, or set `GAUNTLET_TIMEOUT_CLAUDE_SECONDS`, `GAUNTLET_TIMEOUT_CODEX_SECONDS`, or `GAUNTLET_TIMEOUT_GROK_SECONDS` to override one engine at `run-cli` time (env wins over the pinned config). `run-cli` prints the bound and its source (`env`, `config`, or `default`) for the leg it just started, and `collect` reports the same bound for every leg; a leg that hit its bound is reported as `timed out after Ns`, never folded into a generic diagnostic dump. A leg is `RUNNING` until its provider exits, then `FAILED` if it has no valid result. Retry a failed CLI-from-outset row once. An unfinished or malformed native attempt gets one fresh native retry, then one same-engine CLI fallback. `clean` refuses a running leg unless the operator explicitly passes `--force`.
 
@@ -68,13 +68,34 @@ Save native output verbatim outside the worktree, then run `DOC_GAUNTLET_DIR=<wo
 DOC_GAUNTLET_DIR=<workdir> scripts/doc-gauntlet.sh collect
 ~~~
 
-`collect` is idempotent. Unfinished rows produce `GAUNTLET: RUNNING`; completed rows without valid results produce `GAUNTLET: FAILED`; if all prepared rows fail, it also writes `results/gauntlet-failed.json` with per-leg facts, never a verdict. A complete pair produces `ADVERSARIAL: BLOCK` (a reviewer reported at least one error or omission) or `ADVERSARIAL: CONVERGED` (none; sparring points may remain). Arm the Monitor tool on `<workdir>/completion/*` plus `collect` in the same step as the `run-cli` calls, so the finish wakes you; never leave rows unwatched or wait with a poll loop. The host owns the overall verdict after breadth adjudication. A pair BLOCK whose errors are all verified false may be dispositioned as overall convergence with the pair headline disclosed. Do not rerun for reviewer silence. The record of a run is written by the runner, not by the session: `collect` archives a finished run (results, failures, raw reviewer output, the document, origin, ledger and prior-findings snapshots the reviewers saw, `rows.json`, `repository.path`, `source-document.path`, `head.commit` and `scope.digest`) under `~/.gauntlet/runs/<stamp>-doc-gauntlet-<identity>-<digest8>-<run>/` and prints `ARCHIVE: <path>` (`GAUNTLET_ARCHIVE` overrides the root; a root inside a git worktree is refused unless ignored there), and `prepare` appends the round to `~/.gauntlet/rounds.jsonl`. It also archives a breadth-only round (every lens in, no pair leg started), so the lens results survive `clean`; a leg that lands after an archive gets its own, and the earlier archive keeps what it held. A post-facto question about a review is answered from that archive, and `--prior-findings` takes a results file from it. In the PR body, report each round as one line (engines, verdict, reviewed document SHA, archive path). Never commit a run directory, result JSON, collect output or any other reviewer receipt to the reviewed repository, and never narrate rounds in a committed document; the decision record keeps dispositions, not receipts. `clean` removes only the scratch run.
+`collect` is idempotent. Unfinished rows produce `GAUNTLET: RUNNING`; completed rows without valid results produce `GAUNTLET: FAILED`; if all prepared rows fail, it also writes `results/gauntlet-failed.json` with per-leg facts, never a verdict. A complete pair produces `ADVERSARIAL: BLOCK` (a reviewer reported at least one error or omission) or `ADVERSARIAL: CONVERGED` (none; sparring points may remain). Arm the Monitor tool on `<workdir>/completion/*` plus `collect` in the same step as the `run-cli` calls, so the finish wakes you; never leave rows unwatched or wait with a poll loop. The host owns the overall verdict after breadth adjudication. A pair BLOCK whose errors are all verified false may be dispositioned as overall convergence with the pair headline disclosed. Do not rerun for reviewer silence. The record of a run is written by the runner, not by the session: `collect` archives a finished run (results, failures, raw reviewer output, the document, origin, ledger and prior-findings snapshots the reviewers saw, `rows.json`, `repository.path`, `source-document.path`, `head.commit` and `scope.digest`) under `~/.gauntlet/runs/<stamp>-doc-gauntlet-<identity>-<digest8>-<run>/` and prints `ARCHIVE: <path>` (`GAUNTLET_ARCHIVE` overrides the root; a root inside a git worktree is refused unless ignored there), and the first accepted result of a run appends the round to `~/.gauntlet/rounds.jsonl`. It also archives a breadth-only round (every lens in, no pair leg started), so the lens results survive `clean`; a leg that lands after an archive gets its own, and the earlier archive keeps what it held. A post-facto question about a review is answered from that archive, and `--prior-findings` takes a results file from it. In the PR body, report each round as one line (engines, verdict, reviewed document SHA, archive path). Never commit a run directory, result JSON, collect output or any other reviewer receipt to the reviewed repository, and never narrate rounds in a committed document; the decision record keeps dispositions, not receipts. `clean` removes only the scratch run.
 
 ## Rounds
 
-A document gets up to two rounds, one when a code gauntlet has already reviewed the same change. Read the repo's review budget before round 1, in its CLAUDE.md or AGENTS.md; where it gives the document fewer rounds, or none, it governs. One run is one round: when it returns, the orchestrator applies the verified errors and starts another run only while a round is left.
+A document gets one round (23 Nov 2026; it replaces the two of 27 Sep). The gauntlet skill's budget table says which
+documents come here; no repo sets its own number. One run is the round. Apply no fix until every leg of the run has
+returned: the pair reads the content the lenses read, and a retry is a retry only on the same content. Then the
+orchestrator applies the verified errors, checks its own fixes against the findings, and the document goes to its
+owner; the hand-off names any section rewritten after the round as not reviewed. Errors not applied, and fixes that
+fail that check, go to the decision record as residue.
 
-A round is a distinct document content (the sha256 of the file); a fresh run on unchanged content is a retry of the same round. `prepare` numbers the round from `~/.gauntlet/rounds.jsonl`, keyed on the repository and `doc:<path>`, and refuses nothing on round count; `--override-round-budget <value>` is accepted and ignored (it takes one value). Breadth runs once per document: the first round is the six lenses plus the pair; a later round is `prepare --pair-only` with `--prior-findings` carrying the earlier results. Breadth runs again only when a repair replaced the document's structure or most of its content, so the earlier findings no longer map onto it. After the last round, open errors go to the decision record as residue and the document goes to its owner.
+A round is one reviewed content of the document (the sha256 of the file). A fresh run on content this machine's
+record already holds is a retry of that round and is never refused, and `prepare --pair-only --prior-findings
+<results>` retries the pair alone when the lenses are already in. `prepare` numbers the round from
+`~/.gauntlet/rounds.jsonl`, keyed on the repository and `doc:<path>`.
+
+**No second round.** `prepare` refuses a run on content the record does not hold while the record holds a round for
+the same document whose commit is an ancestor of the current HEAD and is not in the default branch. It stops with the
+earlier round and what to do instead. A change on a branch that does not contain the reviewed commit, a new branch
+from the default branch included, is a new review and is not refused. A branch stacked on an unmerged reviewed
+branch, or one still in use after its squash-merge, is refused: start a new branch from the default branch. Two
+things only run a second review, each with `prepare --second-review <label>`, which prints and records the label: a
+client proposal's second fact-check round (`references/derivation-ledger.md`, label `proposal`), and a second review
+the requester asks for (label `asked`). Any other label, an empty one included, is refused. A document gets one second
+review at most: a third round is refused whatever the label. A label given where no second review runs (a first
+round, a retry of recorded content) records nothing, so every labelled line in the record is a second review that
+ran. The record is per machine, so a round on another machine is not seen, and a round is recorded only when its
+first result is accepted: this is a speed control, not a security one.
 
 ## Two outputs
 
@@ -89,6 +110,6 @@ Hedges, caveats, style, prose preference, hypothetical future-host behaviour and
 
 When reviewing gauntlet transport or lifecycle, reject a request for a receipt, state transition, registry, lock, reason-code taxonomy, timing calculation, ordering proof, or attestation unless it cites a reproduced failure in the current implementation, shows why a simpler host primitive or direct validation cannot fix it, states its line and state cost, and has an explicit complexity-budget exception from the reviewed work's owner.
 
-Stop when no unresolved error remains, or at the last round the rule above allows.
+Stop after the one round: fix and check the verified errors, record any left open as residue, and hand the document to its owner.
 
 Read [reviewer-contract.md](references/reviewer-contract.md) for the adversarial envelope and [compatibility.md](references/compatibility.md) for host recipes.

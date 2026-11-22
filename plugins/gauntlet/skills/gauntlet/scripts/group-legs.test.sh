@@ -30,7 +30,7 @@ git -C "$TMP/repo" add . && git -C "$TMP/repo" commit -qm change
 
 run() { GAUNTLET_REPO="$TMP/repo" GAUNTLET_DIR="$1" bash "$RUNNER" "${@:2}"; }
 
-# Refusals: a group that matches nothing, the reserved name, a bad name, a name given twice, no path, a pre-review.
+# Refusals: a group that matches nothing, the reserved name, a bad name, a name given twice, no path.
 refute run "$TMP/r1" prepare --authorize-provider --base main --identity g --group api=src/api --group nothing=no/such 2> "$TMP/e1"
 grep -Fq 'matches no changed file in scope: nothing' "$TMP/e1"
 refute run "$TMP/r2" prepare --authorize-provider --base main --identity g --group Bad_Name=src 2> "$TMP/e2"
@@ -41,8 +41,6 @@ refute run "$TMP/r6" prepare --authorize-provider --base main --identity g --gro
 grep -Fq -- '--group api names no path' "$TMP/e6a"
 refute run "$TMP/r3" prepare --authorize-provider --base main --identity g --group rest=src 2> "$TMP/e3"
 grep -Fq 'other than rest' "$TMP/e3"
-refute run "$TMP/r4" prepare --authorize-provider --base main --identity g --pre-review --builder deepseek --engines codex --group api=src/api 2> "$TMP/e4"
-grep -Fq 'drop --group' "$TMP/e4"
 test ! -e "$TMP/r1" && test ! -e "$TMP/r2" && test ! -e "$TMP/r3" && test ! -e "$TMP/r5" && test ! -e "$TMP/r6"
 # One group holding every file is allowed: one leg per engine, each on the whole diff.
 run "$TMP/one" prepare --authorize-provider --base main --identity one --group all=src,top.txt > "$TMP/one.out"
@@ -181,10 +179,11 @@ grep -Fq 'codex is not in this run' "$TMP/e7"
 run "$RUN" dispose --engine codex --group api --finding 1 --action drop --reason 'reproduced as fixed' --test true > "$TMP/dispose.out"
 grep -Fxq 'DISPOSED: codex@api#1 drop' "$TMP/dispose.out"
 
-# The disposition is recorded under the leg, and the next round on the same identity is round 2.
+# The disposition is recorded under the leg, and the round, recorded once, is the identity's one round: new
+# content over its files is refused (no second round, 22 Nov 2026).
 grep -Fq '"engine": "codex@api"' "$RUN/dispositions.jsonl" || grep -Fq '"engine":"codex@api"' "$RUN/dispositions.jsonl"
 printf 'more\n' >> "$TMP/repo/top.txt"; git -C "$TMP/repo" commit -qam more
-run "$TMP/run2" prepare --authorize-provider --base main --profile fast --identity grouped --group api=src/api > "$TMP/prepare2.out" 2>&1
-grep -Fq 'ROUND: 2 identity=id:grouped' "$TMP/prepare2.out"
-run "$TMP/run2" clean --force
+refute run "$TMP/run2" prepare --authorize-provider --base main --profile fast --identity grouped --group api=src/api > "$TMP/prepare2.out" 2>&1
+grep -Fq 'NO SECOND ROUND: id:grouped already had round 1' "$TMP/prepare2.out"
+test ! -e "$TMP/run2"
 echo 'group-legs: all checks passed'

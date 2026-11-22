@@ -198,7 +198,8 @@ These rules override the paragraphs above where they differ.
 - A cannot-derive from either stop follows the rule above: re-derived later, cut, labelled
   `UNREVIEWED NOTE`, or, on a short message or a proposal, named to the sender in one line.
 - **A proposal** gets two doc-gauntlet rounds that check its facts and figures by re-derivation from the
-  source (the derivation leg above, a verbatim copy of its ledger appended to the reviewed export), then one
+  source (the second runs with `--second-review proposal`; the derivation leg above, a verbatim copy of its
+  ledger appended to the reviewed export), then one
   round of this review in the order above, whose findings are applied once, with no re-run.
 
 ## Questions worth asking, and a message someone else relays

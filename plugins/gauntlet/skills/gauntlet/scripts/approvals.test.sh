@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Approvals that stand and findings kept as written (retro rulings O5 and O7).
+# Approvals that stand and findings kept as written (retro rulings O5 and O7), with no second round over files
+# an earlier round covered (22 Nov 2026): a merge fix is the orchestrator's to check (FIXES CHECKED).
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNNER="$SCRIPT_DIR/gauntlet.sh"
@@ -14,7 +15,7 @@ run() { GAUNTLET_DIR="$RUN_DIR" bash "$RUNNER" "$@"; }
 new_repo() {
   R="$TMP/$1"; git init -q -b main "$R"
   git -C "$R" config user.name test; git -C "$R" config user.email test@example.invalid
-  printf 'base\n' > "$R/app.txt"; printf 'echo ok\n' > "$R/run-once.sh"; git -C "$R" add . && git -C "$R" commit -qm base
+  printf 'base\n' > "$R/app.txt"; git -C "$R" add . && git -C "$R" commit -qm base
   git -C "$R" remote add origin "$2"
   git -C "$R" checkout -qb feature
 }
@@ -29,10 +30,9 @@ result() {
   printf '{"engine":"%s","model":"%s","transport":"%s-native","scope_sha":"%s","scope_digest":"%s","verdict":"%s","findings":%s}\n' "$engine" "$model" "$engine" "$sha" "$digest" "$verdict" "$findings" > "$TMP/result.txt"
   GAUNTLET_DIR="$run" bash "$RUNNER" ingest --engine "$engine" --text "$TMP/result.txt" > /dev/null
 }
-# Pre-review, run-once and an approved round 1 for identity $1.
+# An approved round 1 for identity $1.
 converge() {
-  prep --identity "$1" --pre-review --builder deepseek --engines grok > /dev/null; result "$RUN_DIR" grok APPROVE
-  prep --identity "$1" --run-once > /dev/null
+  prep --identity "$1" > /dev/null
   result "$RUN_DIR" claude APPROVE; result "$RUN_DIR" codex APPROVE
   run collect > "$TMP/collect.out"
 }
@@ -41,7 +41,7 @@ bring_main_in() {
   git -C "$R" merge -q --no-edit main
 }
 
-printf 'example-org/example-dashboard\t-\tbash run-once.sh\n' > "$TMP/on.tsv"
+printf 'example-org/example-dashboard\t-\tnone\n' > "$TMP/on.tsv"
 export GAUNTLET_ENFORCE_LIST="$TMP/on.tsv"
 
 # 1. O5, enforced: converged, then main brought in with the PR's own diff
@@ -63,8 +63,7 @@ test ! -e "$RUN_DIR/rows.json"
 for id in nits held; do
   new_repo "$id" https://github.com/example-org/example-dashboard.git
   edit app.txt one
-  prep --identity "$id" --pre-review --builder deepseek --engines grok > /dev/null; result "$RUN_DIR" grok APPROVE
-  prep --identity "$id" --run-once > /dev/null
+  prep --identity "$id" > /dev/null
   sev=P2; [[ "$id" == nits ]] || sev=P1
   result "$RUN_DIR" claude BLOCK app.txt:1 P3; result "$RUN_DIR" codex BLOCK app.txt:2 "$sev"; run collect > /dev/null || true
   bring_main_in "$id"
@@ -73,28 +72,22 @@ R="$TMP/nits"
 if prep --identity nits > "$TMP/nits.out" 2> /dev/null; then echo 'O5 prepared a round over a nit-only round' >&2; exit 1; fi
 grep -Fq "APPROVAL STANDS @ $(git -C "$R" rev-parse HEAD)" "$TMP/nits.out"
 R="$TMP/held"
+# Its own diff is unchanged after main, so the same content again is a retry of round 1, not a second round.
 prep --identity held > "$TMP/held.out"
 refute grep -Fq 'APPROVAL STANDS' "$TMP/held.out"
+grep -Fq 'ROUND: 1 (retry of recorded round 1)' "$TMP/held.out"
 grep -Fq 'GAUNTLET_DIR=' "$TMP/held.out"
 R="$TMP/solo"
 
-# 2. O5, enforced: a merge fix changes one file of the PR's own diff. Only that
-#    file is the review scope.
+# 2. O5, enforced: a merge fix changes one file of the PR's own diff. It is named, and since round 1 covered it,
+#    no round is prepared: the orchestrator checks the merge fix (FIXES CHECKED).
 edit app.txt merge-fix
-prep --identity stand > "$TMP/fix.out"
+if prep --identity stand > "$TMP/fix.out" 2> "$TMP/fix.err"; then echo 'a round was prepared over a merge fix' >&2; exit 1; fi
 grep -Fq 'MERGE FIX' "$TMP/fix.out"
 grep -Fxq '  app.txt' "$TMP/fix.out"
-grep -Fxq 'other.txt' "$RUN_DIR/scope/excludes"
-grep -Fq 'app.txt' "$RUN_DIR/scope/diff.patch"
-refute grep -Fq 'other.txt' "$RUN_DIR/scope/diff.patch"
-
-# 2b. A retried merge-fix round (one leg already recorded the round) is still
-#     narrowed, so it is the same round, not a new one over the whole diff.
-result "$RUN_DIR" claude APPROVE
-prep --identity stand > "$TMP/fix-retry.out"
-grep -Fq 'ROUND: 2 ' "$TMP/fix-retry.out"
-grep -Fxq '  app.txt' "$TMP/fix-retry.out"
-grep -Fxq 'other.txt' "$RUN_DIR/scope/excludes"
+refute grep -Fxq '  other.txt' "$TMP/fix.out"
+grep -Fq 'MERGE FIX ONLY: every file in it was covered by an earlier round, so no round is prepared; the orchestrator checks the merge fix (FIXES CHECKED)' "$TMP/fix.err"
+test ! -e "$RUN_DIR"
 
 # 3. O5 off the list: the same standing approval is a warning and the round
 #    prepares as today, unnarrowed.
@@ -108,16 +101,19 @@ grep -Fq 'APPROVAL STANDS' "$TMP/plain.out"
 grep -Fq 'WARNING (not enforced for example/plain): the approval stands' "$TMP/plain.err"
 grep -Fq 'GAUNTLET_DIR=' "$TMP/plain.out"
 edit app.txt merge-fix
-prep --identity plain > "$TMP/plainfix.out" 2> "$TMP/plainfix.err"
-grep -Fq 'scope would narrow to the merge fix' "$TMP/plainfix.err"
-grep -Fq 'other.txt' "$RUN_DIR/scope/diff.patch"
+if prep --identity plain > "$TMP/plainfix.out" 2> "$TMP/plainfix.err"; then echo 'a second round was prepared off the list' >&2; exit 1; fi
+grep -Fq 'scope would narrow to the files the approval did not cover' "$TMP/plainfix.err"
+grep -Fq 'NO SECOND ROUND: id:plain already had round 1' "$TMP/plainfix.err"
 export GAUNTLET_ENFORCE_LIST="$TMP/on.tsv"
 
 # 4. O7, enforced: findings are kept as written. A disposition needs a test,
 #    a failing test is refused and recorded, a passing one is accepted.
 R="$TMP/solo"
 edit third.txt three
-prep --identity stand --timeout-seconds 2 > /dev/null
+prep --identity stand --timeout-seconds 2 > "$TMP/third.out"
+grep -Fxq '  third.txt' "$TMP/third.out"
+grep -Fxq 'app.txt' "$RUN_DIR/scope/excludes"
+refute grep -Fq 'b/app.txt' "$RUN_DIR/scope/diff.patch"
 result "$RUN_DIR" claude APPROVE; result "$RUN_DIR" codex BLOCK third.txt:1
 run collect > "$TMP/f.out"
 grep -Fq 'FINDINGS: 1 as written, 1 open' "$TMP/f.out"
@@ -145,9 +141,10 @@ test -f "$(<"$RUN_DIR/archive-path")/dispositions.jsonl"
 
 # 5. O7: the next round's prior findings are the runner's record, every finding
 #    as written, overriding a file the orchestrator passes.
-edit third.txt fixed
+edit fourth.txt four
 printf '{"findings":[]}\n' > "$TMP/empty.json"
-prep --identity stand --prior-findings "$TMP/empty.json" > "$TMP/next.out"
+prep --identity stand --exclude app.txt --exclude other.txt --exclude third.txt --prior-findings "$TMP/empty.json" > "$TMP/next.out"
+grep -Fq 'NEW FILES ONLY' "$TMP/next.out"
 grep -Fq 'PRIOR-FINDINGS: the runner' "$TMP/next.out"
 grep -Fq 'third.txt:1' "$RUN_DIR/scope/prior-findings.snapshot"
 grep -Fq 'disposed: downgrade to P2' "$RUN_DIR/scope/prior-findings.snapshot"
@@ -155,7 +152,7 @@ grep -Fq 'Only a settled prior-round finding (status disposed, or marked accepte
 
 # 6. A disposition test runs inside the slot wrapper and is bounded by the run's timeout.
 mkdir -p "$TMP/slot"; printf '#!/usr/bin/env bash\n[[ "$1" == run ]] && shift; IN_SLOT=1 "$@"\n' > "$TMP/slot/box-test-slot.sh"; chmod +x "$TMP/slot/box-test-slot.sh"
-printf 'example-org/example-dashboard\tbash %s run\tbash run-once.sh\n' "$TMP/slot/box-test-slot.sh" > "$TMP/slot.tsv"
+printf 'example-org/example-dashboard\tbash %s run\tnone\n' "$TMP/slot/box-test-slot.sh" > "$TMP/slot.tsv"
 result "$RUN_DIR" claude APPROVE; result "$RUN_DIR" codex BLOCK third.txt:2; run collect > /dev/null || true
 GAUNTLET_ENFORCE_LIST="$TMP/slot.tsv" run dispose --engine codex --finding 1 --action drop --reason r --test 'test "$IN_SLOT" = 1 && echo a; test "$IN_SLOT" = 1 && echo b' > "$TMP/slotd.out"
 grep -Fxq 'waiting for a box test slot' "$TMP/slotd.out"
@@ -184,21 +181,21 @@ edit café.txt one; edit other.txt two
 converge uni
 bring_main_in u
 edit café.txt merge-fix
-prep --identity uni > "$TMP/uni.out"
+if prep --identity uni > "$TMP/uni.out" 2> "$TMP/uni.err"; then echo 'a round was prepared over a merge fix' >&2; exit 1; fi
 grep -Fxq '  café.txt' "$TMP/uni.out"
-grep -Fxq 'other.txt' "$RUN_DIR/scope/excludes"
-refute grep -Fq 'other.txt' "$RUN_DIR/scope/diff.patch"
+refute grep -Fxq '  other.txt' "$TMP/uni.out"
+grep -Fq 'MERGE FIX ONLY' "$TMP/uni.err"
 
-# 6d. O7: a retried round (its first leg already recorded the round) still gets
-#     the round before it as prior findings, not the file passed.
+# 6d. O7: a retried round 2 (its first leg already recorded the round; it covers
+#     only a file round 1 did not) still gets round 1 as prior findings, not the
+#     file passed.
 new_repo retry https://github.com/example-org/example-dashboard.git
 edit app.txt one
-prep --identity retry --pre-review --builder deepseek --engines grok > /dev/null; result "$RUN_DIR" grok APPROVE
-prep --identity retry --run-once > /dev/null
+prep --identity retry > /dev/null
 result "$RUN_DIR" claude APPROVE; result "$RUN_DIR" codex BLOCK app.txt:9; run collect > /dev/null
-edit app.txt two
-prep --identity retry > /dev/null; result "$RUN_DIR" claude APPROVE
-prep --identity retry --prior-findings "$TMP/empty.json" > "$TMP/retry.out"
+edit new.txt two
+prep --identity retry --exclude app.txt > /dev/null; result "$RUN_DIR" claude APPROVE
+prep --identity retry --exclude app.txt --prior-findings "$TMP/empty.json" > "$TMP/retry.out"
 grep -Fq 'ROUND: 2' "$TMP/retry.out"
 grep -Fq 'PRIOR-FINDINGS: the runner' "$TMP/retry.out"
 grep -Fq 'app.txt:9' "$RUN_DIR/scope/prior-findings.snapshot"
@@ -222,32 +219,31 @@ test "$(verdicts id:rec)" -eq 1
 export GAUNTLET_ENFORCE_LIST="$TMP/on.tsv"
 
 # 6f. O5, enforced: main brings in the same change the PR made to app.txt, so
-#     app.txt leaves the PR's own diff. With nothing else changed the whole
-#     diff is reviewed (never an empty scope); with a real merge fix too, the
-#     scope narrows to it.
+#     app.txt leaves the PR's own diff. With nothing else changed no approval
+#     stands and the whole diff, all of it covered by round 1, is a second
+#     round, refused; with a real merge fix too, only that file is named and no
+#     round is prepared.
 new_repo gone https://github.com/example-org/example-dashboard.git
 edit app.txt one; edit other.txt two; edit third.txt three
 converge gone
 git -C "$R" checkout -q main; edit app.txt one; git -C "$R" checkout -q feature; git -C "$R" merge -q --no-edit main
-prep --identity gone > "$TMP/gone.out"
+if prep --identity gone > "$TMP/gone.out" 2> "$TMP/gone.err"; then echo 'a second round over covered files was prepared' >&2; exit 1; fi
 grep -Fxq '  gone: app.txt' "$TMP/gone.out"
-grep -Fq 'the whole diff is reviewed' "$TMP/gone.out"
-test ! -s "$RUN_DIR/scope/excludes"
-grep -Fq 'other.txt' "$RUN_DIR/scope/diff.patch"; grep -Fq 'third.txt' "$RUN_DIR/scope/diff.patch"
+grep -Fq 'so no approval stands; the second-round rule decides whether a round prepares' "$TMP/gone.out"
+grep -Fq 'NO SECOND ROUND: id:gone already had round 1' "$TMP/gone.err"
 edit other.txt merge-fix
-prep --identity gone > "$TMP/gone2.out"
+if prep --identity gone > "$TMP/gone2.out" 2> "$TMP/gone2.err"; then echo 'a round was prepared over a merge fix' >&2; exit 1; fi
 grep -Fxq '  other.txt' "$TMP/gone2.out"
-grep -Fxq 'third.txt' "$RUN_DIR/scope/excludes"
-refute grep -Fq 'app.txt' "$RUN_DIR/scope/excludes"
-refute grep -Fq 'third.txt' "$RUN_DIR/scope/diff.patch"
+refute grep -Fxq '  third.txt' "$TMP/gone2.out"
+grep -Fq 'MERGE FIX ONLY' "$TMP/gone2.err"
 
-# 6g. O5 excludes are literal paths: an unchanged [x].txt never hides the
-#     changed x.txt (as a glob it would match it).
+# 6g. O5 excludes are literal paths: [x].txt keeps its standing and never hides
+#     x.txt, which round 1 left out (as a glob it would match it).
 new_repo glob https://github.com/example-org/example-dashboard.git
 edit '[x].txt' one; edit x.txt two
-converge glob
+prep --identity glob --exclude x.txt > /dev/null
+result "$RUN_DIR" claude APPROVE; result "$RUN_DIR" codex APPROVE; run collect > /dev/null
 bring_main_in g
-edit x.txt merge-fix
 prep --identity glob > "$TMP/glob.out"
 grep -Fxq '  x.txt' "$TMP/glob.out"
 grep -Fxq '[x].txt' "$RUN_DIR/scope/excludes"
@@ -258,15 +254,14 @@ refute grep -Fq '[x].txt' "$RUN_DIR/scope/diff.patch"
 #     to the next round, as written and open.
 new_repo partial https://github.com/example-org/example-dashboard.git
 edit app.txt one
-prep --identity partial --pre-review --builder deepseek --engines grok > /dev/null; result "$RUN_DIR" grok APPROVE
-prep --identity partial --run-once > /dev/null
+prep --identity partial > /dev/null
 result "$RUN_DIR" codex BLOCK app.txt:5
 printf 'not a result\n' > "$TMP/bad.txt"
 GAUNTLET_DIR="$RUN_DIR" bash "$RUNNER" ingest --engine claude --text "$TMP/bad.txt" > /dev/null 2>&1 || true
 if run collect > "$TMP/partial.out"; then echo 'a round with a failed leg collected as complete' >&2; exit 1; fi
 grep -Fq 'GAUNTLET: FAILED' "$TMP/partial.out"
-edit app.txt two
-prep --identity partial --prior-findings "$TMP/empty.json" > "$TMP/partial2.out"
+edit new.txt two
+prep --identity partial --exclude app.txt --prior-findings "$TMP/empty.json" > "$TMP/partial2.out"
 grep -Fq 'PRIOR-FINDINGS: the runner' "$TMP/partial2.out"
 grep -Fq 'app.txt:5' "$RUN_DIR/scope/prior-findings.snapshot"
 grep -Fq '"status": "open"' "$RUN_DIR/scope/prior-findings.snapshot"
@@ -277,8 +272,7 @@ grep -Fq '"status": "open"' "$RUN_DIR/scope/prior-findings.snapshot"
 #     and a merge fix to a.txt must never exclude the never-reviewed b.txt.
 new_repo partscope https://github.com/example-org/example-dashboard.git
 edit a.txt one; edit b.txt two
-prep --identity partscope --pre-review --builder deepseek --engines grok > /dev/null; result "$RUN_DIR" grok APPROVE
-prep --identity partscope --run-once --exclude b.txt > /dev/null
+prep --identity partscope --exclude b.txt > /dev/null
 refute grep -Fq 'b.txt' "$RUN_DIR/scope/diff.patch"
 result "$RUN_DIR" claude APPROVE; result "$RUN_DIR" codex APPROVE; run collect > /dev/null
 bring_main_in p
@@ -297,51 +291,46 @@ grep -Fq "APPROVAL STANDS @ $(git -C "$R" rev-parse HEAD)" "$TMP/part2.out"
 # A merge fix to the reviewed a.txt never excludes the unreviewed b.txt.
 new_repo partfix https://github.com/example-org/example-dashboard.git
 edit a.txt one; edit b.txt two
-prep --identity partfix --pre-review --builder deepseek --engines grok > /dev/null; result "$RUN_DIR" grok APPROVE
-prep --identity partfix --run-once --exclude b.txt > /dev/null
+prep --identity partfix --exclude b.txt > /dev/null
 result "$RUN_DIR" claude APPROVE; result "$RUN_DIR" codex APPROVE; run collect > /dev/null
 bring_main_in f
 edit a.txt merge-fix
-prep --identity partfix > "$TMP/partfix.out" 2> /dev/null || true
+prep --identity partfix > "$TMP/partfix.out"
+grep -Fxq '  a.txt' "$TMP/partfix.out"
 refute grep -Fxq 'b.txt' "$RUN_DIR/scope/excludes"
+grep -Fxq 'a.txt' "$RUN_DIR/scope/excludes"
 grep -Fq 'b/b.txt' "$RUN_DIR/scope/diff.patch"
-grep -Fq 'b/a.txt' "$RUN_DIR/scope/diff.patch"
+refute grep -Fq 'b/a.txt' "$RUN_DIR/scope/diff.patch"
 
-# 6j. O5, enforced: a file name holding a line feed never forges standing.
-#     Round 1 reviews only $'safe\nvictim.txt'; once main is brought in, the
-#     unreviewed victim.txt must be in scope, and no later approval stands
-#     while such a name is in the diff.
-printf 'example-org/line-break-names\t-\tbash run-once.sh\n' > "$TMP/lb.tsv"
+# 6j. O5, enforced: a file name holding a line feed never forges standing or
+#     coverage. Round 1 reviews only $'safe\nvictim.txt'; once main is brought
+#     in, no approval stands, and with no coverage recorded a second round is
+#     refused, never let through as new files.
+printf 'example-org/line-break-names\t-\tnone\n' > "$TMP/lb.tsv"
 export GAUNTLET_ENFORCE_LIST="$TMP/lb.tsv"
 new_repo lf https://github.com/example-org/line-break-names.git
 edit $'safe\nvictim.txt' one; edit victim.txt two; edit other.txt three
-prep --identity lf --pre-review --builder deepseek --engines grok > /dev/null; result "$RUN_DIR" grok APPROVE
-prep --identity lf --run-once --exclude victim.txt --exclude other.txt > /dev/null
+prep --identity lf --exclude victim.txt --exclude other.txt > /dev/null
 refute grep -Fq 'diff --git a/victim.txt b/victim.txt' "$RUN_DIR/scope/diff.patch"
 result "$RUN_DIR" claude APPROVE; result "$RUN_DIR" codex APPROVE; run collect > /dev/null
 bring_main_in lf1
-prep --identity lf > "$TMP/lf.out" 2> /dev/null || true
-grep -Fq 'diff --git a/victim.txt b/victim.txt' "$RUN_DIR/scope/diff.patch"
-refute grep -Fxq 'victim.txt' "$RUN_DIR/scope/excludes"
-result "$RUN_DIR" claude APPROVE; result "$RUN_DIR" codex APPROVE; run collect > /dev/null
-bring_main_in lf2
-prep --identity lf > "$TMP/lf2.out" 2> /dev/null || true
-refute grep -Fq 'APPROVAL STANDS' "$TMP/lf2.out"
-grep -Fq 'diff --git a/victim.txt b/victim.txt' "$RUN_DIR/scope/diff.patch"
+if prep --identity lf > "$TMP/lf.out" 2> "$TMP/lf.err"; then echo 'a line-break name forged a second round' >&2; exit 1; fi
+refute grep -Fq 'APPROVAL STANDS' "$TMP/lf.out"
+grep -Fq 'NO SECOND ROUND: id:lf already had round 1' "$TMP/lf.err"
 
 # 6k. O5, enforced: coverage reads excludes as the review does (line feeds
 #     only), and a name holding a carriage return gives no standing. Round 1
-#     excludes $'secret\rpart.txt'; after main it is still reviewed.
+#     excludes $'secret\rpart.txt'; after main no approval stands and the
+#     second round is refused.
 new_repo cr https://github.com/example-org/line-break-names.git
 edit app.txt one; edit $'secret\rpart.txt' two
-prep --identity cr --pre-review --builder deepseek --engines grok > /dev/null; result "$RUN_DIR" grok APPROVE
-prep --identity cr --run-once --exclude $'secret\rpart.txt' > /dev/null
+prep --identity cr --exclude $'secret\rpart.txt' > /dev/null
 refute grep -Fq 'secret\rpart.txt' "$RUN_DIR/scope/diff.patch"
 result "$RUN_DIR" claude APPROVE; result "$RUN_DIR" codex APPROVE; run collect > /dev/null
 bring_main_in cr1
-prep --identity cr > "$TMP/cr.out" 2> /dev/null || true
+if prep --identity cr > "$TMP/cr.out" 2> "$TMP/cr.err"; then echo 'a carriage-return name forged a second round' >&2; exit 1; fi
 refute grep -Fq 'APPROVAL STANDS' "$TMP/cr.out"
-grep -Fq 'secret\rpart.txt' "$RUN_DIR/scope/diff.patch"
+grep -Fq 'NO SECOND ROUND: id:cr already had round 1' "$TMP/cr.err"
 export GAUNTLET_ENFORCE_LIST="$TMP/on.tsv"
 
 # 6c. O5, enforced: a diff too large to pass as one argument (Linux refuses an argument over 128 KiB, the Mac a

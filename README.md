@@ -41,8 +41,8 @@ Start with ruling-page and reading-page: neither needs a key or an account. ruli
 - [**reading-page**](#reading-page) 0.3.2: Turns a long agent answer into one page you can read. Needs uv.
 - [**ruling-page**](#ruling-page) 0.3.3: Puts several decisions with trade-offs on one page you click through. Nothing to install.
 - [**call-prep**](#call-prep) 0.3.1: Writes what to say on a call, word for word. Nothing to install.
-- [**gauntlet**](#gauntlet) 0.7.2: Reviews a committed code change with two models at once. Needs two signed-in reviewer CLIs (Claude Code and Codex by default). Sends the diff, and whatever the reviewers can read in the worktree, to those two model companies through your own logins.
-- [**doc-gauntlet**](#doc-gauntlet) 0.6.4: Reviews a plan or spec before you build from it. Needs two signed-in reviewer CLIs (Claude Code and Codex by default). Sends the document, and whatever the reviewers can read in the worktree, to those two model companies through your own logins.
+- [**gauntlet**](#gauntlet) 0.8.0: Reviews a committed code change with two models at once. Needs two signed-in reviewer CLIs (Claude Code and Codex by default). Sends the diff, and whatever the reviewers can read in the worktree, to those two model companies through your own logins.
+- [**doc-gauntlet**](#doc-gauntlet) 0.7.0: Reviews a plan or spec before you build from it. Needs two signed-in reviewer CLIs (Claude Code and Codex by default). Sends the document, and whatever the reviewers can read in the worktree, to those two model companies through your own logins.
 - [**persona-teardown**](#persona-teardown) 0.2.0: Walks your prototype as three to five cold personas in a real browser. Needs agent-browser. The screens it walks go to the model company of your own session.
 - [**humanize-writing**](#humanize-writing) 0.2.0: Rewrites a draft so it reads like a person wrote it, adding nothing. Nothing to install.
 - [**go-deeper**](#go-deeper) 0.1.0: Rewrites a task to ask for what a top professional in the field would do. Nothing to install.
@@ -197,7 +197,7 @@ in one slot. Choose the pair at prepare.
 
 </details>
 
-Version 0.7.2 · [Plugin README](plugins/gauntlet/README.md) · [Changelog](CHANGELOG.md)
+Version 0.8.0 · [Plugin README](plugins/gauntlet/README.md) · [Changelog](CHANGELOG.md)
 
 ### doc-gauntlet
 
@@ -243,7 +243,7 @@ in one slot. Choose the pair at prepare.
 
 </details>
 
-Version 0.6.4 · [Plugin README](plugins/doc-gauntlet/README.md) · [Changelog](CHANGELOG.md)
+Version 0.7.0 · [Plugin README](plugins/doc-gauntlet/README.md) · [Changelog](CHANGELOG.md)
 
 ### persona-teardown
 
@@ -415,9 +415,9 @@ Clone the repo. From `plugins/gauntlet` or `plugins/doc-gauntlet`, follow that d
 ## Latest changes
 
 <!-- changes:latest:start -->
+- **gauntlet 0.8.0 and doc-gauntlet 0.7.0** (23 November 2026)
 - **doc-gauntlet 0.6.4** (20 November 2026)
 - **call-prep 0.3.1** (20 November 2026)
-- **ruling-page 0.3.3** (19 November 2026)
 
 Full history: [CHANGELOG.md](CHANGELOG.md)
 <!-- changes:latest:end -->

@@ -11,12 +11,16 @@ usage() { cat <<'EOF'
 Usage: doc-gauntlet.sh prepare --authorize-provider --doc PATH --type requirements|plan [--origin PATH|none] [--ledger PATH|none]
        [--engines ENG,ENG] [--claude-model MODEL] [--codex-model MODEL] [--grok-model MODEL]
        [--effort low|medium|high|xhigh|max] [--timeout-seconds N] [--prior-findings FILE]...
-       [--pair-only]
+       [--pair-only] [--second-review proposal|asked]
        DOC_GAUNTLET_DIR=DIR doc-gauntlet.sh run-cli --lens NAME|--engine claude|codex|grok
        DOC_GAUNTLET_DIR=DIR doc-gauntlet.sh ingest --lens NAME|--engine claude|codex|grok --transport TRANSPORT --text FILE
        DOC_GAUNTLET_DIR=DIR doc-gauntlet.sh collect
        DOC_GAUNTLET_DIR=DIR doc-gauntlet.sh clean [--force]
-  --override-round-budget is accepted and ignored (the round budget was retired).
+  prepare refuses a second round on a changed document (23 Nov 2026): new content while the record holds a round
+  of the same document whose commit is an ancestor of HEAD and not in the default branch. A retry of recorded
+  content always prepares. --second-review proposal|asked runs the one second review and records its label;
+  a third round is refused whatever the label, and a label where no second review runs records nothing.
+  --override-round-budget is accepted and ignored; it does not lift the refusal.
 EOF
 }
 fail() { printf '%s\n' "$*" >&2; exit 2; }
@@ -197,11 +201,14 @@ PY
 # Round arithmetic and the metadata prepare hands to rows.json. New content is
 # numbered one past the larger of this document's distinct recorded contents and
 # its highest recorded round; content already on record is a retry and keeps its
-# round. Nothing is refused on round count.
+# round, and is never refused. Otherwise, without --second-review, new content is
+# refused while some recorded round of the document has a head that is an
+# ancestor of HEAD and is not reachable from the default branch (23 Nov 2026:
+# one round on every document). Only local refs are read; nothing is fetched.
 round_compute() {
   python3 - "$@" <<'PY'
-import hashlib, json, os, sys
-record, default_flag, repo_key, identity, doc_path, head, pair_flag = sys.argv[1:8]
+import hashlib, json, os, re, subprocess, sys
+record, default_flag, repo_key, identity, doc_path, head, pair_flag, second_review, worktree = sys.argv[1:10]
 default = default_flag == "1"
 pair_only = pair_flag == "1"
 
@@ -222,7 +229,7 @@ except OSError as exc:
     die("round record %s is not writable: %s" % (record, exc.strerror))
 
 digest = hashlib.sha256(open(doc_path, "rb").read()).hexdigest()
-distinct, recorded, top, seen = [], None, 0, False
+distinct, recorded, top, seen, rounds = [], None, 0, False, []
 with open(record, "r", errors="replace") as handle:
     for number, raw in enumerate(handle, 1):
         raw = raw.strip()
@@ -239,6 +246,7 @@ with open(record, "r", errors="replace") as handle:
         if entry["repo"] != repo_key or entry["identity"] != identity or entry["runner"] != "doc-gauntlet":
             continue
         seen = True
+        rounds.append(entry)
         if entry["digest"] not in distinct:
             distinct.append(entry["digest"])
         top = max(top, entry["round"])
@@ -247,8 +255,72 @@ with open(record, "r", errors="replace") as handle:
 if pair_only and not seen:
     die("--pair-only needs a recorded round on %s; the first round runs breadth" % identity)
 
+
+def git_ok(*args):
+    return subprocess.call(["git", "-C", worktree] + list(args), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 0
+
+
+# The default branch is the first of these that resolves, read as the local refs
+# stand; a repository where none resolves refuses nothing.
+def default_branch():
+    for ref in ("refs/remotes/origin/HEAD", "refs/remotes/origin/main", "refs/remotes/origin/master", "refs/heads/main", "refs/heads/master"):
+        if git_ok("rev-parse", "--verify", "--quiet", ref + "^{commit}"):
+            return ref
+    return None
+
+
+# The recorded rounds whose head is on this branch's history and not yet in the
+# default branch, oldest first. A head this repository does not have, one that
+# is not an ancestor of HEAD (another branch, or rebased since), and one already
+# in the default branch never count.
+def branch_rounds():
+    base = default_branch()
+    if base is None:
+        return []
+    found = []
+    for entry in rounds:
+        earlier = entry.get("head")
+        if not isinstance(earlier, str) or not re.fullmatch(r"[0-9a-f]{7,64}", earlier):
+            continue
+        if not git_ok("merge-base", "--is-ancestor", earlier, head):
+            continue
+        if git_ok("merge-base", "--is-ancestor", earlier, base):
+            continue
+        found.append(entry)
+    return found
+
+
+def where(entry):
+    return "round %s at %s, %s" % (entry["round"], entry["head"][:12], str(entry.get("ts", ""))[:10] or "date not recorded")
+
+
+# The label is kept only when this run is the one second review: new content on
+# a branch that already had its round. On a first round and on a retry of
+# recorded content it is dropped, so a record line that carries a label is
+# always a second review that ran.
+label = ""
+if recorded is None:
+    earlier_rounds = branch_rounds()
+    if earlier_rounds and not second_review:
+        die(
+            "REFUSED: %s already had its one round on this branch: %s (23 Nov 2026: one round on every document).\n"
+            "Either apply the verified errors and check the fixes against the findings, after which the document goes to its owner;\n"
+            "or, when the reviewed change has merged, run git fetch and start the new work on a new branch from the default branch.\n"
+            "A second review runs only for a client proposal's second fact-check round or when the requester asks: --second-review proposal|asked."
+            % (identity, where(earlier_rounds[-1]))
+        )
+    labelled = [entry for entry in earlier_rounds if entry.get("second_review")]
+    if labelled:
+        die(
+            "REFUSED: %s already had its second review on this branch: %s (%s). No third round runs, whatever the label.\n"
+            "Apply the verified errors and check the fixes against the findings, after which the document goes to its owner."
+            % (identity, where(labelled[-1]), labelled[-1]["second_review"])
+        )
+    if earlier_rounds:
+        label = second_review
+
 parts = [part for part in os.path.dirname(repo_key).split(os.sep) if part]
-print(json.dumps({
+meta = {
     "identity": identity,
     "round": recorded if recorded is not None else max(len(distinct), top) + 1,
     "retry": recorded is not None,
@@ -258,7 +330,12 @@ print(json.dumps({
     "repo_short": "/".join(parts[-2:]),
     "round_record": record,
     "round_record_default": default,
-}))
+}
+# The label travels through rows.json to the record line written at the run's
+# first accepted result, so every second review can be counted.
+if label:
+    meta["second_review"] = label
+print(json.dumps(meta))
 PY
 }
 # The ROUND-RECORD/ROUND lines, from the same metadata at prepare (full record
@@ -281,6 +358,8 @@ else:
     print("ROUND-RECORD: non-default %s" % shown)
 number = meta.get("round")
 opening = "ROUND: %s (retry of recorded round %s)" % (number, number) if meta.get("retry") else "ROUND: %s" % number
+if meta.get("second_review"):
+    opening += " (second review: %s)" % meta["second_review"]
 print("%s identity=%s repo=%s" % (opening, meta.get("identity"), meta.get("repo_short", "")))
 PY
 }
@@ -310,6 +389,8 @@ entry = {
     "head": rows["head"],
     "round": rows["round"],
 }
+if rows.get("second_review"):
+    entry["second_review"] = rows["second_review"]
 payload = (json.dumps(entry, separators=(",", ":")) + "\n").encode()
 handle = os.open(rows["round_record"], os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
 try:
@@ -396,9 +477,9 @@ prepare() {
   require_runtime
   local authorised=false doc="" type="" origin=none ledger=none engines_raw=claude,codex claude_model=opus codex_model=gpt-6.1-sol grok_model=grok-4.6 effort=medium timeout_seconds='' repo="${DOC_GAUNTLET_REPO:-$(git rev-parse --show-toplevel)}"
   local engine_a engine_b engine breadth_model
-  local pair_only=false prior
+  local pair_only=false prior second_review=''
   local -a pair=() prior_findings=()
-  while [[ $# -gt 0 ]]; do case "$1" in --authorize-provider) authorised=true; shift;; --doc) doc="$2"; shift 2;; --type) type="$2"; shift 2;; --origin) origin="$2"; shift 2;; --ledger) ledger="$2"; shift 2;; --prior-findings) prior_findings+=("$2"); shift 2;; --engines) engines_raw="$2"; shift 2;; --claude-model) claude_model="$2"; shift 2;; --codex-model) codex_model="$2"; shift 2;; --grok-model) grok_model="$2"; shift 2;; --effort) effort="$2"; shift 2;; --timeout-seconds) timeout_seconds="$2"; shift 2;; --pair-only) pair_only=true; shift;; --override-round-budget) shift 2;; *) fail "unknown argument: $1";; esac; done
+  while [[ $# -gt 0 ]]; do case "$1" in --authorize-provider) authorised=true; shift;; --doc) doc="$2"; shift 2;; --type) type="$2"; shift 2;; --origin) origin="$2"; shift 2;; --ledger) ledger="$2"; shift 2;; --prior-findings) prior_findings+=("$2"); shift 2;; --engines) engines_raw="$2"; shift 2;; --claude-model) claude_model="$2"; shift 2;; --codex-model) codex_model="$2"; shift 2;; --grok-model) grok_model="$2"; shift 2;; --effort) effort="$2"; shift 2;; --timeout-seconds) timeout_seconds="$2"; shift 2;; --pair-only) pair_only=true; shift;; --second-review) [[ $# -ge 2 && ( "$2" == proposal || "$2" == asked ) ]] || fail '--second-review takes proposal (a client proposal'"'"'s second fact-check round) or asked (a second review the requester asked for)'; second_review="$2"; shift 2;; --override-round-budget) shift 2;; *) fail "unknown argument: $1";; esac; done
   [[ "$authorised" == true ]] || fail 'provider authorisation is required'
   repo="$(git -C "$repo" rev-parse --path-format=absolute --show-toplevel)"
   [[ -z "$(git -C "$repo" status --porcelain --untracked-files=all)" ]] || fail 'refusing mutable review evidence: use a clean committed worktree'
@@ -429,7 +510,7 @@ prepare() {
   round_record_default="$(printf '%s\n' "$round_setup" | sed -n 2p)"
   repo_common="$(git -C "$repo" rev-parse --path-format=absolute --git-common-dir)"
   identity="doc:${doc#$repo/}"
-  round_meta="$(round_compute "$round_record" "$round_record_default" "$repo_common" "$identity" "$doc" "$(git -C "$repo" rev-parse HEAD)" "$([[ "$pair_only" == true ]] && echo 1 || echo 0)")" || exit 2
+  round_meta="$(round_compute "$round_record" "$round_record_default" "$repo_common" "$identity" "$doc" "$(git -C "$repo" rev-parse HEAD)" "$([[ "$pair_only" == true ]] && echo 1 || echo 0)" "$second_review" "$repo")" || exit 2
   round_lines "$round_meta" prepare
   local dir
   if [[ -n "${DOC_GAUNTLET_DIR:-}" ]]; then dir="$DOC_GAUNTLET_DIR"; [[ ! -e "$dir" ]] || fail 'refusing existing document-gauntlet run directory'; else dir="$(mktemp -d "${TMPDIR:-/tmp}/doc-gauntlet.XXXXXX")"; fi

@@ -24,7 +24,6 @@ usage() {
   cat <<'EOF'
 Usage:
   gauntlet.sh prepare --authorize-provider (--pr N | --identity TOKEN)
-                       [--pre-review --builder FAMILY --engines ENG] [--run-once]
                        [--pre-reviewed-by MODEL|none]
                        [--base REF] [--profile fast|balanced|deep]
                        [--focus TEXT] [--engines ENG,ENG] [--claude-model MODEL]
@@ -37,7 +36,10 @@ Usage:
   GAUNTLET_DIR=<run> gauntlet.sh dispose --engine ENG [--group NAME] --finding N --action drop|downgrade
                        [--to SEVERITY] --reason TEXT --test COMMAND
   GAUNTLET_DIR=<run> gauntlet.sh clean [--force]
-  --override-round-budget and --supersedes are accepted and ignored (the round budget was retired).
+  --override-round-budget and --supersedes are accepted and ignored.
+  prepare refuses a second round on new content for an identity (22 Nov 2026): a retry of the same content,
+  and a round whose files no earlier round of the identity covered, still prepare.
+  --pre-review and --run-once were retired on 22 Nov 2026: prepare stops on either.
   --group splits one round's reviewers by file group: every engine runs one leg per
   group, each reading the whole pinned diff and reporting on its own group's files; changed files no group
   names form the group "rest". collect merges every leg into one verdict and the round is recorded once.
@@ -48,14 +50,10 @@ die() { echo "$*" >&2; exit 1; }
 token() { [[ "$1" =~ ^[A-Za-z0-9._:-]+$ ]] || die "invalid $2"; }
 
 parse_engine_pair() {
-  python3 - "$1" "${2:-2}" <<'PY'
+  python3 - "$1" <<'PY'
 import sys
 allowed = ("claude", "codex", "grok")
 parts = [part.strip() for part in sys.argv[1].split(",") if part.strip()]
-if sys.argv[2] == "1":
-    if len(parts) != 1 or parts[0] not in allowed:
-        raise SystemExit("a pre-review runs exactly one engine: --engines claude|codex|grok")
-    print(parts[0]); raise SystemExit(0)
 if len(parts) != 2:
     raise SystemExit("prepare requires exactly two engines")
 if parts[0] == parts[1]:
@@ -338,7 +336,8 @@ PY
 # numbered one past the larger of this identity's distinct recorded contents and its
 # highest recorded round (lines written under the retired budget counted whole
 # lineages), so numbers never repeat or go backwards; content already on record is a
-# retry and keeps its round. Nothing is refused.
+# retry and keeps its round. Nothing is refused here; prepare refuses a second
+# round afterwards (second_round_check).
 round_compute() {
   python3 - "$@" <<'PY'
 import json, os, sys
@@ -402,7 +401,7 @@ elif form == "short":
 else:
     print(f"ROUND-RECORD: non-default {record}")
 if rows.get("kind") == "pre-review":
-    print(f"PRE-REVIEW: identity={rows['identity']} repo={rows.get('repo_short', '')}; not a budget round")
+    print(f"PRE-REVIEW: identity={rows['identity']} repo={rows.get('repo_short', '')}; prepared before the pre-review was retired (22 Nov 2026), so it is not recorded and is not a round")
     raise SystemExit(0)
 number = rows.get("round")
 opening = f"ROUND: {number} (retry of recorded round {number})" if rows.get("retry") else f"ROUND: {number}"
@@ -425,8 +424,10 @@ record_round() {
   [[ ! -d "$marker" ]] || return 0
   mkdir "$claim" 2>/dev/null || return 0
   chmod 700 "$claim" 2>/dev/null || true
+  # A pre-review prepared before it was retired (22 Nov 2026) is never recorded:
+  # it is not a round, and nothing reads its line any more.
   if [[ "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("kind",""))' "$RUN/rows.json")" == pre-review ]]; then
-    record_pre_review "$claim" "$marker"; return 0
+    mkdir "$marker" 2>/dev/null || true; return 0
   fi
   message="$(python3 - "$RUN/rows.json" gauntlet 2>&1 <<'PY'
 import datetime, json, os, sys
@@ -469,61 +470,9 @@ PY
   return 0
 }
 
-# A pre-review's record line. One Python process holds an flock on the record's
-# lock file (released by the kernel if the process dies), checks that no run
-# recorded a pre-review of the same head and base meanwhile, and appends. A
-# duplicate leaves failures/pre-review-duplicate.txt, which collect shows. A lock
-# timeout or a failed append leaves failures/round-record.txt and no completion
-# marker, so collect reports it and retries.
-record_pre_review() {
-  local claim="$1" marker="$2" eligible=true rc=0
-  # Eligible for an enforced round 1 only if independent of the builder and
-  # over the whole change; an unlisted repo records it either way.
-  [[ "$(builder_engine "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("builder") or "")' "$RUN/rows.json")")" != "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["engines"][0])' "$RUN/rows.json")" && ! -s "$RUN/scope/excludes" ]] || eligible=false
-  python3 - "$RUN/rows.json" "$eligible" "${GAUNTLET_PRE_REVIEW_LOCK_SECONDS:-20}" <<'PY' || rc=$?
-import datetime, fcntl, json, os, sys, time
-rows = json.load(open(sys.argv[1])); run = os.path.dirname(sys.argv[1]); eligible = sys.argv[2] == "true"; wait = float(sys.argv[3])
-record = rows["round_record"]; base = open(os.path.join(run, "scope", "base")).read().strip()
-lock = open(record + ".pre-review.lock", "a")
-deadline = time.monotonic() + wait
-while True:
-    try:
-        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB); break
-    except BlockingIOError:
-        if time.monotonic() > deadline:
-            sys.exit(4)
-        time.sleep(0.1)
-if os.path.exists(record):
-    for raw in open(record, errors="replace"):
-        try:
-            e = json.loads(raw)
-        except ValueError:
-            continue
-        if isinstance(e, dict) and e.get("runner") == "gauntlet-pre-review" and e.get("repo") == rows["repo"] and e.get("identity") == rows["identity"] \
-                and e.get("head") == rows["head"] and e.get("base") == base and e.get("eligible") is True and eligible:
-            sys.exit(3)
-e = {"ts": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat(), "runner": "gauntlet-pre-review",
-     "repo": rows["repo"], "identity": rows["identity"], "digest": rows["digest"], "head": rows["head"], "round": 1,
-     "base": base, "engine": rows["engines"][0], "builder": rows.get("builder"), "eligible": eligible}
-fd = os.open(record, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
-try:
-    os.write(fd, (json.dumps(e, separators=(",", ":")) + "\n").encode())
-finally:
-    os.close(fd)
-PY
-  mkdir -p "$RUN/failures"
-  case "$rc" in
-    0|3)
-      [[ "$rc" -eq 0 ]] || printf 'a covering pre-review was recorded by another run first; this one is not recorded\n' > "$RUN/failures/pre-review-duplicate.txt"
-      mkdir "$marker" 2>/dev/null || true; rm -f "$RUN/failures/round-record.txt" ;;
-    4) printf 'the pre-review record lock is held by a live process; collect again to retry\n' > "$RUN/failures/round-record.txt"; rmdir "$claim" 2>/dev/null || true ;;
-    *) printf 'pre-review record append failed\n' > "$RUN/failures/round-record.txt"; rmdir "$claim" 2>/dev/null || true ;;
-  esac
-}
-
 prepare() {
   local base=main profile=balanced focus='Review this committed diff for material defects.' effort='' claude='' codex='' grok='' engines_raw='claude,codex' authorised=false timeout_seconds='' prior
-  local pr_arg='' identity_arg='' identity='' pre_review='' pre_review_run=false builder='' do_run_once=false
+  local pr_arg='' identity_arg='' identity='' pre_review=''
   local engine_a engine_b engine
   local -a excludes=() pair=() prior_findings=() group_specs=()
   while (($#)); do case "$1" in
@@ -536,8 +485,8 @@ prepare() {
     --prior-findings) prior_findings+=("$2"); shift 2 ;;
     --pr) pr_arg="$2"; shift 2 ;; --identity) identity_arg="$2"; shift 2 ;;
     --pre-reviewed-by) pre_review="$2"; token "$2" '--pre-reviewed-by model token'; shift 2 ;;
-    --pre-review) pre_review_run=true; shift ;; --run-once) do_run_once=true; shift ;;
-    --builder) builder="$2"; token "$2" '--builder model family token'; shift 2 ;;
+    --pre-review|--builder) die 'RETIRED: the pre-review was retired on 22 Nov 2026; its checklist is in every round'"'"'s brief, so prepare round 1 without --pre-review or --builder' ;;
+    --run-once) die 'RETIRED: the run-once was retired on 22 Nov 2026; prepare without --run-once' ;;
     --override-round-budget|--supersedes) shift 2 ;;
     --exclude) excludes+=("$2"); shift 2 ;; --authorize-provider) authorised=true; shift ;;
     --group) group_specs+=("$2"); shift 2 ;;
@@ -557,16 +506,9 @@ prepare() {
   REPO="$(git -C "$requested_repo" rev-parse --show-toplevel)" || die 'prepare requires a Git repository'
   [[ -z "$(git -C "$REPO" status --porcelain)" ]] || die 'run from a clean dedicated worktree'
   base="$(git -C "$REPO" merge-base "$base^{commit}" HEAD)" || die 'base must share an ancestor with HEAD'
-  local want_engines=2
-  if [[ "$pre_review_run" == true ]]; then
-    want_engines=1
-    [[ -n "$builder" ]] || die 'a pre-review needs --builder <model family of the builder> (for example deepseek, gpt, grok, claude)'
-    [[ "$do_run_once" != true ]] || die '--run-once belongs to the round-1 prepare, not the pre-review'
-    ((${#group_specs[@]} == 0)) || die 'a pre-review covers the whole change with one reviewer; drop --group'
-  fi
-  while IFS= read -r engine; do pair+=("$engine"); done < <(parse_engine_pair "$engines_raw" "$want_engines")
-  [[ "${#pair[@]}" -eq "$want_engines" ]] || die 'prepare could not read its engines'
-  engine_a="${pair[0]}"; engine_b="${pair[1]:-}"
+  while IFS= read -r engine; do pair+=("$engine"); done < <(parse_engine_pair "$engines_raw")
+  [[ "${#pair[@]}" -eq 2 ]] || die 'prepare could not read its engines'
+  engine_a="${pair[0]}"; engine_b="${pair[1]}"
   case "$profile" in
     fast) claude="${claude:-sonnet}"; codex="${codex:-gpt-6.1-sol}"; grok="${grok:-grok-4.6}"; effort="${effort:-low}" ;;
     balanced) claude="${claude:-opus}"; codex="${codex:-gpt-6.1-sol}"; grok="${grok:-grok-4.6}"; effort="${effort:-medium}" ;;
@@ -600,11 +542,9 @@ prepare() {
   repo_short="$(short_repo_key "$repo_key")"
   head="$(git -C "$REPO" rev-parse HEAD)"
   load_enforcement "$REPO"
-  if [[ "$pre_review_run" != true ]]; then
-    : > "$prep_tmp/approval-excludes"
-    approval_check "$repo_key" "$identity" "$base" "$head" "$prep_tmp/approval-excludes"
-    while IFS= read -r path; do [[ -z "$path" ]] || excludes+=("$path"); done < "$prep_tmp/approval-excludes"
-  fi
+  : > "$prep_tmp/approval-excludes"
+  approval_check "$repo_key" "$identity" "$base" "$head" "$prep_tmp/approval-excludes"
+  while IFS= read -r path; do [[ -z "$path" ]] || excludes+=("$path"); done < "$prep_tmp/approval-excludes"
   local changed status path old
   while IFS= read -r -d '' status; do
     IFS= read -r -d '' path || die 'invalid changed-path record'
@@ -683,32 +623,22 @@ PY
   local round_number round_retry
   round_number="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["round"])' "$prep_tmp/round.json")"
   round_retry="$(python3 -c 'import json,sys; print(str(json.load(open(sys.argv[1]))["retry"]).lower())' "$prep_tmp/round.json")"
-  if [[ "$pre_review_run" == true ]]; then
-    [[ "$(builder_engine "$builder")" != "$engine_a" ]] || gate "the pre-review must run on an engine other than the builder's: $builder builds with $engine_a"
-    ((${#excludes[@]} == 0)) || gate 'a pre-review covers the whole change; drop --exclude'
-    if [[ -n "$(covering_pre_review "$ROUND_RECORD_PATH" "$repo_key" "$identity" "$head" "$base" "$REPO")" ]]; then
-      gate "a valid pre-review of $identity covering this head and base is already recorded; only a FAILED or timed-out pre-review leg may be retried (after a rebase onto a moved main, a fresh one is allowed)"
-    fi
-    focus="$PRE_REVIEW_CHECKLIST $focus"
-    printf 'PRE-REVIEW: %s by %s (builder %s) repo=%s; not a budget round\n' "$identity" "$engine_a" "$builder" "$repo_short"
-  else
-    print_round_status "$prep_tmp/round.json" full
-    [[ -z "$pre_review" ]] || echo "NOTE: --pre-reviewed-by is recorded only; round 1 checks the runner's own pre-review record"
-    if [[ "$round_number" == 1 && "$round_retry" != true ]]; then
-      round_one_gate "$repo_key" "$identity" "$head" "$base" "$do_run_once" "$timeout_seconds"
-    elif [[ "$do_run_once" == true ]]; then
-      echo 'NOTE: --run-once applies to round 1 only; not run'
-    fi
-    # O7: a later round's prior findings are the runner's own record of the
-    # last round, every finding as written and undisposed ones open.
-    if [[ "$round_number" != 1 ]] && runner_prior_findings "$repo_key" "$identity" "$round_number" "$prep_tmp/runner-prior.json"; then
-      if [[ "$ENFORCED" == true ]]; then
-        [[ "${#prior_findings[@]}" -eq 0 ]] || echo "NOTE: --prior-findings replaced by the runner's own record of the last round"
-        prior_findings=("$prep_tmp/runner-prior.json")
-        echo "PRIOR-FINDINGS: the runner's record of the last round (every finding as written)"
-      else
-        gate "later rounds take the runner's own record of the last round's findings as prior findings"
-      fi
+  # A second round stops here with its one line, before any round status is printed.
+  [[ "$round_number" == 1 || "$round_retry" == true ]] || second_round_check "$repo_key" "$identity" "$base" "$prep_tmp/excludes"
+  print_round_status "$prep_tmp/round.json" full
+  [[ -z "$pre_review" ]] || echo "NOTE: --pre-reviewed-by is recorded only"
+  if [[ "$round_number" == 1 && "$round_retry" != true ]]; then
+    round_one_gate "$base"
+  fi
+  # O7: a later round's prior findings are the runner's own record of the
+  # last round, every finding as written and undisposed ones open.
+  if [[ "$round_number" != 1 ]] && runner_prior_findings "$repo_key" "$identity" "$round_number" "$prep_tmp/runner-prior.json"; then
+    if [[ "$ENFORCED" == true ]]; then
+      [[ "${#prior_findings[@]}" -eq 0 ]] || echo "NOTE: --prior-findings replaced by the runner's own record of the last round"
+      prior_findings=("$prep_tmp/runner-prior.json")
+      echo "PRIOR-FINDINGS: the runner's record of the last round (every finding as written)"
+    else
+      gate "later rounds take the runner's own record of the last round's findings as prior findings"
     fi
   fi
   [[ -n "$RUN" ]] || RUN="$(mktemp -d "${TMPDIR:-/tmp}/gauntlet.XXXXXX")"
@@ -736,14 +666,12 @@ PY
   if [[ "${#prior_findings[@]}" -gt 0 ]]; then
     for prior in "${prior_findings[@]}"; do cat < "$prior"; [[ -z "$(tail -c 1 < "$prior")" ]] || echo; done > "$RUN/scope/prior-findings.snapshot"
   fi
-  python3 - "$RUN/rows.json" "$engine_a" "$engine_b" "$claude" "$codex" "$grok" "$effort" "$timeout_seconds" "$pre_review_run" "$builder" <<'PY'
+  python3 - "$RUN/rows.json" "$engine_a" "$engine_b" "$claude" "$codex" "$grok" "$effort" "$timeout_seconds" <<'PY'
 import json, pathlib, sys
-path, a, b, claude, codex, grok, effort, timeout_seconds, pre, builder = sys.argv[1:]
+path, a, b, claude, codex, grok, effort, timeout_seconds = sys.argv[1:]
 models = {"claude": claude, "codex": codex, "grok": grok}
-engines = [e for e in (a, b) if e]
+engines = [a, b]
 rows = {"engines": engines, "effort": effort, "timeout_seconds": int(timeout_seconds)}
-if pre == "true":
-    rows.update(kind="pre-review", builder=builder)
 for engine in engines:
     rows[engine] = {
         "model": models[engine],
@@ -824,6 +752,7 @@ PY
       diff_file='./diff.patch in your current working directory, not in the repository'; [[ "$route" == cli ]] || diff_file="$RUN/scope/diff.patch"
       cat > "$RUN/prompts/$leg-$route.md" <<EOF
 You are the $engine reviewer. Inspect the pinned committed diff and repository evidence read-only.
+$ROUND_CHECKLIST
 Scope SHA: $head
 Scope digest: $digest
 Repository path: $REPO
@@ -1272,7 +1201,6 @@ PY
 collect_locked() {
   local started_only="$1"
   print_round_status "$RUN/rows.json" short
-  [[ ! -f "$RUN/failures/pre-review-duplicate.txt" ]] || printf 'PRE-REVIEW: NOT RECORDED, %s\n' "$(<"$RUN/failures/pre-review-duplicate.txt")"
   # A claim held by a live worker is an append in flight, not a failure; only
   # an abandoned claim or a recorded failure is reported and retried here.
   if [[ ! -d "$RUN/round-recorded" ]] && [[ -f "$RUN/failures/round-record.txt" || -d "$RUN/round-recording" ]] && ! recording_leg_live; then

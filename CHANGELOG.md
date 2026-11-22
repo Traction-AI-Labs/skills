@@ -1,5 +1,15 @@
 # Changelog
 
+- **gauntlet 0.8.0 and doc-gauntlet 0.7.0** (23 November 2026). One review round. gauntlet: every kind of code gets
+  one round and one check of the fixes (`FIXES CHECKED`). `prepare` refuses a second round on new content for the same
+  identity and says what to do instead; a retry on the same content, and a round over files no earlier round covered,
+  still prepare; a second review that was asked for runs under its own identity. The raise past the budget is gone.
+  The pre-review and the run-once are retired: `--pre-review`, `--builder` and `--run-once` stop with a message, the
+  pre-review's checklist is in every round's brief, `scripts/ci-run-once.sh` is removed and the third field of
+  `enforce.tsv` is no longer read. doc-gauntlet: a document gets one round, with no review before it, and no fix is
+  applied until every leg has returned. `prepare` refuses a second round on changed content in the same branch;
+  `--second-review proposal|asked` runs the one second review a document can have, and a third is refused;
+  `--pair-only --prior-findings` retries the pair alone.
 - **doc-gauntlet 0.6.4** (20 November 2026). The client-draft procedure (`references/derivation-ledger.md`), after a
   review of six client emails: a finding resting on inference, or a can't-check on something the draft does not say,
   is advisory, adds no text and is named to the sender in one line; the cold run credits the recipient with their own
