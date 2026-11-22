@@ -548,53 +548,212 @@ grep -Fx 'ROUND-RECORD: non-default record-home/rounds.jsonl' "$TMP/b1.collect"
 grep -Fx "ROUND: 1 identity=doc:docs/spec.md repo=$budget_short" "$TMP/b1.collect"
 grep -Fx 'GAUNTLET: RUNNING' "$TMP/b1.collect"
 
-# Round 2: new content, a plain round line.
-printf '# Spec v2\n' > "$BREPO/docs/spec.md"; git -C "$BREPO" commit -qam spec2
-B2="$TMP/budget-r2"
-budget_prepare "$B2" --doc docs/spec.md > "$TMP/b2.out"
-grep -Fx "ROUND: 2 identity=doc:docs/spec.md repo=$budget_short" "$TMP/b2.out"
-accept_breadth "$B2"
-test "$(record_lines "$BUDGET_RECORD")" = 2
+# --- One round on every document (23 Nov 2026) -------------------------------
+# Each case has its own scratch repository and its own record. A round is
+# reviewed on a branch; what happens to the branch decides whether a changed
+# document prepares.
+rr_new() {
+  local base="${2:-main}"
+  RR="$TMP/rr-$1"; RRREC="$TMP/rr-$1.jsonl"; mkdir -p "$RR/docs"
+  git init -q -b "$base" "$RR"
+  git -C "$RR" config user.name test
+  git -C "$RR" config user.email test@example.invalid
+  printf '# Spec v1\n' > "$RR/docs/spec.md"
+  git -C "$RR" add . && git -C "$RR" commit -qm initial
+  git -C "$RR" checkout -qb feature
+}
+rr_prepare() {
+  local run="$1"; shift
+  GAUNTLET_ROUND_RECORD="$RRREC" DOC_GAUNTLET_REPO="$RR" DOC_GAUNTLET_DIR="$run" "$RUNNER" prepare --authorize-provider --type plan --claude-model fixture --codex-model fixture --doc docs/spec.md "$@"
+}
+rr_edit() { printf '%s\n' "$1" > "$RR/docs/spec.md"; git -C "$RR" commit -qam "$1"; }
+# One reviewed round on the current content: prepare, accept a result (which
+# writes the record line), clean the scratch run.
+rr_review() {
+  local run="$TMP/rr-run-$1"
+  rr_prepare "$run" > "$TMP/rr-run-$1.out"
+  accept_breadth "$run"
+  DOC_GAUNTLET_DIR="$run" "$RUNNER" clean --force
+}
+rr_refused() {
+  local run="$1" status=0; shift
+  rr_prepare "$run" "$@" > "$run.out" 2> "$run.err" || status=$?
+  test "$status" = 2
+  test ! -e "$run"
+}
 
-# A third distinct content is no longer refused, and --override-round-budget is
-# accepted and ignored: same round line, nothing about an override anywhere.
-printf '# Spec v3\n' > "$BREPO/docs/spec.md"; git -C "$BREPO" commit -qam spec3
-B3="$TMP/budget-r3"
-budget_prepare "$B3" --doc docs/spec.md --override-round-budget 'an old go, now ignored' > "$TMP/b3.out" 2> "$TMP/b3.err"
-grep -Fx "ROUND: 3 identity=doc:docs/spec.md repo=$budget_short" "$TMP/b3.out"
-grep -Fx "WORKDIR=$B3" "$TMP/b3.out"
-! grep -qi 'override\|refused\|round budget' "$TMP/b3.out" "$TMP/b3.err"
-! grep -qi 'override' "$B3/rows.json"
-accept_breadth "$B3"
-test "$(record_lines "$BUDGET_RECORD")" = 3
-python3 - "$BUDGET_RECORD" <<'PY2'
+# The refusal: a changed document on the branch whose round has not merged.
+rr_new refuse
+rr_edit '# Spec v2'
+rr_review refuse-r1
+refuse_head="$(git -C "$RR" rev-parse HEAD)"
+rr_edit '# Spec v3'
+rr_refused "$TMP/rr-refuse-2"
+# The date in the refusal is the recorded round's own, read from its record
+# line, never today's.
+refuse_date="$(python3 -c 'import json,sys; print(json.loads(open(sys.argv[1]).readlines()[0])["ts"][:10])' "$RRREC")"
+grep -Fq "REFUSED: doc:docs/spec.md already had its one round on this branch: round 1 at ${refuse_head:0:12}, $refuse_date (23 Nov 2026" "$TMP/rr-refuse-2.err"
+grep -Fq 'apply the verified errors and check the fixes against the findings, after which the document goes to its owner' "$TMP/rr-refuse-2.err"
+grep -Fq 'when the reviewed change has merged, run git fetch and start the new work on a new branch from the default branch' "$TMP/rr-refuse-2.err"
+if grep -q 'WORKDIR=' "$TMP/rr-refuse-2.out"; then exit 1; fi
+test "$(record_lines "$RRREC")" = 1
+# --override-round-budget is accepted, ignored, and does not lift the refusal.
+rr_refused "$TMP/rr-refuse-override" --override-round-budget 'an old go'
+grep -Fq 'REFUSED: doc:docs/spec.md' "$TMP/rr-refuse-override.err"
+# An unknown label stops with one line naming the two.
+rr_refused "$TMP/rr-refuse-label" --second-review again
+test "$(cat "$TMP/rr-refuse-label.err")" = "--second-review takes proposal (a client proposal's second fact-check round) or asked (a second review the requester asked for)"
+# So does an empty label: it is not the same as leaving the flag out.
+rr_refused "$TMP/rr-refuse-empty" --second-review ''
+test "$(cat "$TMP/rr-refuse-empty.err")" = "--second-review takes proposal (a client proposal's second fact-check round) or asked (a second review the requester asked for)"
+# Unchanged content is a retry of its recorded round, never refused, even with
+# a later commit on the branch.
+rr_edit '# Spec v2'
+RRRETRY="$TMP/rr-refuse-retry"
+rr_prepare "$RRRETRY" > "$TMP/rr-refuse-retry.out"
+grep -Fq 'ROUND: 1 (retry of recorded round 1) identity=doc:docs/spec.md' "$TMP/rr-refuse-retry.out"
+DOC_GAUNTLET_DIR="$RRRETRY" "$RUNNER" clean --force
+
+# A labelled second review prepares, shows its label, and records it; a retry of
+# that second content then prepares with no flag.
+rr_edit '# Spec v3'
+RRLAB="$TMP/rr-label"
+rr_prepare "$RRLAB" --second-review proposal > "$TMP/rr-label.out"
+grep -Fq 'ROUND: 2 (second review: proposal) identity=doc:docs/spec.md' "$TMP/rr-label.out"
+grep -Fq '"second_review": "proposal"' "$RRLAB/rows.json"
+accept_breadth "$RRLAB"
+test "$(record_lines "$RRREC")" = 2
+python3 - "$RRREC" <<'PY'
 import json, sys
-obj = json.loads(open(sys.argv[1]).readlines()[2])
-assert obj["round"] == 3 and "override" not in obj, obj
-PY2
-DOC_GAUNTLET_DIR="$B3" "$RUNNER" collect > "$TMP/b3.collect" || true
-grep -Fx "ROUND: 3 identity=doc:docs/spec.md repo=$budget_short" "$TMP/b3.collect"
-! grep -qi 'override' "$TMP/b3.collect"
+obj = json.loads(open(sys.argv[1]).readlines()[1])
+assert obj["round"] == 2 and obj["second_review"] == "proposal", obj
+first = json.loads(open(sys.argv[1]).readlines()[0])
+assert "second_review" not in first, first
+PY
+DOC_GAUNTLET_DIR="$RRLAB" "$RUNNER" collect > "$TMP/rr-label.collect" || true
+grep -Fq 'ROUND: 2 (second review: proposal) identity=doc:docs/spec.md' "$TMP/rr-label.collect"
+DOC_GAUNTLET_DIR="$RRLAB" "$RUNNER" clean --force
+git -C "$RR" commit -q --allow-empty -m later
+RRLABR="$TMP/rr-label-retry"
+rr_prepare "$RRLABR" > "$TMP/rr-label-retry.out"
+grep -Fq 'ROUND: 2 (retry of recorded round 2) identity=doc:docs/spec.md' "$TMP/rr-label-retry.out"
+DOC_GAUNTLET_DIR="$RRLABR" "$RUNNER" clean --force
+# A third content is refused whatever the label: without one as the one round,
+# with one as the second review already run.
+label_head="$(git -C "$RR" log -1 --format=%H --grep='^# Spec v3$')"
+rr_edit '# Spec v4'
+rr_refused "$TMP/rr-label-third"
+grep -Fq 'REFUSED: doc:docs/spec.md already had its one round on this branch' "$TMP/rr-label-third.err"
+for third in proposal asked; do
+  rr_refused "$TMP/rr-label-third-$third" --second-review "$third"
+  grep -Fq "REFUSED: doc:docs/spec.md already had its second review on this branch: round 2 at ${label_head:0:12}, " "$TMP/rr-label-third-$third.err"
+  grep -Fq '(proposal). No third round runs, whatever the label.' "$TMP/rr-label-third-$third.err"
+done
+# A refusal writes nothing: the record still holds the round and its second review.
+test "$(record_lines "$RRREC")" = 2
 
-# A fourth distinct content without the flag is not refused either.
-printf '# Spec v4\n' > "$BREPO/docs/spec.md"; git -C "$BREPO" commit -qam spec4
-B4="$TMP/budget-r4"
-budget_prepare "$B4" --doc docs/spec.md > "$TMP/b4.out"
-grep -Fx "ROUND: 4 identity=doc:docs/spec.md repo=$budget_short" "$TMP/b4.out"
-DOC_GAUNTLET_DIR="$B4" "$RUNNER" clean --force
-
-# Unchanged content is a retry of its recorded round, with or without the flag.
-printf '# Spec v3\n' > "$BREPO/docs/spec.md"; git -C "$BREPO" commit -qam spec3-again
-B3R="$TMP/budget-r3-retry"
-budget_prepare "$B3R" --doc docs/spec.md --override-round-budget 'ignored again' > "$TMP/b3r.out"
-grep -Fx "ROUND: 3 (retry of recorded round 3) identity=doc:docs/spec.md repo=$budget_short" "$TMP/b3r.out"
-accept_breadth "$B3R"
-test "$(record_lines "$BUDGET_RECORD")" = 4
-python3 - "$BUDGET_RECORD" <<'PY2'
+# The other label, asked, runs the one second review and records it. A label
+# where no second review runs (a first round, a retry of recorded content)
+# records nothing, so a labelled line is always a second review that ran.
+rr_new asked
+rr_edit '# Spec v2'
+RRA1="$TMP/rr-asked-1"
+rr_prepare "$RRA1" --second-review asked > "$TMP/rr-asked-1.out"
+grep -Fq 'ROUND: 1 identity=doc:docs/spec.md' "$TMP/rr-asked-1.out"
+accept_breadth "$RRA1"
+DOC_GAUNTLET_DIR="$RRA1" "$RUNNER" clean --force
+git -C "$RR" commit -q --allow-empty -m later
+RRA1R="$TMP/rr-asked-1-retry"
+rr_prepare "$RRA1R" --second-review asked > "$TMP/rr-asked-1-retry.out"
+grep -Fq 'ROUND: 1 (retry of recorded round 1) identity=doc:docs/spec.md' "$TMP/rr-asked-1-retry.out"
+accept_breadth "$RRA1R"
+DOC_GAUNTLET_DIR="$RRA1R" "$RUNNER" clean --force
+test "$(record_lines "$RRREC")" = 2
+python3 - "$RRREC" <<'PY'
 import json, sys
-obj = json.loads(open(sys.argv[1]).readlines()[3])
-assert obj["round"] == 3, obj
-PY2
+for line in open(sys.argv[1]):
+    assert "second_review" not in json.loads(line), line
+PY
+rr_edit '# Spec v3'
+asked_head="$(git -C "$RR" rev-parse HEAD)"
+RRA2="$TMP/rr-asked-2"
+rr_prepare "$RRA2" --second-review asked > "$TMP/rr-asked-2.out"
+grep -Fq 'ROUND: 2 (second review: asked) identity=doc:docs/spec.md' "$TMP/rr-asked-2.out"
+accept_breadth "$RRA2"
+DOC_GAUNTLET_DIR="$RRA2" "$RUNNER" clean --force
+python3 - "$RRREC" <<'PY'
+import json, sys
+lines = [json.loads(line) for line in open(sys.argv[1])]
+assert len(lines) == 3 and lines[2]["round"] == 2 and lines[2]["second_review"] == "asked", lines
+assert [("second_review" in line) for line in lines] == [False, False, True], lines
+PY
+rr_edit '# Spec v4'
+rr_refused "$TMP/rr-asked-third" --second-review asked
+grep -Fq "REFUSED: doc:docs/spec.md already had its second review on this branch: round 2 at ${asked_head:0:12}, " "$TMP/rr-asked-third.err"
+
+# A recorded round whose commit this repository does not have never blocks.
+rr_new foreign
+rr_edit '# Spec v2'
+printf '{"ts":"2026-11-01T00:00:00+00:00","runner":"doc-gauntlet","repo":"%s","identity":"doc:docs/spec.md","digest":"%s","head":"0123456789abcdef0123456789abcdef01234567","round":1}\n' "$(git -C "$RR" rev-parse --path-format=absolute --git-common-dir)" "$(printf 'elsewhere' | shasum -a 256 | cut -d' ' -f1)" > "$RRREC"
+RRFH="$TMP/rr-foreign-2"
+rr_prepare "$RRFH" > "$TMP/rr-foreign-2.out"
+grep -Fq 'ROUND: 2 identity=doc:docs/spec.md' "$TMP/rr-foreign-2.out"
+DOC_GAUNTLET_DIR="$RRFH" "$RUNNER" clean --force
+
+# The reviewed commit merged into the default branch by a merge commit: the
+# same branch carries on and a changed document is a new review.
+rr_new merged
+rr_edit '# Spec v2'
+rr_review merged-r1
+git -C "$RR" checkout -q main
+git -C "$RR" merge -q --no-ff -m merge feature
+git -C "$RR" checkout -q feature
+rr_edit '# Spec v3'
+RRM="$TMP/rr-merged-2"
+rr_prepare "$RRM" > "$TMP/rr-merged-2.out"
+grep -Fq 'ROUND: 2 identity=doc:docs/spec.md' "$TMP/rr-merged-2.out"
+DOC_GAUNTLET_DIR="$RRM" "$RUNNER" clean --force
+
+# Squash-merged: a new branch from the default branch is a new review; the
+# squashed branch itself, still in use, is refused.
+rr_new squash
+rr_edit '# Spec v2'
+rr_review squash-r1
+git -C "$RR" checkout -q main
+git -C "$RR" merge -q --squash feature
+git -C "$RR" commit -qm squash
+git -C "$RR" checkout -qb next
+rr_edit '# Spec v3'
+RRS="$TMP/rr-squash-2"
+rr_prepare "$RRS" > "$TMP/rr-squash-2.out"
+grep -Fq 'ROUND: 2 identity=doc:docs/spec.md' "$TMP/rr-squash-2.out"
+DOC_GAUNTLET_DIR="$RRS" "$RUNNER" clean --force
+git -C "$RR" checkout -q feature
+rr_edit '# Spec v4'
+rr_refused "$TMP/rr-squash-stale"
+grep -Fq 'REFUSED: doc:docs/spec.md' "$TMP/rr-squash-stale.err"
+
+# A second branch from the same base does not contain the reviewed commit.
+rr_new sibling
+rr_edit '# Spec v2'
+rr_review sibling-r1
+git -C "$RR" checkout -q main
+git -C "$RR" checkout -qb other
+rr_edit '# Spec v3'
+RRB="$TMP/rr-sibling-2"
+rr_prepare "$RRB" > "$TMP/rr-sibling-2.out"
+grep -Fq 'ROUND: 2 identity=doc:docs/spec.md' "$TMP/rr-sibling-2.out"
+DOC_GAUNTLET_DIR="$RRB" "$RUNNER" clean --force
+
+# No default branch resolves (no origin, no main, no master): nothing is refused.
+rr_new nodefault trunk
+rr_edit '# Spec v2'
+rr_review nodefault-r1
+rr_edit '# Spec v3'
+RRN="$TMP/rr-nodefault-2"
+rr_prepare "$RRN" > "$TMP/rr-nodefault-2.out"
+grep -Fq 'ROUND: 2 identity=doc:docs/spec.md' "$TMP/rr-nodefault-2.out"
+DOC_GAUNTLET_DIR="$RRN" "$RUNNER" clean --force
 
 # A record written under the retired budget (override, lineage, supersedes keys,
 # a lineage round above the distinct count) still parses and never numbers backwards.
@@ -609,7 +768,7 @@ BO="$TMP/budget-other"
 budget_prepare "$BO" --doc docs/other.md > "$TMP/bo.out"
 grep -Fx "ROUND: 1 identity=doc:docs/other.md repo=$budget_short" "$TMP/bo.out"
 accept_breadth "$BO"
-test "$(record_lines "$BUDGET_RECORD")" = 5
+test "$(record_lines "$BUDGET_RECORD")" = 2
 
 # An unrelated commit moves HEAD; the unchanged document is a retry.
 printf 'origin v2\n' > "$BREPO/docs/origin.md"; git -C "$BREPO" commit -qam origin2
@@ -629,14 +788,15 @@ budget_prepare "$BO4" --doc docs/other.md --origin docs/origin.md > "$TMP/bo4.ou
 grep -Fq 'ROUND: 1 (retry of recorded round 1)' "$TMP/bo4.out"
 test "$(cat "$BO4/scope.digest")" != "$(cat "$BO3/scope.digest")"
 
-# A changed document is a new round.
+# A changed document reviewed on the default branch itself is a new round: its
+# earlier round is already in the default branch, so it counts as merged.
 printf '# Other v2\n' > "$BREPO/docs/other.md"; git -C "$BREPO" commit -qam other2
 BO5="$TMP/budget-other-5"
 budget_prepare "$BO5" --doc docs/other.md > "$TMP/bo5.out"
 grep -Fx "ROUND: 2 identity=doc:docs/other.md repo=$budget_short" "$TMP/bo5.out"
 
 # No lineage anywhere in document output.
-cat "$TMP/b1.out" "$TMP/b1.collect" "$TMP/b2.out" "$TMP/b3.out" "$TMP/b3.collect" "$TMP/b3r.out" "$TMP/bo.out" "$TMP/bo2.out" "$TMP/bo5.out" > "$TMP/doc-round-output.txt"
+cat "$TMP/b1.out" "$TMP/b1.collect" "$TMP/rr-refuse-retry.out" "$TMP/rr-label.out" "$TMP/rr-label.collect" "$TMP/bo.out" "$TMP/bo2.out" "$TMP/bo5.out" > "$TMP/doc-round-output.txt"
 ! grep -Fq 'lineage=' "$TMP/doc-round-output.txt"
 ! grep -Fq 'LINEAGE:' "$TMP/doc-round-output.txt"
 
@@ -678,16 +838,17 @@ test -f "$P1/prompts/breadth-coherence.md"
 accept_breadth "$P1"
 test "$(record_lines "$PAIR_RECORD")" = 1
 
-printf '# Pair doc v2\n' > "$BREPO/docs/pairdoc.md"; git -C "$BREPO" commit -qam pairdoc2
+# A plain run on the same content is a retry with breadth; --pair-only retries
+# the pair alone on that content.
 PPLAIN="$TMP/pair-r2-plain"
 budget_prepare "$PPLAIN" --doc docs/pairdoc.md > "$TMP/pplain.out"
-grep -Fq 'ROUND: 2 identity=doc:docs/pairdoc.md' "$TMP/pplain.out"
+grep -Fq 'ROUND: 1 (retry of recorded round 1) identity=doc:docs/pairdoc.md' "$TMP/pplain.out"
 test -f "$PPLAIN/prompts/breadth-coherence.md"
 DOC_GAUNTLET_DIR="$PPLAIN" "$RUNNER" clean --force
 
 P2="$TMP/pair-r2"
 budget_prepare "$P2" --doc docs/pairdoc.md --pair-only --prior-findings "$TMP/pair-prior.json" > "$TMP/p2.out"
-grep -Fq 'ROUND: 2 identity=doc:docs/pairdoc.md' "$TMP/p2.out"
+grep -Fq 'ROUND: 1 (retry of recorded round 1) identity=doc:docs/pairdoc.md' "$TMP/p2.out"
 grep -Fq '"pair_only": true' "$P2/rows.json"
 test ! -e "$P2/prompts/breadth-coherence.md"
 test ! -e "$P2/schemas/breadth-coherence.json"
@@ -706,18 +867,18 @@ grep -Fx 'RUNNING: claude codex' "$TMP/p2-running.out"
 accept_pair "$P2"
 DOC_GAUNTLET_DIR="$P2" "$RUNNER" collect > "$TMP/p2.collect"
 grep -Fx 'ADVERSARIAL: CONVERGED' "$TMP/p2.collect"
-grep -Fq 'ROUND: 2 identity=doc:docs/pairdoc.md' "$TMP/p2.collect"
+grep -Fq 'ROUND: 1 (retry of recorded round 1) identity=doc:docs/pairdoc.md' "$TMP/p2.collect"
 ! grep -q 'RUNNING' "$TMP/p2.collect"
 test "$(record_lines "$PAIR_RECORD")" = 2
 python3 - "$PAIR_RECORD" <<'PY'
 import json, sys
 obj = json.loads(open(sys.argv[1]).readlines()[1])
-assert obj["round"] == 2 and obj["identity"] == "doc:docs/pairdoc.md", obj
+assert obj["round"] == 1 and obj["identity"] == "doc:docs/pairdoc.md", obj
 PY
 DOC_GAUNTLET_DIR="$P2" "$RUNNER" clean
 test ! -e "$P2"
 
-# A round 2 after a breadth round 1 has several results files, one
+# A pair retry after the lenses are in has several results files, one
 # --prior-findings each: prepare snapshots every one, in order, never only the
 # last (27 Oct 2026, the pair saw only the security lens's findings). A file
 # with no final newline does not run into the next one.

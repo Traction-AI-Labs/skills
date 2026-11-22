@@ -11,8 +11,7 @@ GEMINI.md, SKILL.md, and anything under .claude/, .agents/, .codex/, .cursor/,
 .grok/ or .github/). A caller that applies its own rule sets DOC to a pattern that
 never matches (a repository's own merge lock does). Documentation leaves
 before moved-line pairing, so code moved into or out of a document is counted. Usage: nontest_lines.py REPO FROM TO [--report LABEL LIMIT]
-Without --report prints the total (the raw count, which the pre-review coverage
-check reads). With it prints the ROUND-1 SIZE line and, over the threshold,
+Without --report prints the total (the raw count). With it prints the ROUND-1 SIZE line and, over the threshold,
 per-file counts and the SIZE NOTE line, exiting 0 either way: size is a note,
 never a refusal. A non-zero exit means only that counting failed. The report does not count
 lines git shows were moved unchanged, within a file or between counted files

@@ -46,9 +46,9 @@ printf '%s\n' "$OUTPUT"
 
 Read each breadth-lens JSON finding before the final line. Every finding is one of two kinds. An `error` or `omission` (a false premise, a wrong or unverifiable fact, broken logic, a contradiction, or wording that would make a reader act wrongly) goes on the error list and is fixed in the document; a fix corrects or deletes, never adds a hedge. A `sparring` point goes into a short memo for the author (a two-line verdict, then at most six ranked points, each with a concrete fix) and is the author's to weigh, never auto-applied. `ADVERSARIAL: BLOCK` means a reviewer reported at least one error or omission; `ADVERSARIAL: CONVERGED` means none, and may still carry sparring points. The review gate passes when no verified error remains. `GAUNTLET: RUNNING` names unfinished reviewers. `GAUNTLET: FAILED` names completed reviewers without a valid result; inspect the printed failure, recover only that reviewer, then collect again. Save the output before running `clean`.
 
-A document gets up to two rounds, one when a code gauntlet has already reviewed the same change. Each successful round is appended to the round record at `~/.gauntlet/rounds.jsonl` (override the path with `GAUNTLET_ROUND_RECORD`), keyed on the repository and the document path; a round is a distinct document content, so a re-run on an unchanged document is a retry of the same round. The runner numbers rounds and refuses nothing on round count; `--override-round-budget` is accepted and ignored. Breadth runs once.
+A document gets one round. Each successful round is appended to the round record at `~/.gauntlet/rounds.jsonl` (override the path with `GAUNTLET_ROUND_RECORD`), keyed on the repository and the document path; a round is one content of the document, so a re-run on an unchanged document is a retry of the same round and always prepares. After the round, fix the errors, check your fixes against the findings and hand the document on: `prepare` refuses a changed document while the reviewed commit is on the current branch and not yet in the default branch, and says so in one message. Once the reviewed change has merged, a new branch from the default branch is a new review. `--second-review proposal` (a client proposal's second fact-check round) or `--second-review asked` (a second review that was explicitly asked for) runs the one second review and records its label; a third round is refused whatever the label. `--override-round-budget` is accepted and ignored. The record is per machine, so this is a speed control, not a security one. Breadth runs once.
 
-The second round, after the errors are fixed and committed, prepares only the two adversarial reviewers. It has no breadth rows, so do not run the quickstart above against it; run this instead, with the first round's saved `collect` output as the prior findings:
+If a pair reviewer failed or timed out after the lenses were in, retry the pair alone on the same, unchanged document. That run has no breadth rows, so do not run the quickstart above against it; run this instead, with the round's saved `collect` output as the prior findings:
 
 ```sh
 RUN="$(DOC_GAUNTLET_REPO="<absolute review worktree>" bash skills/doc-gauntlet/scripts/doc-gauntlet.sh prepare --authorize-provider --doc docs/plan.md --type plan --pair-only --prior-findings <round-1-collect-output> | sed -n 's/^WORKDIR=//p')"
@@ -62,7 +62,7 @@ done
 printf '%s\n' "$OUTPUT"
 ```
 
-Pass `--prior-findings <file>` to `prepare` (repeat the flag for more than one file) when a previous round exists. The runner snapshots every file given and tells every prepared reviewer not to repeat accepted or known findings unless they remain in the current document.
+Pass `--prior-findings <file>` to `prepare` (repeat the flag for more than one file) on a pair retry or a labelled second review. The runner snapshots every file given and tells every prepared reviewer not to repeat accepted or known findings unless they remain in the current document.
 
 ## Requirements
 
@@ -71,7 +71,7 @@ Pass `--prior-findings <file>` to `prepare` (repeat the flag for more than one f
 - Claude Code or Codex for optional matching native reviewers (a Grok leg always runs by the CLI)
 - Explicit provider authorisation before document or repository content is sent
 
-The runner has five commands: `prepare`, `run-cli`, `ingest`, `collect` and `clean`. The six breadth lenses run in two practical waves of three. Inspect breadth findings before starting the adversarial pair. `collect` reports only the pair outcome as `ADVERSARIAL: CONVERGED|BLOCK`; the host owns the overall verdict after breadth adjudication. A fix changes the pinned revision, so commit it and prepare a fresh run.
+The runner has five commands: `prepare`, `run-cli`, `ingest`, `collect` and `clean`. The six breadth lenses run in two practical waves of three. Inspect breadth findings before starting the adversarial pair. `collect` reports only the pair outcome as `ADVERSARIAL: CONVERGED|BLOCK`; the host owns the overall verdict after breadth adjudication. A fix changes the document, and a changed document is not reviewed again on the same branch: check the fix against the findings yourself.
 
 A host may use a fresh read-only native reviewer, pass the exact prepared native prompt, save the returned text verbatim, then call `ingest`. The host owns one fixed native wait, interruption, one native retry and one same-engine CLI fallback. The runner validates the pinned scope, starts CLI legs detached, refuses concurrent same-leg launches and takes the last matching JSON object.
 

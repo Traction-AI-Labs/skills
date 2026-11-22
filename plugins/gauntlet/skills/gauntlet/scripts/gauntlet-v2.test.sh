@@ -713,7 +713,8 @@ test ! -e "$TMP/run-two"
 # Rounds: identity on prepare, the round record, the pre-review field, and what
 # prepare and collect print. This block runs in its own scratch repository with
 # its own record file, isolated from the scenarios above and from the operator's
-# real record. There is no round cap: nothing here is refused for its round.
+# real record. A second round on new content is refused (22 Nov 2026) unless it
+# covers only files no earlier round of the identity covered.
 # ---------------------------------------------------------------------------
 ROUNDS="$TMP/rounds"
 mkdir -p "$ROUNDS" "$TMP/fixtures"
@@ -839,91 +840,98 @@ grep -Fxq 'ROUND: 1 (retry of recorded round 1) identity=pr:7 repo=rounds/repo' 
 scratch_accept "$ROUNDS/r-a2" claude
 test "$(record_lines "$RECORD")" -eq 2
 python3 -c 'import json,sys; assert json.loads(open(sys.argv[1]).read().splitlines()[1])["round"] == 1' "$RECORD"
+A_HEAD="$(git -C "$ROUNDS/repo" rev-parse HEAD)"
 printf 'B\n' > "$ROUNDS/repo/app.txt"
 git -C "$ROUNDS/repo" commit -qam commit-b
 test "$(record_lines "$RECORD")" -eq 2
 rc=0; scratch_run "$ROUNDS/r-a2" collect > /dev/null 2> "$TMP/t3b.err" || rc=$?
 test "$rc" -ne 0
 grep -Fq 'prepared scope changed' "$TMP/t3b.err"
-scratch_prepare "$ROUNDS/r-b0" --pr 7 > /dev/null
-scratch_run "$ROUNDS/r-b0" clean --force
+# 4. Commit B is new content for pr:7, so it is a second round and is refused, on an unlisted repo too:
+# one line naming round 1's head (its verdict line was never written, so no archive or files), nothing
+# prepared and nothing recorded.
+rc=0; scratch_prepare "$ROUNDS/r-b0" --pr 7 > /dev/null 2> "$TMP/t4.err" || rc=$?
+test "$rc" -eq 1
+grep -Fxq "NO SECOND ROUND: pr:7 already had round 1 at ${A_HEAD:0:12} (no verdict line on record, so its archive and files are unknown) on this machine. Check the fixes against its findings (FIXES CHECKED), fix forward in its own PR, or hold" "$TMP/t4.err"
 test ! -e "$ROUNDS/r-b0"
 test "$(record_lines "$RECORD")" -eq 2
-
-# 4. Commit B is round 2. The count survives clean.
-scratch_prepare "$ROUNDS/r-b1" --pr 7 > "$TMP/t4.out"
-grep -Fxq 'ROUND: 2 identity=pr:7 repo=rounds/repo' "$TMP/t4.out"
-scratch_accept "$ROUNDS/r-b1" claude
-test "$(record_lines "$RECORD")" -eq 3
 scratch_run "$ROUNDS/r-a2" clean --force
-scratch_run "$ROUNDS/r-b1" clean --force
-test "$(record_lines "$RECORD")" -eq 3
 
-# 5. Commit C is round 3 and is not refused. The retired flags are accepted and
-# ignored, and --pre-reviewed-by is recorded on the line and in rows.json.
+# 5. Commit C adds extra.txt. pr:8's round 1 leaves it out with --exclude. The retired budget flags are accepted
+# and ignored, and --pre-reviewed-by is recorded on the line and in rows.json.
 printf 'C\n' > "$ROUNDS/repo/app.txt"
 printf 'extra\n' > "$ROUNDS/repo/extra.txt"
 git -C "$ROUNDS/repo" add extra.txt
 git -C "$ROUNDS/repo" commit -qam commit-c
-scratch_prepare "$ROUNDS/r-c1" --pr 7 --override-round-budget "bounded: anything" --supersedes pr:1 --pre-reviewed-by gpt-5.6-terra > "$TMP/t5.out"
-grep -Fxq 'ROUND: 3 identity=pr:7 repo=rounds/repo' "$TMP/t5.out"
+scratch_prepare "$ROUNDS/r-c1" --pr 8 --exclude extra.txt --override-round-budget "bounded: anything" --supersedes pr:1 --pre-reviewed-by gpt-5.6-terra > "$TMP/t5.out"
+grep -Fxq 'ROUND: 1 identity=pr:8 repo=rounds/repo' "$TMP/t5.out"
 refute grep -q '^OVERRIDE' "$TMP/t5.out"
 scratch_accept "$ROUNDS/r-c1" claude
-test "$(record_lines "$RECORD")" -eq 4
+scratch_accept "$ROUNDS/r-c1" codex
+scratch_run "$ROUNDS/r-c1" collect > /dev/null
+test "$(record_lines "$RECORD")" -eq 3
 python3 - "$RECORD" "$ROUNDS/r-c1/rows.json" <<'PY'
 import json, sys
-entry = json.loads(open(sys.argv[1]).read().splitlines()[3])
-assert entry["round"] == 3 and entry["pre_review"] == "gpt-5.6-terra", entry
+entry = [e for e in map(json.loads, open(sys.argv[1])) if e["runner"] == "gauntlet"][-1]
+assert entry["round"] == 1 and entry["identity"] == "pr:8" and entry["pre_review"] == "gpt-5.6-terra", entry
 assert "override" not in entry and "lineage" not in entry, entry
 rows = json.load(open(sys.argv[2]))
 for key in ("identity", "round", "retry", "pre_review", "digest", "head", "repo",
             "repo_short", "round_record", "round_record_default"):
     assert key in rows, key
-assert rows["identity"] == "pr:7" and rows["round"] == 3 and rows["retry"] is False, rows
+assert rows["identity"] == "pr:8" and rows["round"] == 1 and rows["retry"] is False, rows
 assert rows["pre_review"] == "gpt-5.6-terra" and rows["round_record_default"] is False, rows
 assert rows["timeout_seconds"] == 1800 and rows["engines"] == ["claude", "codex"], rows
 PY
+C1_ARCHIVE="$(python3 -c 'import json,sys; print([e for e in map(json.loads, open(sys.argv[1])) if e["runner"] == "gauntlet-verdict"][-1]["archive"])' "$RECORD")"
 
 # A malformed pre-review token is refused before anything is written.
-rc=0; scratch_prepare "$ROUNDS/r-c2" --pr 7 --pre-reviewed-by 'bad model' > /dev/null 2> "$TMP/t5b.err" || rc=$?
+rc=0; scratch_prepare "$ROUNDS/r-c2" --pr 8 --pre-reviewed-by 'bad model' > /dev/null 2> "$TMP/t5b.err" || rc=$?
 test "$rc" -eq 1
 grep -Fq 'invalid --pre-reviewed-by model token' "$TMP/t5b.err"
 test ! -e "$ROUNDS/r-c2"
 
-# 6. A different --exclude set over the same commit is a different reviewed
-# content, so it is round 4; `none` is recorded as given.
-scratch_prepare "$ROUNDS/r-c3" --pr 7 --exclude extra.txt --pre-reviewed-by none > "$TMP/t6.out"
-grep -Fxq 'ROUND: 4 identity=pr:7 repo=rounds/repo' "$TMP/t6.out"
+# 6. The whole of commit C is new content that covers app.txt again, so it is refused, naming round 1's head and
+# archive from its verdict line. Leaving out app.txt, the round covers only extra.txt, which no earlier round
+# covered, so it prepares as round 2; `none` is recorded as given.
+rc=0; scratch_prepare "$ROUNDS/r-c3x" --pr 8 > /dev/null 2> "$TMP/t6x.err" || rc=$?
+test "$rc" -eq 1
+grep -Fxq "NO SECOND ROUND: pr:8 already had round 1 at $(git -C "$ROUNDS/repo" rev-parse HEAD | cut -c1-12) (archive $C1_ARCHIVE) on this machine; this scope holds 1 file(s) it covered, first app.txt; 1 file(s) in this scope no round covered, first extra.txt: to review only those, prepare again with --exclude <file> for each covered file. Check the fixes against its findings (FIXES CHECKED), fix forward in its own PR, or hold. A retry of that round needs the same head and the same --exclude list, which is in $C1_ARCHIVE/scope/excludes" "$TMP/t6x.err"
+test ! -e "$ROUNDS/r-c3x"
+scratch_prepare "$ROUNDS/r-c3" --pr 8 --exclude app.txt --pre-reviewed-by none > "$TMP/t6.out"
+grep -Fxq 'NEW FILES ONLY: no earlier round of pr:8 covered any file in this scope, so this round prepares' "$TMP/t6.out"
+grep -Fxq 'ROUND: 2 identity=pr:8 repo=rounds/repo' "$TMP/t6.out"
 scratch_accept "$ROUNDS/r-c3" claude
-test "$(record_lines "$RECORD")" -eq 5
-python3 -c 'import json,sys; e=json.loads(open(sys.argv[1]).read().splitlines()[4]); assert e["round"]==4 and e["pre_review"]=="none", e' "$RECORD"
+test "$(record_lines "$RECORD")" -eq 4
+python3 -c 'import json,sys; e=[e for e in map(json.loads, open(sys.argv[1])) if e["runner"] == "gauntlet"][-1]; assert e["round"]==2 and e["pre_review"]=="none", e' "$RECORD"
 
 # 7. collect prints the record status and the round on RUNNING, FAILED and final
 # output, with the record path shortened; a run prepared before rounds were
 # recorded (no round keys in rows.json) prints none of them.
-scratch_prepare "$ROUNDS/r-c5" --pr 7 > /dev/null
+scratch_prepare "$ROUNDS/r-c5" --pr 8 --exclude app.txt > /dev/null 2> /dev/null
 rc=0; scratch_run "$ROUNDS/r-c5" collect > "$TMP/t7-running.out" || rc=$?
 test "$rc" -ne 0
 grep -Fxq 'GAUNTLET: RUNNING' "$TMP/t7-running.out"
 grep -Fxq 'ROUND-RECORD: non-default record/rounds.jsonl' "$TMP/t7-running.out"
 refute grep -Fq "$RECORD" "$TMP/t7-running.out"
-grep -Fxq 'ROUND: 3 (retry of recorded round 3) identity=pr:7 repo=rounds/repo' "$TMP/t7-running.out"
+grep -Fxq 'ROUND: 2 (retry of recorded round 2) identity=pr:8 repo=rounds/repo' "$TMP/t7-running.out"
 FAKE_CLAUDE_FAIL=yes scratch_cli "$ROUNDS/r-c5" claude
 FAKE_CODEX_FAIL=yes scratch_cli "$ROUNDS/r-c5" codex
 rc=0; scratch_run "$ROUNDS/r-c5" collect > "$TMP/t7-failed.out" || rc=$?
 test "$rc" -ne 0
 grep -Fxq 'GAUNTLET: FAILED' "$TMP/t7-failed.out"
 grep -Fxq 'ROUND-RECORD: non-default record/rounds.jsonl' "$TMP/t7-failed.out"
-grep -Fq 'ROUND: 3 (retry of recorded round 3)' "$TMP/t7-failed.out"
-test "$(record_lines "$RECORD")" -eq 5
-scratch_prepare "$ROUNDS/r-c6" --pr 7 > /dev/null
+grep -Fq 'ROUND: 2 (retry of recorded round 2)' "$TMP/t7-failed.out"
+test "$(record_lines "$RECORD")" -eq 4
+# A fresh prepare on unchanged content after both legs failed is a retry, not a second round.
+scratch_prepare "$ROUNDS/r-c6" --pr 8 --exclude app.txt > /dev/null 2> /dev/null
 scratch_cli "$ROUNDS/r-c6" claude
 scratch_cli "$ROUNDS/r-c6" codex
 scratch_run "$ROUNDS/r-c6" collect > "$TMP/t7-final.out"
 grep -Fxq 'GAUNTLET: APPROVE' "$TMP/t7-final.out"
 grep -Fxq 'ROUND-RECORD: non-default record/rounds.jsonl' "$TMP/t7-final.out"
-grep -Fq 'ROUND: 3 (retry of recorded round 3)' "$TMP/t7-final.out"
-test "$(record_lines "$RECORD")" -eq 6
+grep -Fq 'ROUND: 2 (retry of recorded round 2)' "$TMP/t7-final.out"
+test "$(record_lines "$RECORD")" -eq 5
 cp -a "$ROUNDS/r-c6" "$ROUNDS/r-legacy"
 python3 - "$ROUNDS/r-legacy/rows.json" <<'PY'
 import json, os, pathlib, sys
@@ -970,8 +978,8 @@ PY
 # 10. A second worktree of the same repository shares the key and continues the
 # count.
 git -C "$ROUNDS/repo" worktree add -q --detach "$ROUNDS/wt" work
-GAUNTLET_REPO="$ROUNDS/wt" GAUNTLET_DIR="$ROUNDS/r-i1" bash "$RUNNER" prepare --authorize-provider --base main --profile fast --pr 7 > "$TMP/t10.out"
-grep -Fxq 'ROUND: 3 (retry of recorded round 3) identity=pr:7 repo=rounds/repo' "$TMP/t10.out"
+GAUNTLET_REPO="$ROUNDS/wt" GAUNTLET_DIR="$ROUNDS/r-i1" bash "$RUNNER" prepare --authorize-provider --base main --profile fast --pr 8 --exclude app.txt > "$TMP/t10.out" 2> /dev/null
+grep -Fxq 'ROUND: 2 (retry of recorded round 2) identity=pr:8 repo=rounds/repo' "$TMP/t10.out"
 git -C "$ROUNDS/repo" worktree remove --force "$ROUNDS/wt"
 
 # 11. Record failure modes. A malformed line is skipped with a warning naming it.
@@ -1151,6 +1159,8 @@ record, repo, head = sys.argv[1:]
 with open(record, "a") as handle:
     for runner, number, digest in (("doc-gauntlet", 1, "a" * 64), ("doc-gauntlet", 2, "b" * 64), ("gauntlet", 1, "c" * 64)):
         handle.write(json.dumps({"ts": "2026-09-13T00:00:00+00:00", "runner": runner, "repo": repo, "identity": "pr:14", "digest": digest, "head": head, "round": number, "override": None, "lineage": [], "supersedes": []}, separators=(",", ":")) + "\n")
+    # Its round covered another file, so this prepare is not a second round over app.txt.
+    handle.write(json.dumps({"runner": "gauntlet-verdict", "repo": repo, "identity": "pr:14", "digest": "c" * 64, "head": head, "round": 1, "verdict": "BLOCK", "covered": ["elsewhere.txt"], "archive": "/nonexistent"}, separators=(",", ":")) + "\n")
 PY
 scratch_prepare "$HOPS/d1" --pr 14 > "$TMP/doc-isolation.out"
 grep -Fxq 'ROUND: 2 identity=pr:14 repo=hops/repo' "$TMP/doc-isolation.out"
@@ -1165,6 +1175,7 @@ record, repo, head = sys.argv[1:]
 with open(record, "a") as handle:
     for identity, number, digest in (("pr:15", 1, "d" * 64), ("pr:15", 3, "e" * 64), ("pr:16", 17, "f" * 64), ("pr:16", 18, "0" * 64)):
         handle.write(json.dumps({"ts": "2026-09-13T00:00:00+00:00", "runner": "gauntlet", "repo": repo, "identity": identity, "digest": digest, "head": head, "round": number, "override": None, "lineage": ["pr:7"], "supersedes": []}, separators=(",", ":")) + "\n")
+        handle.write(json.dumps({"runner": "gauntlet-verdict", "repo": repo, "identity": identity, "digest": digest, "head": head, "round": number, "verdict": "BLOCK", "covered": ["elsewhere.txt"], "archive": "/nonexistent"}, separators=(",", ":")) + "\n")
 PY
 scratch_prepare "$HOPS/i1" --pr 15 > "$TMP/inflated15.out"
 grep -Fxq 'ROUND: 4 identity=pr:15 repo=hops/repo' "$TMP/inflated15.out"

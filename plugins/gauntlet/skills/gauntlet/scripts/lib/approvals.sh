@@ -52,11 +52,14 @@ PY
 # the files its round reviewed (the verdict line's "covered"): a file its scope
 # left out (--exclude) never gains standing from it. Unchanged and every file
 # covered: the approval stands and no round is prepared. Otherwise the files
-# still in the diff whose own patch differs are the merge fix, the files the
-# approval never covered still need review, and on an enforced repo the scope
-# narrows to those two sets. A file that left the diff (main now carries the
-# same change, or it was undone) is named; when it is the only difference, the
-# whole diff is reviewed. A verdict line without "covered" (written before
+# still in the diff whose own patch differs are named (MERGE FIX); those the
+# approval covered are the merge fix, which the orchestrator checks (FIXES
+# CHECKED) and no round reviews (no second round, 22 Nov 2026). The files the
+# approval never covered (left out by --exclude, or new since) still need
+# review, and on an enforced repo the scope narrows to them, with no round
+# prepared when there are none. A file that left the diff (main now carries the
+# same change, or it was undone) is named; when it is the only difference, no
+# approval stands and the second-round rule decides. A verdict line without "covered" (written before
 # coverage was recorded) gives no standing, nor does a diff or record holding
 # a file name with a line break (path lists are one name per line). Appends exclude paths to the file
 # named by $5; those are the files that keep their standing. Nothing merges
@@ -100,12 +103,15 @@ unreviewed = sorted(p for p in b if a.get(p) == b[p] and p not in covered)
 if old.get("patch_id") == new["patch_id"] and not unreviewed:
     print(json.dumps({"stands": True}))
     raise SystemExit(0)
-print(json.dumps({"changed": changed, "unreviewed": unreviewed, "gone": sorted(p for p in a if p not in b)}))
+# A changed file the approved round never covered (new since, or left out then)
+# still needs review; a changed file it covered is the merge fix.
+print(json.dumps({"changed": changed, "unreviewed": unreviewed, "fresh": [p for p in changed if p not in covered],
+                  "gone": sorted(p for p in a if p not in b)}))
 PY
   # The approval stands only on the comparison's explicit answer. A comparison that fails or prints nothing gives
   # no standing (it used to read as "unchanged", so a crash would have let an approval stand).
   if [[ -z "$now" ]] || ! delta="$(printf '[%s,%s]' "$last" "$now" | python3 -c "$py")" || [[ -z "$delta" ]]; then
-    echo 'NOTE: the comparison with the approved round failed, so no approval stands and the whole diff is reviewed'
+    echo 'NOTE: the comparison with the approved round failed, so no approval stands; the second-round rule decides whether a round prepares'
     return 0
   fi
   if [[ "$(printf '%s' "$delta" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("stands", False))')" == True ]]; then
@@ -114,22 +120,23 @@ PY
     return 0
   fi
   if [[ "$(printf '%s' "$delta" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("legacy", False))')" == True ]]; then
-    echo 'NOTE: the approved round'"'"'s record does not say which files it reviewed, so the whole diff is reviewed'
+    echo 'NOTE: the approved round'"'"'s record does not say which files it reviewed, so no approval stands; the second-round rule decides whether a round prepares'
     return 0
   fi
   if [[ "$(printf '%s' "$delta" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("line_break", False))')" == True ]]; then
-    echo 'NOTE: a file name in the diff or the approved record holds a line break, so no approval stands and the whole diff is reviewed'
+    echo 'NOTE: a file name in the diff or the approved record holds a line break, so no approval stands; the second-round rule decides whether a round prepares'
     return 0
   fi
   changed="$(printf '%s' "$delta" | python3 -c 'import json,sys; print("\n".join(json.load(sys.stdin)["changed"]))')"
   unreviewed="$(printf '%s' "$delta" | python3 -c 'import json,sys; print("\n".join(json.load(sys.stdin)["unreviewed"]))')"
   gone="$(printf '%s' "$delta" | python3 -c 'import json,sys; print("\n".join(json.load(sys.stdin)["gone"]))')"
+  need="$(printf '%s' "$delta" | python3 -c 'import json,sys; d=json.load(sys.stdin); print("\n".join(sorted(set(d["unreviewed"]) | set(d["fresh"]))))')"
   if [[ -n "$gone" ]]; then
     echo "NOTE: no longer in the PR's own diff (main now carries the same change, or it was undone):"
     sed 's/^/  gone: /' <<<"$gone"
   fi
   if [[ -z "$changed" && -z "$unreviewed" ]]; then
-    echo 'NOTE: no file still in the diff differs from the approved one, so the whole diff is reviewed'
+    echo 'NOTE: no file still in the diff differs from the approved one, but the diff changed, so no approval stands; the second-round rule decides whether a round prepares'
     return 0
   fi
   if [[ -n "$changed" ]]; then
@@ -140,16 +147,19 @@ PY
     echo 'NOT REVIEWED: the approved round'"'"'s scope left these files out, so its approval does not cover them:'
     sed 's/^/  /' <<<"$unreviewed"
   fi
-  echo 'Review only these files: as a round if the budget has one left, otherwise the orchestrator checks a merge fix (FIXES CHECKED); a file never reviewed needs a round.'
+  [[ -z "$changed" ]] || echo 'A MERGE FIX file the approved round covered gets no round: the orchestrator checks it as a merge fix (FIXES CHECKED).'
   if [[ "$ENFORCED" == true ]]; then
+    [[ -n "$need" ]] || die 'MERGE FIX ONLY: every file in it was covered by an earlier round, so no round is prepared; the orchestrator checks the merge fix (FIXES CHECKED)'
+    echo 'A round reviews only the files the approved round did not cover:'
+    sed 's/^/  /' <<<"$need"
     IFS= read -r -d '' py <<'PY' || true
 import json, sys
-keep = set(sys.argv[1].split("\n")) | set(sys.argv[2].split("\n"))
+keep = set(sys.argv[1].split("\n"))
 print("\n".join(p for p in json.load(sys.stdin)["files"] if p not in keep))
 PY
-    printf '%s' "$now" | python3 -c "$py" "$changed" "$unreviewed" >> "$excludes_out"
+    printf '%s' "$now" | python3 -c "$py" "$need" >> "$excludes_out"
   else
-    gate "on an enforced repo the scope would narrow to the merge fix and the files the approval did not cover"
+    gate "on an enforced repo the scope would narrow to the files the approval did not cover"
   fi
 }
 

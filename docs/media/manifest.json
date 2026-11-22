@@ -36,8 +36,8 @@
     }
   },
   "doc-gauntlet": {
-    "checked_at_version": "0.6.4",
-    "reason": "0.6.4 changes only the client-draft procedure's wording rules in references/derivation-ledger.md; the picture shows a review round, which is unchanged",
+    "checked_at_version": "0.7.0",
+    "reason": "The session shows one round (prepare, lenses, the pair, collect) with no second round; 0.7.0 changes none of those lines.",
     "inputs": {
       "docs/examples/doc-gauntlet/session.txt": "9f2ea1cce0a53102cea70f832850f302d66ed9a9a1bfc310fcad5dbf6d781e35",
       "scripts/media/terminal.html": "96f2657a651860516588a88899bcf135ed23e92dcc414e85e425e344e25ffac0",
@@ -51,8 +51,8 @@
     }
   },
   "gauntlet": {
-    "checked_at_version": "0.7.2",
-    "reason": "0.7.2 is a runner fix (approval records on stdin); nothing the picture shows changed",
+    "checked_at_version": "0.8.0",
+    "reason": "The session shows one round (prepare, two reviewers, collect) and uses no retired flag; 0.8.0 changes none of those lines.",
     "inputs": {
       "docs/examples/gauntlet/session.txt": "22aaf132d45c347c7cd1c57ded1daa57b853742383f27a9f45eefc2cae9e0981",
       "scripts/media/terminal.html": "96f2657a651860516588a88899bcf135ed23e92dcc414e85e425e344e25ffac0",
