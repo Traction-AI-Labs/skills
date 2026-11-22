@@ -233,13 +233,20 @@ load_run_repo() {
 }
 
 scope_diff() {
-  local base="$1" excludes_file="$2" format="${3:---binary}" args=(-- .)
+  local base="$1" excludes_file="$2" format="${3:---binary}" ids="${4:-full}" args=(-- .)
   if [[ -f "$excludes_file" ]]; then
     # Literal, as prepare's own path check treats them: a name like [id].tsx is
     # that file, never a pattern that also matches another.
     while IFS= read -r path; do args+=(":(exclude,literal)$path"); done < "$excludes_file"
   fi
-  git -C "$REPO" diff "$format" "$base" HEAD "${args[@]}"
+  # Full object ids on the index lines: git lengthens its short ids as a repository gains objects, so
+  # the same diff printed with short ids can hash differently at collect than it did at prepare. `short` prints
+  # it as the runner did before that, only so prepare can recognise a round recorded then (round_compute).
+  if [[ "$ids" == short ]]; then
+    git -C "$REPO" diff "$format" "$base" HEAD "${args[@]}"
+  else
+    git -C "$REPO" diff --full-index "$format" "$base" HEAD "${args[@]}"
+  fi
 }
 
 # The paths of the pinned diff, as `git diff --name-status -z` with the same
@@ -342,7 +349,7 @@ round_compute() {
   python3 - "$@" <<'PY'
 import json, os, sys
 
-(out, record, record_default, repo, repo_short, identity, digest, head, pre_review) = sys.argv[1:10]
+(out, record, record_default, repo, repo_short, identity, digest, head, pre_review, legacy) = sys.argv[1:11]
 distinct, recorded, top = [], None, 0
 if os.path.exists(record):
     with open(record, "r", errors="replace") as handle:
@@ -358,10 +365,13 @@ if os.path.exists(record):
                 continue
             if entry["repo"] != repo or entry["runner"] != "gauntlet" or entry["identity"] != identity:
                 continue
-            if entry["digest"] not in distinct:
-                distinct.append(entry["digest"])
+            # A line the runner wrote for this content before the pinned diff carried full object ids
+            # holds the digest of the short-id diff: it is this content, so it is a retry.
+            seen = digest if entry["digest"] == legacy else entry["digest"]
+            if seen not in distinct:
+                distinct.append(seen)
             top = max(top, entry["round"])
-            if entry["digest"] == digest and recorded is None:
+            if seen == digest and recorded is None:
                 recorded = entry["round"]
 meta = {
     "identity": identity,
@@ -616,10 +626,15 @@ if empty:
 json.dump({"order": order, "groups": groups}, open(sys.argv[2], "w"))
 PY
   fi
-  local digest
+  local digest legacy_digest
   digest="$(hash_file "$prep_tmp/diff.patch")"
+  # The digest the runner recorded for this same scope before 0.8.1, so a retry of a round recorded then is
+  # still a retry. It and round_compute's use of it can go once no open pull request has a round recorded
+  # before 23 Nov 2026.
+  scope_diff "$base" "$prep_tmp/excludes" --binary short > "$prep_tmp/diff.short"
+  legacy_digest="$(hash_file "$prep_tmp/diff.short")"; rm -f "$prep_tmp/diff.short"
   round_compute "$prep_tmp/round.json" "$ROUND_RECORD_PATH" "$ROUND_RECORD_DEFAULT" \
-    "$repo_key" "$repo_short" "$identity" "$digest" "$head" "$pre_review"
+    "$repo_key" "$repo_short" "$identity" "$digest" "$head" "$pre_review" "$legacy_digest"
   local round_number round_retry
   round_number="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["round"])' "$prep_tmp/round.json")"
   round_retry="$(python3 -c 'import json,sys; print(str(json.load(open(sys.argv[1]))["retry"]).lower())' "$prep_tmp/round.json")"

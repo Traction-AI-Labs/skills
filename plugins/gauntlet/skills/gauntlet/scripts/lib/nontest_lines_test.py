@@ -285,6 +285,15 @@ class DocumentationTest(unittest.TestCase):
         self.assertEqual(sorted(p for _, _, p in nl.counted(self.path, "HEAD~1", "HEAD")), ["a.ts", "docs/util.ts"])
         self.assertEqual(self.total(), 43)
 
+    def test_shared_test_setup_named_testing_is_a_test(self):
+        # *.testing.<ext> is test set-up and does not count; a file merely called testing.ts does.
+        self.write("a.ts", block("x", 30) + block("fix", 3))
+        self.write("db.testing.ts", block("setup", 50))
+        self.write("testing.ts", block("real", 7))
+        self.commit("fix with test set-up")
+        self.assertEqual(sorted(p for _, _, p in nl.counted(self.path, "HEAD~1", "HEAD")), ["a.ts", "testing.ts"])
+        self.assertEqual(self.total(), 10)
+
     def test_agent_instruction_markdown_still_counts(self):
         names = ["CLAUDE.md", "AGENTS.md", "docs/Agents.md", "AGENT.md", "docs/Claude.md", "CLAUDE.local.md", "GEMINI.md",
                  "docs/SKILL.md", "docs/sub/CLAUDE.md", ".claude/commands/go.md", ".agents/rules.md", ".codex/x.md",

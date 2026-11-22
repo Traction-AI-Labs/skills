@@ -51,8 +51,8 @@
     }
   },
   "gauntlet": {
-    "checked_at_version": "0.8.0",
-    "reason": "The session shows one round (prepare, two reviewers, collect) and uses no retired flag; 0.8.0 changes none of those lines.",
+    "checked_at_version": "0.8.1",
+    "reason": "0.8.1 changes how the runner hashes the pinned diff and what the size measure counts as a test; nothing the picture shows",
     "inputs": {
       "docs/examples/gauntlet/session.txt": "22aaf132d45c347c7cd1c57ded1daa57b853742383f27a9f45eefc2cae9e0981",
       "scripts/media/terminal.html": "96f2657a651860516588a88899bcf135ed23e92dcc414e85e425e344e25ffac0",
