@@ -1,7 +1,8 @@
 """Changed non-test lines (added plus removed) between two commits, the O6 measure.
 
 Tests, snapshots, lockfiles, generated files (including linguist-generated) and
-documentation (12 Nov 2026) do not count. Documentation is a Markdown
+documentation (12 Nov 2026) do not count. A shared test set-up file
+named *.testing.<ext> is a test. Documentation is a Markdown
 file (*.md, *.markdown) at the repository root or under a docs, doc,
 documentation, changelog, changelog.d or evidence folder at any depth. Everything
 else counts: code or configuration in those folders, Markdown elsewhere (skill
@@ -19,7 +20,7 @@ lines git shows were moved unchanged, within a file or between counted files
 """
 import collections, os, re, subprocess, sys, tempfile
 
-TEST = re.compile(r'(^|/)(tests?|__tests__|spec|specs|__snapshots__|fixtures|__fixtures__|testdata)/|(\.|_)(test|spec)\.[^/]+$|(^|/)test_[^/]+\.py$|\.snap$')
+TEST = re.compile(r'(^|/)(tests?|__tests__|spec|specs|__snapshots__|fixtures|__fixtures__|testdata)/|(\.|_)(test|spec)\.[^/]+$|\.testing\.[^/]+$|(^|/)test_[^/]+\.py$|\.snap$')
 LOCK = re.compile(r'(^|/)(package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lockb?|Cargo\.lock|poetry\.lock|uv\.lock|Pipfile\.lock|Gemfile\.lock|composer\.lock|go\.sum|flake\.lock)$')
 DOC = re.compile(r'^(?:[^/]+|(?:.*/)?(?:docs?|documentation|changelog|changelog\.d|evidence)/.+)\.(?:md|markdown)$', re.I)
 AGENT_MD = re.compile(r'(^|/)(AGENTS?|Agents|CLAUDE|Claude|CLAUDE\.local|GEMINI|SKILL)\.md$|(^|/)\.(claude|agents|codex|cursor|grok|github)/', re.I)

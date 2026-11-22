@@ -303,6 +303,28 @@ test "$rc" -eq 1 || { echo 'a second round over covered files was prepared' >&2;
 grep -Fxq "NO SECOND ROUND: id:second already had round 1 at ${H2:0:12} (archive $ARCH2) on this machine; this scope holds 2 file(s) it covered, first a.txt. Check the fixes against its findings (FIXES CHECKED), fix forward in its own PR, or hold. A retry of that round needs the same head and the same --exclude list, which is in $ARCH2/scope/excludes" "$TMP/second.err"
 test -f "$ARCH2/scope/excludes"
 test ! -e "$RUN_DIR"
+# 8c2. A round recorded before the pinned diff carried full object ids is on record under the digest of
+#      the short-id diff. The same content prepared again is still a retry of it, and new content after it is
+#      still a second round.
+new_repo oldrunner https://github.com/example/oldrunner.git
+lines a.txt 3
+prep --identity oldrunner > /dev/null
+approve "$RUN_DIR" claude > /dev/null
+NEW_DIGEST="$(<"$RUN_DIR/scope/digest")"
+OLD_DIGEST="$(git -C "$R" diff --binary main HEAD -- . | python3 -c 'import hashlib,sys; print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest())')"
+[[ "$OLD_DIGEST" != "$NEW_DIGEST" ]]
+python3 -c 'import sys
+path, new, old = sys.argv[1:]
+text = open(path).read()
+assert text.count(new) == 1, text.count(new)
+open(path, "w").write(text.replace(new, old))' "$GAUNTLET_ROUND_RECORD" "$NEW_DIGEST" "$OLD_DIGEST"
+prep --identity oldrunner > "$TMP/oldrunner.out" 2> "$TMP/oldrunner.err" \
+  || { echo "a retry of a round the older runner recorded was refused: $(cat "$TMP/oldrunner.err")" >&2; exit 1; }
+grep -Fq 'ROUND: 1 (retry of recorded round 1) identity=id:oldrunner' "$TMP/oldrunner.out"
+printf 'fix\n' >> "$R/a.txt"; git -C "$R" commit -qam fix
+rc=0; prep --identity oldrunner > /dev/null 2> "$TMP/oldrunner2.err" || rc=$?
+test "$rc" -eq 1 || { echo 'a second round was prepared after a round the older runner recorded' >&2; exit 1; }
+grep -Fq 'NO SECOND ROUND: id:oldrunner already had round 1' "$TMP/oldrunner2.err"
 
 # 8d. A round after one whose legs all failed prepares: that round was never recorded, so this is round 1.
 new_repo allfail https://github.com/example/allfail.git

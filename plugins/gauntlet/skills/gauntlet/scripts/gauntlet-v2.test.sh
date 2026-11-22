@@ -137,6 +137,11 @@ grep -Fq 'already has an accepted result' "$TMP/duplicate.err"
 test -f "$TMP/run/completion/claude.done"
 run collect > /dev/null
 
+# The scope digest does not depend on how long git's short ids are: the pinned diff carries full ids,
+# so collect still matches when the repository's short ids have lengthened since prepare.
+grep -Eq '^index [0-9a-f]{40}\.\.[0-9a-f]{40}' "$TMP/run/scope/diff.patch"
+GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.abbrev GIT_CONFIG_VALUE_0=20 run collect > /dev/null
+
 # A changed committed scope aborts dispatch and collection rather than using a
 # stale review result.
 printf 'again\n' > "$TMP/repo/app.txt"; git -C "$TMP/repo" commit -am again -q

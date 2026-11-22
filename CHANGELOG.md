@@ -1,5 +1,11 @@
 # Changelog
 
+- **gauntlet 0.8.1** (23 November 2026). Two runner fixes. The pinned diff now carries full object ids, so
+  `collect` no longer stops on a digest mismatch when the repository's short ids have lengthened since `prepare`.
+  A round an earlier version recorded is still recognised as the same content: a retry of it is a retry, and new
+  content after it is still refused as a second round. A run prepared by 0.8.0 and collected by 0.8.1 stops once;
+  prepare it again, which is a retry. A shared test set-up file named `*.testing.<ext>` now counts as a test when
+  the round-1 size is measured. New tests cover both.
 - **gauntlet 0.8.0 and doc-gauntlet 0.7.0** (23 November 2026). One review round. gauntlet: every kind of code gets
   one round and one check of the fixes (`FIXES CHECKED`). `prepare` refuses a second round on new content for the same
   identity and says what to do instead; a retry on the same content, and a round over files no earlier round covered,
