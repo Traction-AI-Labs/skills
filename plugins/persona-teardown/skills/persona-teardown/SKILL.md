@@ -52,7 +52,8 @@ noticed. Discard and re-run any report that echoes another's wording.
 
 Persona agents run shell commands and write files, so they need a writable role, and each starts cold.
 
-- **Claude Code:** one `general-purpose` agent per persona with an explicit `model`, all in one message.
+- **Claude Code:** one `general-purpose` agent per persona with `model: "sonnet"`, all in one message. Name a
+  larger model only when the brief says why a walk needs it.
   Never a fork.
 - **Codex:** one `spawn_agent` per persona with `agent_type: "worker"` and `fork_turns: "none"` (an
   omitted `fork_turns` copies the orchestrator's whole history into the persona), all spawned before any
