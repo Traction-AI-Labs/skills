@@ -24,7 +24,7 @@
       "name": "persona-teardown",
       "source": "./plugins/persona-teardown",
       "description": "Tears down a prototype, UI kit or live screen with a panel of cold persona agents driving a browser, then consolidates the findings into one design-tool amendment prompt.",
-      "version": "0.2.0"
+      "version": "0.2.1"
     },
     {
       "name": "ruling-page",
