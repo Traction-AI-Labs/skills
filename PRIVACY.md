@@ -33,7 +33,8 @@ hosting site, if you put the page online). Links on any page contact their desti
 
 ruling-page's "Copy my answers" button shows your answers and puts them on your clipboard. If an author embeds a ruling
 page in another page and sets it up to do so (`RULING_BRIDGE`), the page passes your answers to that host page as you
-answer. Without that setting it passes nothing.
+answer: only the answers to the questions the page shows now, never one saved earlier for a question it no longer
+shows. Without that setting it passes nothing.
 
 ## What stays on your machine
 
