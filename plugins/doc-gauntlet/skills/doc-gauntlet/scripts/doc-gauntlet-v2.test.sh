@@ -602,10 +602,10 @@ rr_refused "$TMP/rr-refuse-override" --override-round-budget 'an old go'
 grep -Fq 'REFUSED: doc:docs/spec.md' "$TMP/rr-refuse-override.err"
 # An unknown label stops with one line naming the two.
 rr_refused "$TMP/rr-refuse-label" --second-review again
-test "$(cat "$TMP/rr-refuse-label.err")" = "--second-review takes proposal (a client proposal's second fact-check round) or asked (a second review the requester asked for)"
+test "$(cat "$TMP/rr-refuse-label.err")" = "--second-review takes proposal (a client proposal's second fact-check round) or asked (a second review the person who owns the work asked for)"
 # So does an empty label: it is not the same as leaving the flag out.
 rr_refused "$TMP/rr-refuse-empty" --second-review ''
-test "$(cat "$TMP/rr-refuse-empty.err")" = "--second-review takes proposal (a client proposal's second fact-check round) or asked (a second review the requester asked for)"
+test "$(cat "$TMP/rr-refuse-empty.err")" = "--second-review takes proposal (a client proposal's second fact-check round) or asked (a second review the person who owns the work asked for)"
 # Unchanged content is a retry of its recorded round, never refused, even with
 # a later commit on the branch.
 rr_edit '# Spec v2'
