@@ -30,7 +30,7 @@
       "name": "ruling-page",
       "source": "./plugins/ruling-page",
       "description": "Turns a complicated decision into a clickable one-file HTML ruling page: a recommendation pre-selected on every card, alternatives as buttons, and one button that copies the answers back into chat.",
-      "version": "0.3.3"
+      "version": "0.3.4"
     },
     {
       "name": "call-prep",

@@ -2,7 +2,7 @@
 name: ruling-page
 description: Use when you need the person you're working with to rule on a COMPLICATED decision (several decisions at once, or options with trade-offs that need explaining), or when asks from several threads need one answer. Builds a clickable one-file HTML ruling page with your recommendation pre-selected on every card and a "Copy my answers" button, instead of asking them to read a markdown file or a long chat message. Simple yes/no decisions stay in chat.
 ---
-<!-- SOURCE-REVISION 45fb651f -->
+<!-- SOURCE-REVISION 80ea4c80 -->
 
 # Ruling page
 
@@ -23,7 +23,8 @@ screenshot is not sent, because without one the person can only guess.
 **A design decision shows each option as a picture**, even a two-way pick that would otherwise stay in chat: a page
 with a frame or screenshot per option (the card's `frames`, step 2; a `data:` URI in the Claude app, where there is
 no folder beside the page), each annotated to mark what differs between the options, or a clickable mock. Never offer
-visual options in words alone.
+visual options in words alone. The page enforces this: a card marked `design: true` with no usable picture is
+refused (see `design` below).
 
 ## Build it
 
@@ -67,6 +68,18 @@ visual options in words alone.
      screenshots). Thumbnails sit under the question and enlarge on click, with arrow keys between them.
      `src` is a `data:image/...` URI (keeps the file self-contained) or a plain relative path beside the
      page; anything else is dropped. Use it whenever the options are visual.
+   - `design` (optional): `true` on a card that decides how something looks. It needs at least one usable picture
+     in `frames`: a `data:image/` address with at least one character after its comma that is not whitespace, or a
+     relative path that does not start with `#` or `?`. Without one the card is not drawn as a card: it shows its id,
+     title and a line saying it has no pictures yet, with no answer controls. It is left out of the tally, the rail
+     and Copy my answers, which ends with a `Needs pictures, not answerable yet:` line naming it, and the console
+     logs one error naming it, so step 3's check fails until you add a picture. A design card's pictures load at
+     once, and a card whose pictures fail to load logs one console error naming it, however many of them fail. The
+     picture rule holds for every card: a picture whose `src` is a `data:image/` address with no payload, or starts
+     with `#` or `?`, is not drawn, with or without `design`. A card's status and its Clear button go by the parts
+     the page draws now, so an answer or note saved for a part it no longer draws is kept and ignored. In the
+     open-questions page the flag belongs on a branch, never on a thread: a thread that carries it logs one console
+     error and is drawn as usual.
    - `link` (optional): `["label", "href"]`, or a list of such pairs: links under the question, each opening
      in a new tab. The href goes through the same check as `BRIEF.source`; one it rejects is left out with a
      console error.
@@ -175,7 +188,10 @@ When the page carries answers to questions they asked, not only decisions, use
 they asked it, the answer, what is still owed and by whom, a **Got it** button (saved like a choice),
 then one or more branch decisions with the same pick buttons. Replace only the data script (`RULER`,
 `BRIEF` with `date` and `lede`, `T`) and the `<h1>`. Thread fields: `id`, `short` (optional, as above), `group`, `title`, `asked`,
-`when`, `answer`, `owed` (empty hides it), `ev`, `branches: [{id, q, opts, pick, why, flip, multi}]`.
+`when`, `answer`, `owed` (empty hides it), `ev`, `branches: [{id, q, opts, pick, why, flip, multi, design, frames}]`.
+A branch that decides how something looks is marked `design: true` and carries its own `frames`, drawn under its
+question; a branch gets `frames` only when it is a design branch, and one with no usable picture is refused inside
+its thread as the `design` field above describes.
 Branch ids are stable (`Q1a`, `Q1b`). Check it as in step 3: the card count equals the number of
 threads in `T`, and `rulingText()` starts `Open questions: 0 of <N> answers read, 0 of <B> decisions
 answered` (B is the number of branches). "Copy my answers" gives one line per thread (got it or not
