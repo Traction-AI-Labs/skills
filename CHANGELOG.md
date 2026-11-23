@@ -1,5 +1,12 @@
 # Changelog
 
+- **ruling-page 0.3.4** (23 November 2026). A card can carry `design: true` (in the open-questions template, a branch,
+  which then carries its own `frames`, drawn under its question). A design card or branch with no usable picture is
+  refused: it is drawn as a notice with no answer controls, left out of the tally, the rail and the strip, named on
+  the last line of "Copy my answers", and logged as one console error naming it. A picture is usable when its `src`
+  is a `data:image/` address with something after the comma, or a relative path that does not start with `#` or `?`.
+  A design card's pictures load at once, and one that fails to load logs one console error. Cards with no `design`
+  field behave as before. New tests cover both templates.
 - **gauntlet 0.8.1** (23 November 2026). Two runner fixes. The pinned diff now carries full object ids, so
   `collect` no longer stops on a digest mismatch when the repository's short ids have lengthened since `prepare`.
   A round an earlier version recorded is still recognised as the same content: a retry of it is a retry, and new

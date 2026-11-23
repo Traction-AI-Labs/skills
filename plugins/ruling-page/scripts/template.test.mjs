@@ -13,6 +13,12 @@
 //      answered and replaced switch the answer controls and Copy off, fold the old cards (still readable and
 //      printable) and keep saved answers unchanged when the cards are clicked or typed in; a broken STATE (unknown
 //      status, a .md, mailto: or text link, a missing field) logs one console error naming the fault.
+//   6. Design cards (a branch, in template-threads.html): one with pictures is drawn with them; one with no `frames`, one
+//      whose only picture is a `data:image/` address with no payload and one whose only picture has an unusable `src` (a
+//      same-page `#` reference) are each refused: drawn as a refusal with no answer controls, left out of the tally, the
+//      rail and the strip, named on the last line of the copied answers, and logged as one console error naming it. A card
+//      with no `design` flag and no pictures is still drawn. A design card's picture that fails to load logs one console
+//      error, and the card is still drawn.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -167,6 +173,73 @@ for (const name of ["template.html", "template-threads.html"]) {
   {
     const { page, errors } = await statePage(name, '{status: "answered", answered_on: "12 Nov 2026"}');
     check(!errors.length, `${name}: answered with no answers_in is allowed (${errors.join(" | ") || "no errors"})`);
+    await page.close();
+  }
+}
+// 6: design cards
+{
+  const PNG = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 4"><rect width="4" height="4"/></svg>');
+  const OPTS = [["One", "first"], ["Two", "second"]];
+  const frame = src => ({ src, cap: "a picture" });
+  // [id, design?, frames?]; the answer is in the ids: DRAWN ones can be answered, REFUSED ones cannot.
+  const DEF = [["A1", true, [frame(PNG)]], ["B1", true, undefined], ["C1", true, [frame("data:image/png;base64,")]], ["D1", true, [frame("#frame")]],
+               ["E1", undefined, undefined], ["F1", true, [frame("missing-picture.png")]]];
+  const DRAWN = ["A1", "E1", "F1"], REFUSED = ["B1", "C1", "D1"];
+  const mk = (id, design, frames) => { const o = { id, q: "Question " + id, opts: OPTS, pick: 0, why: "Because." };
+    if (design) o.design = true; if (frames) o.frames = frames; return o; };
+  const data = name => name === "template.html"
+    ? "const D = " + JSON.stringify(DEF.map(([id, d, f]) => ({ ...mk(id, d, f), title: "Card " + id }))) + ";\n</script>"
+    : "const T = " + JSON.stringify([{ id: "T1", title: "Thread", asked: "A question", when: "today", answer: "An answer", owed: "",
+        branches: DEF.map(([id, d, f]) => mk("T" + id, d, f)) }]) + ";\n";
+  for (const name of ["template.html", "template-threads.html"]) {
+    const threads = name === "template-threads.html", pre = threads ? "T" : "", sel = id => "#card-" + (threads ? "T1" : id);
+    const html = readFileSync(join(refs, name), "utf8").replace(threads ? /const T = \[[\s\S]*?\n\];\n/ : /const D = \[[\s\S]*?\n\];\n<\/script>/, () => data(name));
+    const page = await browser.newPage(), errors = [];
+    page.on("pageerror", e => errors.push("pageerror: " + e.message));
+    page.on("console", m => { if (m.type() === "error") errors.push(m.text()); });
+    await page.route("http://ruling.test/**", r => r.request().url().endsWith(".png")
+      ? r.fulfill({ contentType: "image/png", body: "not an image" }) : r.fulfill({ contentType: "text/html", body: html }));
+    await page.goto("http://ruling.test/design-" + Math.random().toString(36).slice(2) + ".html");
+    await page.waitForTimeout(600);
+    const got = await page.evaluate(({ threads, pre, drawn, refused }) => {
+      const out = { drawn: {}, refused: {} };
+      const box = id => threads ? document.querySelector("#card-T1") : document.getElementById("card-" + id);
+      for (const id of drawn) {
+        const root = threads ? [...document.querySelectorAll("#card-T1 fieldset.tp-part")].find(f => f.textContent.includes(pre + id)) : box(id);
+        out.drawn[id] = root ? { controls: root.querySelectorAll("input").length, pictures: root.querySelectorAll(".tp-frame img").length, refused: !!root.classList.contains("tp-refused") } : null;
+      }
+      for (const id of refused) {
+        const root = [...document.querySelectorAll(".tp-refused")].find(e => e.textContent.includes(pre + id));
+        out.refused[id] = root ? { controls: root.querySelectorAll("input, textarea, button, select, a, fieldset").length, pictures: root.querySelectorAll("img").length,
+          asCard: root.classList.contains("tp-card") || !!root.closest("fieldset.tp-part") } : null;
+      }
+      const lines = window.rulingText().split("\n");
+      out.first = lines[0]; out.last = lines[lines.length - 1];
+      out.listed = lines.filter(l => refused.some(id => new RegExp("^\\s*" + pre + id + "\\b").test(l)) && !/^Needs pictures/.test(l));
+      out.tally = document.getElementById("tp-tally").textContent;
+      out.rail = document.querySelectorAll("#tp-rail li a").length; out.segs = document.querySelectorAll("#tp-strip .tp-seg").length;
+      out.refusals = document.querySelectorAll(".tp-refused").length;
+      out.eager = [...document.querySelectorAll(".tp-frame img")].every(i => i.getAttribute("loading") !== "lazy");
+      return out;
+    }, { threads, pre, drawn: DRAWN, refused: REFUSED });
+    const A = got.drawn.A1, E = got.drawn.E1, F = got.drawn.F1;
+    check(A && A.pictures === 1 && A.controls === 2 && !A.refused, `${name}: a design ${threads ? "branch" : "card"} with a picture is drawn with it and its controls (${JSON.stringify(A)})`);
+    check(E && E.pictures === 0 && E.controls === 2 && !E.refused, `${name}: a ${threads ? "branch" : "card"} with no design flag and no pictures is still drawn (${JSON.stringify(E)})`);
+    check(F && F.controls === 2 && F.pictures === 1, `${name}: a design ${threads ? "branch" : "card"} whose picture will not load is still drawn (${JSON.stringify(F)})`);
+    for (const id of REFUSED) {
+      const r = got.refused[id], named = errors.filter(e => e.includes(`"${pre}${id}"`) && /no usable picture/.test(e));
+      check(r && r.controls === 0 && r.pictures === 0 && !r.asCard && got.refusals === REFUSED.length, `${name}: ${id} is refused: drawn with no controls and no picture, not as a ${threads ? "decision" : "card"} (${JSON.stringify(r)})`);
+      check(named.length === 1, `${name}: ${id} logs one console error naming it (${named.length})`);
+    }
+    const n = threads ? 1 : DRAWN.length, want = threads ? /^Open questions: 0 of 1 answers read, 0 of 3 decisions answered/ : /^Rulings.*: 0 of 3 answered/;
+    check(want.test(got.first) && new RegExp(" of " + n + "\\b").test(got.tally) && got.rail === n && got.segs === n && !got.listed.length,
+      `${name}: the refused ones are out of the tally, the rail, the strip and the answers (${got.first} | ${got.tally} | rail ${got.rail}, strip ${got.segs} | ${got.listed.join(" ; ") || "none listed"})`);
+    check(got.last === "Needs pictures, not answerable yet: " + REFUSED.map(id => pre + id).join(", "), `${name}: the last line of the copied answers names the refused ones ("${got.last}")`);
+    check(got.eager, `${name}: a design ${threads ? "branch" : "card"}'s pictures load at once`);
+    const lost = errors.filter(e => /did not load/.test(e));
+    check(lost.length === 1 && lost[0].includes(`"${pre}F1"`), `${name}: a design ${threads ? "branch" : "card"}'s picture that fails to load logs one console error naming it (${lost.length}: ${lost.join(" | ")})`);
+    const other = errors.filter(e => !/no usable picture|did not load/.test(e));
+    check(other.length === 0, `${name}: no other console errors (${other.join(" | ") || "none"})`);
     await page.close();
   }
 }

@@ -6,7 +6,9 @@
 
   Authors edit only the data script: RULER (optional), BRIEF (optional), T, STATE (optional), and the <h1>.
   Thread fields: id, group, title, asked, when, answer, owed (empty hides it), ev,
-    branches [{id, q, opts [[label, effect, downside?], ...], pick, why, flip?, multi?}]
+    branches [{id, q, opts [[label, effect, downside?], ...], pick, why, flip?, multi?, frames?, design?}]
+      frames [{src, cap}]: pictures under the branch's question; design: true on a branch that decides how something
+      looks: with no usable picture in its frames it is drawn as a refusal, not a decision, and is left out of the counts
     link (optional) ["label", "href"] or a list of them: links under the question, opening in a new tab
   Each thread is one card: what was asked, the answer, what is still owed, a "Got it" button, then the
   decisions that branch off it. Branch ids stay stable (Q1a). Saved answers from the old threads template
@@ -214,6 +216,14 @@
   .tp .tp-frame img { display:block; width:100%; height:110px; object-fit:cover; }
   .tp .tp-frame span { display:block; padding:6px 10px 8px; font-size:.8rem; color:var(--tp-ink-2); }
 
+  /* A design question with no pictures: drawn as a refusal in its own place, never as something to answer. */
+  .tp .tp-refused { margin:0 0 18px; padding:16px 20px; background:var(--tp-amber-tint); border:1px solid var(--tp-amber-line); border-radius:var(--tp-r-card); }
+  .tp .tp-refused-head { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 12px; margin:0 0 8px; }
+  .tp .tp-refused-title { margin:0; font:650 1.05rem/1.32 var(--tp-sans); overflow-wrap:break-word; min-width:0; }
+  .tp .tp-refused-tag { font:600 .76rem/1 var(--tp-sans); color:var(--tp-amber); border:1px solid var(--tp-amber-line); border-radius:var(--tp-r-pill); padding:5px 9px; white-space:nowrap; }
+  .tp .tp-refused p { margin:0; font-size:.96rem; }
+  .tp .tp-refused--part { margin:18px 0 6px; padding:12px 16px; border-radius:var(--tp-r-code); }
+
   /* Questions inside a card, and their options. */
   .tp .tp-part { margin:0 0 6px; padding:0; border:0; min-width:0; }
   .tp .tp-part + .tp-part { margin-top:18px; padding-top:16px; border-top:1px solid var(--tp-rule-2); }
@@ -341,7 +351,7 @@
     .tp { background:#fff; color:#000; }
     .tp .tp-bar, .tp .tp-rail, .tp .tp-btn, .tp .tp-link, .tp .tp-toast, .tp .tp-how-tools, .tp .tp-finish-acts, .tp .tp-strip { display:none !important; }
     .tp .tp-layout { display:block; padding:0; max-width:none; }
-    .tp .tp-card, .tp .tp-opt { break-inside:avoid; }
+    .tp .tp-card, .tp .tp-opt, .tp .tp-refused { break-inside:avoid; }
     .tp .tp-group-head { break-after:avoid; }
     .tp textarea { border:1px solid #999; }
   }
@@ -533,20 +543,42 @@ const T = [
     if (id === "__proto__" || seen[id]) { console.error("Ruling page: the " + what + " id \"" + id + "\" is used twice or reserved; that " + what + " is left out."); return false; }
     return (seen[id] = true);
   }
+  /* Pictures only from data:image URIs or paths beside this file, so the page stays self-contained. */
+  /* A data address needs a payload after its comma. A relative path has no colon, backslash, control character or
+     leading slash or space, so the URL parser cannot turn it into a scheme or a //host address, and it does not
+     start with # or ?, which name this same page. */
+  function usableFrames(list) {
+    return Array.isArray(list) ? list.filter(function (f) { return f && typeof f.src === "string" && (/^data:image\/[^,]*,[\s\S]/i.test(f.src) || /^[^\x00-\x20\\\/:#?][^\x00-\x1f\\:]*$/.test(f.src)); }) : [];
+  }
+  /* A design card (design: true; in the open-questions page, a branch) with no usable picture is not a card: it is
+     drawn as a refusal in its own place, has no answer controls, is left out of every count and the tally, is named
+     on the last line of Copy my answers, and logs a console error naming its id. */
+  var REFUSAL = "This design question has no pictures yet, so it cannot be answered here.";
+  function loadLog(what, id) { console.error("Ruling page: a picture of the design " + what + " \"" + id + "\" did not load; the " + what + " is still drawn, with its picture missing."); }
+  function refuseLog(what, id) { console.error("Ruling page: the design " + what + " \"" + id + "\" has no usable picture in frames; it is drawn as a refusal, not as something to answer."); }
   var lastGroup, seenCards = Object.create(null);
-  var CARDS = SRC.filter(function (d) { return d && d.id != null && freshId(seenCards, String(d.id), "card"); }).map(function (d) {
+  var ALL = SRC.filter(function (d) { return d && d.id != null && freshId(seenCards, String(d.id), "card"); }).map(function (d) {
     var seenParts = Object.create(null);
     var c = { d: d, id: String(d.id), label: String(d.short || d.id), dom: "card-" + sid(d.id), title: String(d.title || ""), parts: [] };
     c.group = d.group || lastGroup; lastGroup = c.group;
+    if (!THREADS && d.design === true && !usableFrames(d.frames).length) { c.refused = true; refuseLog("card", c.id); return c; }
     if (THREADS) {
       c.thread = { asked: d.asked, when: d.when, answer: d.answer, owed: d.owed };
       c.parts.push(mkPart({ kind: "ack" }, "ack", c.id, false));
-      (d.branches || []).forEach(function (b) { if (!b || !freshId(seenParts, String(b.id), "branch")) return; var p = mkPart(b, "b:" + b.id, String(b.id), false); p.ownNote = true; c.parts.push(p); });
+      (d.branches || []).forEach(function (b) {
+        if (!b || !freshId(seenParts, String(b.id), "branch")) return;
+        if (b.design === true && !usableFrames(b.frames).length) { refuseLog("branch", String(b.id)); (c.refusals = c.refusals || []).push({ id: String(b.id), q: String(b.q || ""), at: c.parts.length }); return; }
+        var p = mkPart(b, "b:" + b.id, String(b.id), false); p.ownNote = true; if (b.design === true) p.frames = b.frames; c.parts.push(p);
+      });
     } else if (Array.isArray(d.parts) && d.parts.length) {
       d.parts.forEach(function (p, i) { if (!p) return; var pid = String(p.id || (c.id + String.fromCharCode(97 + i))); if (freshId(seenParts, pid, "part")) c.parts.push(mkPart(p, "p:" + pid, pid, false)); });
     } else c.parts.push(mkPart(d, "_", c.id, true));
     return c;
   });
+  /* CARDS is what can be answered: every count, the tally and Copy my answers run over it. ALL keeps the refusals in place. */
+  var CARDS = ALL.filter(function (c) { return !c.refused; });
+  var NEEDS_PICTURES = [];
+  ALL.forEach(function (c) { if (c.refused) NEEDS_PICTURES.push(c.id); (c.refusals || []).forEach(function (r) { NEEDS_PICTURES.push(r.id); }); });
   var isChoice = function (p) { return p.kind === "single" || p.kind === "multi"; };
 
   /* State: saved per page path and card id, so a reload or a card added later never loses an answer. */
@@ -607,7 +639,9 @@ const T = [
   function hasText(v) { return typeof v === "string" && v.trim() !== ""; }
   function status(c) {
     var s = S.cards[c.id], choice = c.parts.filter(function (p) { return isChoice(p) || p.kind === "ack"; });
-    var touched = 0, changed = false, typed = false, noted = Object.keys(s.n).some(function (k) { return hasText(s.n[k]); });
+    /* Only the card's own note and its drawn parts count; what is stored for a part that is not drawn is kept and ignored. */
+    var mine = Object.create(null); mine._ = true; c.parts.forEach(function (p) { mine[p.key] = true; });
+    var touched = 0, changed = false, typed = false, noted = Object.keys(s.n).some(function (k) { return mine[k] === true && hasText(s.n[k]); });
     c.parts.forEach(function (p) {
       if (!(p.key in s.a)) return;
       if (p.kind === "text") { if (hasText(s.a[p.key])) typed = true; return; }
@@ -653,6 +687,7 @@ const T = [
       if (p.kind === "text") lg.appendChild(el("span", "tp-hint", "Optional"));
     }
     fs.appendChild(lg);
+    if (p.frames) drawFrames(fs, p.frames, "branch", p.id);
     if (p.kind === "text") {
       var ta = el("textarea", "tp-input"); ta.name = name; ta.rows = 2; ta.setAttribute("aria-labelledby", lg.id);
       ta.placeholder = p.placeholder || "Type your answer (optional)"; ta.value = typeof s.a[p.key] === "string" ? s.a[p.key] : "";
@@ -709,6 +744,31 @@ const T = [
     ta.addEventListener("input", function () { if (ta.value) s.n[key] = ta.value; else delete s.n[key]; changed(c, true); });
     wrap.appendChild(ta); (c.notes = c.notes || []).push(ta); return wrap;
   }
+  /* Thumbnails of the usable pictures in list, under parent; each enlarges on click. On a design card or branch
+     (what is "card" or "branch") they load at once, and one that fails to load logs one console error naming it;
+     the card is not redrawn. Elsewhere they load lazily and nothing watches them. */
+  function drawFrames(parent, list, what, id) {
+    var set = usableFrames(list);
+    if (!set.length) return;
+    var fr = el("div", "tp-frames"), failed = false;
+    set.forEach(function (f, i) {
+      var b = el("button", "tp-frame"); b.type = "button"; b.setAttribute("aria-label", "Open picture: " + (f.cap || "picture " + (i + 1)));
+      var im = el("img");
+      if (what) im.addEventListener("error", function () { if (!failed) { failed = true; loadLog(what, id); } }); else im.loading = "lazy";
+      im.src = f.src; im.alt = ""; b.appendChild(im); if (f.cap) b.appendChild(el("span", null, f.cap));
+      b.addEventListener("click", function () { openFrame(set, i, b); }); fr.appendChild(b);
+    });
+    parent.appendChild(fr);
+  }
+  /* The refusal: its id, its title (a branch's question) and the line; no answer controls. A branch's sits inside its thread. */
+  function renderRefused(id, title, inThread, domId) {
+    var box = el(inThread ? "div" : "section", "tp-refused" + (inThread ? " tp-refused--part" : "")), head = el("div", "tp-refused-head");
+    var h = el(inThread ? "p" : "h3", "tp-refused-title", title), hid = (inThread ? domId + "-r-" : "card-") + sid(id) + "-t";
+    h.id = hid; box.setAttribute("aria-labelledby", hid); if (!inThread) box.id = "card-" + sid(id);
+    head.appendChild(el("span", "tp-id", id)); head.appendChild(h); head.appendChild(el("span", "tp-refused-tag", "No pictures yet"));
+    box.appendChild(head); box.appendChild(el("p", null, REFUSAL));
+    return box;
+  }
   function renderCard(c) {
     var sec = el("section", "tp-card card"); sec.id = c.dom; sec.tabIndex = -1; sec.setAttribute("aria-labelledby", c.dom + "-t");
     var head = el("div", "tp-card-head"), h = el("h3", "tp-card-title", c.title);
@@ -742,22 +802,13 @@ const T = [
       det.appendChild(el("summary", null, c.d.textLabel || "Show the text that goes out"));
       det.appendChild(el("div", "tp-textbody", c.d.text)); sec.appendChild(det);
     }
-    if (Array.isArray(c.d.frames) && c.d.frames.length) {
-      /* Pictures only from data:image URIs or paths beside this file, so the page stays self-contained. */
-      /* A relative path has no colon, backslash, control character or leading slash or space, so the URL parser cannot
-         turn it into a scheme or a //host address. */
-      var set = c.d.frames.filter(function (f) { return f && typeof f.src === "string" && (/^data:image\//i.test(f.src) || /^[^\x00-\x20\\\/:][^\x00-\x1f\\:]*$/.test(f.src)); });
-      if (set.length) {
-        var fr = el("div", "tp-frames");
-        set.forEach(function (f, i) {
-          var b = el("button", "tp-frame"); b.type = "button"; b.setAttribute("aria-label", "Open picture: " + (f.cap || "picture " + (i + 1)));
-          var im = el("img"); im.src = f.src; im.alt = ""; im.loading = "lazy"; b.appendChild(im); if (f.cap) b.appendChild(el("span", null, f.cap));
-          b.addEventListener("click", function () { openFrame(set, i, b); }); fr.appendChild(b);
-        });
-        sec.appendChild(fr);
-      }
-    }
-    c.parts.forEach(function (p) { sec.appendChild(renderPart(c, p)); });
+    drawFrames(sec, c.d.frames, !THREADS && c.d.design === true ? "card" : null, c.id);
+    var rf = c.refusals || [], ri = 0;
+    c.parts.forEach(function (p, i) {
+      while (ri < rf.length && rf[ri].at <= i) { sec.appendChild(renderRefused(rf[ri].id, rf[ri].q, true, c.dom)); ri++; }
+      sec.appendChild(renderPart(c, p));
+    });
+    while (ri < rf.length) { sec.appendChild(renderRefused(rf[ri].id, rf[ri].q, true, c.dom)); ri++; }
     if (c.d.ev) { var ev = el("p", "tp-ev"); ev.appendChild(el("b", null, "Evidence: ")); ev.appendChild(doc.createTextNode(c.d.ev)); sec.appendChild(ev); }
     sec.appendChild(noteBox(c, "_", THREADS ? "Anything about this answer? (optional)" : "Add a note (optional)", "Note on " + c.id));
     var foot = el("div", "tp-foot"); c.clear = el("button", "tp-link", THREADS ? "Clear this card" : "Clear my choice"); c.clear.type = "button";
@@ -782,17 +833,23 @@ const T = [
   function renderAll() {
     cardsBox.textContent = ""; strip.textContent = ""; rail.textContent = ""; groups = [];
     var run = null;
-    var prevGroup = null, holder = cardsBox, railList = null, first = true;
-    CARDS.forEach(function (c) {
+    var prevGroup = null, holder = cardsBox, railList = null, railHead = null, gapPending = false, drawn = false;
+    ALL.forEach(function (c) {
       if (c.group && c.group !== prevGroup) {
         var g = run = { cards: [] }, gs = el("section", "tp-group"), gh = el("div", "tp-group-head"); groups.push(g);
         gh.appendChild(el("h2", null, c.group)); g.count = el("span", "tp-group-count"); gh.appendChild(g.count); gs.appendChild(gh); cardsBox.appendChild(gs); holder = gs;
-        var rg = el("p", "tp-rail-g"); rg.appendChild(el("span", null, c.group)); g.rcount = el("span"); rg.appendChild(g.rcount); rail.appendChild(rg);
-        railList = el("ol"); rail.appendChild(railList);
-        if (!first) c.gapBefore = true;
+        /* The rail's heading and list wait for the group's first card that can be answered, and so does the strip's gap. */
+        g.rcount = el("span"); railHead = c.group; railList = null; gapPending = true;
+      }
+      if (c.refused) { prevGroup = c.group; holder.appendChild(renderRefused(c.id, c.title, false)); return; }
+      if (railHead !== null) {
+        var rg = el("p", "tp-rail-g"); rg.appendChild(el("span", null, railHead)); rg.appendChild(run.rcount); rail.appendChild(rg);
+        railList = el("ol"); rail.appendChild(railList); railHead = null;
       }
       if (!railList) { railList = el("ol"); rail.appendChild(railList); }
-      prevGroup = c.group; first = false;
+      prevGroup = c.group;
+      if (gapPending && drawn) c.gapBefore = true;
+      gapPending = false; drawn = true;
       if (c.group && run) run.cards.push(c);
       holder.appendChild(renderCard(c));
       var li = el("li"), a = el("a"); a.href = "#" + c.dom; c.dot = el("span", "tp-dot"); c.dot.setAttribute("aria-hidden", "true");
@@ -810,7 +867,7 @@ const T = [
     [c.el, c.chip, c.seg, c.dot].forEach(function (e) { e.dataset.st = st.st; e.dataset.ch = st.changed ? "1" : "0"; });
     c.chip.textContent = word; c.rstate.textContent = ", " + word + (st.changed && st.st !== "done" ? ", not my pick" : "");
     c.seg.title = c.label + " " + c.title + ": " + word;
-    var s = S.cards[c.id]; c.clear.hidden = !Object.keys(s.a).length;
+    var s = S.cards[c.id]; c.clear.hidden = !c.parts.some(function (p) { return p.key in s.a; });
   }
   function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
   function fillable(c) {
@@ -834,7 +891,7 @@ const T = [
     acc.setAttribute("aria-label", fill === withPick ? "Accept all picks" : "Accept my picks on the " + plural(fill, "card", "cards") + " not answered yet");
     groups.forEach(function (g) {
       var d = g.cards.filter(function (c) { return status(c).st === "done"; }).length;
-      g.count.textContent = d + " of " + g.cards.length + " answered"; g.rcount.textContent = d + "/" + g.cards.length;
+      g.count.textContent = g.cards.length ? d + " of " + g.cards.length + " answered" : ""; g.rcount.textContent = g.cards.length ? d + "/" + g.cards.length : "";
     });
     var sum = r.done + " of " + plural(n, "card", "cards") + " answered" + (r.changed ? ", " + r.changed + " not my pick" : "") + ".";
     if (THREADS) sum = r.read + " of " + plural(n, "answer", "answers") + " read, " + r.decDone + " of " + plural(r.dec, "decision", "decisions") + " answered" + (r.decChanged ? ", " + r.decChanged + " not my pick" : "") + ".";
@@ -895,6 +952,7 @@ const T = [
     var part = CARDS.filter(function (c) { return status(c).st === "part"; }), open = CARDS.filter(function (c) { return status(c).st === "open"; });
     if (part.length) L.push("Partly answered: " + part.map(function (c) { return c.id; }).join(", "));
     if (open.length) L.push((THREADS ? "Not answered: " : "Not answered: ") + open.map(function (c) { return c.id; }).join(", "));
+    if (NEEDS_PICTURES.length) L.push("Needs pictures, not answerable yet: " + NEEDS_PICTURES.join(", "));
     return L.join("\n");
   }
   var toastT;
