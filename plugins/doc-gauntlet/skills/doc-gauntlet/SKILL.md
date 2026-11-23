@@ -91,7 +91,9 @@ from the default branch included, is a new review and is not refused. A branch s
 branch, or one still in use after its squash-merge, is refused: start a new branch from the default branch. Two
 things only run a second review, each with `prepare --second-review <label>`, which prints and records the label: a
 client proposal's second fact-check round (`references/derivation-ledger.md`, label `proposal`), and a second review
-the requester asks for (label `asked`). Any other label, an empty one included, is refused. A document gets one second
+the person who owns the work asks for (label `asked`; 23 Nov 2026): the engineer on work an engineer owns, otherwise
+the person who asked for the work. They ask the session doing the work, in their own words; a session, lane or
+reviewer never asks on its own. Any other label, an empty one included, is refused. A document gets one second
 review at most: a third round is refused whatever the label. A label given where no second review runs (a first
 round, a retry of recorded content) records nothing, so every labelled line in the record is a second review that
 ran. The record is per machine, so a round on another machine is not seen, and a round is recorded only when its

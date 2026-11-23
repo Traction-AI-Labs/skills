@@ -306,7 +306,7 @@ if recorded is None:
             "REFUSED: %s already had its one round on this branch: %s (23 Nov 2026: one round on every document).\n"
             "Either apply the verified errors and check the fixes against the findings, after which the document goes to its owner;\n"
             "or, when the reviewed change has merged, run git fetch and start the new work on a new branch from the default branch.\n"
-            "A second review runs only for a client proposal's second fact-check round or when the requester asks: --second-review proposal|asked."
+            "A second review runs only for a client proposal's second fact-check round or when the person who owns the work asks: --second-review proposal|asked."
             % (identity, where(earlier_rounds[-1]))
         )
     labelled = [entry for entry in earlier_rounds if entry.get("second_review")]
@@ -479,7 +479,7 @@ prepare() {
   local engine_a engine_b engine breadth_model
   local pair_only=false prior second_review=''
   local -a pair=() prior_findings=()
-  while [[ $# -gt 0 ]]; do case "$1" in --authorize-provider) authorised=true; shift;; --doc) doc="$2"; shift 2;; --type) type="$2"; shift 2;; --origin) origin="$2"; shift 2;; --ledger) ledger="$2"; shift 2;; --prior-findings) prior_findings+=("$2"); shift 2;; --engines) engines_raw="$2"; shift 2;; --claude-model) claude_model="$2"; shift 2;; --codex-model) codex_model="$2"; shift 2;; --grok-model) grok_model="$2"; shift 2;; --effort) effort="$2"; shift 2;; --timeout-seconds) timeout_seconds="$2"; shift 2;; --pair-only) pair_only=true; shift;; --second-review) [[ $# -ge 2 && ( "$2" == proposal || "$2" == asked ) ]] || fail '--second-review takes proposal (a client proposal'"'"'s second fact-check round) or asked (a second review the requester asked for)'; second_review="$2"; shift 2;; --override-round-budget) shift 2;; *) fail "unknown argument: $1";; esac; done
+  while [[ $# -gt 0 ]]; do case "$1" in --authorize-provider) authorised=true; shift;; --doc) doc="$2"; shift 2;; --type) type="$2"; shift 2;; --origin) origin="$2"; shift 2;; --ledger) ledger="$2"; shift 2;; --prior-findings) prior_findings+=("$2"); shift 2;; --engines) engines_raw="$2"; shift 2;; --claude-model) claude_model="$2"; shift 2;; --codex-model) codex_model="$2"; shift 2;; --grok-model) grok_model="$2"; shift 2;; --effort) effort="$2"; shift 2;; --timeout-seconds) timeout_seconds="$2"; shift 2;; --pair-only) pair_only=true; shift;; --second-review) [[ $# -ge 2 && ( "$2" == proposal || "$2" == asked ) ]] || fail '--second-review takes proposal (a client proposal'"'"'s second fact-check round) or asked (a second review the person who owns the work asked for)'; second_review="$2"; shift 2;; --override-round-budget) shift 2;; *) fail "unknown argument: $1";; esac; done
   [[ "$authorised" == true ]] || fail 'provider authorisation is required'
   repo="$(git -C "$repo" rev-parse --path-format=absolute --show-toplevel)"
   [[ -z "$(git -C "$repo" status --porcelain --untracked-files=all)" ]] || fail 'refusing mutable review evidence: use a clean committed worktree'

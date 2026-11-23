@@ -9,7 +9,7 @@ Review one pinned committed diff with two independent reviewers, Claude and Code
 
 ## Review budget
 
-This is the budget for every repo (22 Nov 2026; it replaces the 17 Oct table). No repo sets its own: a repo's CLAUDE.md or AGENTS.md points here and restates no number. The orchestrator is the session that owns the PR's merge; a lane running this skill reports to it at the budget and stops. The budget overrides the stop state below, and one run of this skill is one pass over one head, and no second pass follows it unless the requester asks for a second review (below).
+This is the budget for every repo (22 Nov 2026; it replaces the 17 Oct table). No repo sets its own: a repo's CLAUDE.md or AGENTS.md points here and restates no number. The orchestrator is the session that owns the PR's merge; a lane running this skill reports to it at the budget and stops. The budget overrides the stop state below, and one run of this skill is one pass over one head, and no second pass follows it unless the person who owns the work asks for a second review (below).
 
 **A round is one reviewed head**, whoever reviews it and whatever it is called: a lane's own review, a bot, a gauntlet round, a targeted or light check. Two reviewers on the same head are one round. There is no pre-review (retired 22 Nov 2026): its checklist is part of the round's brief. The runner's round number counts gauntlet heads only, so count the budget from the PR table.
 
@@ -19,7 +19,7 @@ This is the budget for every repo (22 Nov 2026; it replaces the 17 Oct table). N
 | Documents: plans, architecture docs and rule files (an SOP, a runbook, any CLAUDE.md, AGENTS.md or SKILL.md) | 1, by the doc-gauntlet skill instead of this one; a rule file then ships |
 | All other code, whatever it can do (small changes, product code before launch, code that can move money or touch credentials) | 1 |
 
-A new identity for the same pull request is never a way to a second round; only the requester asks for a second review, and it is then run under an identity named for it (`--identity <pr>-second-review`). An identity names one change: later, unrelated work on a reused branch name takes its own identity (its PR number). A PR spanning rows takes the highest; a document in the PR goes to the doc-gauntlet skill and never adds a code round. **Before round 1** the PR body carries its row, `Review budget: <n>` and `Past budget: FIXES CHECKED, then fix forward or hold`.
+A new identity for the same pull request is never a way to a second round. Only the person who owns the work asks for a second review (23 Nov 2026): the engineer on work an engineer owns, otherwise the person who asked for the work. They ask the session doing the work, in their own words; a session, lane or reviewer never asks on its own. A pull request gets one at most, run under an identity named for it (`--identity <pr>-second-review`). An identity names one change: later, unrelated work on a reused branch name takes its own identity (its PR number). A PR spanning rows takes the highest; a document in the PR goes to the doc-gauntlet skill and never adds a code round. **Before round 1** the PR body carries its row, `Review budget: <n>` and `Past budget: FIXES CHECKED, then fix forward or hold`.
 
 **No second round.** The runner refuses to prepare one (Run a round, below). A change that needs another look after its round is fixed and checked (`FIXES CHECKED`), fixed forward in its own PR, or held.
 

@@ -1,5 +1,10 @@
 # Changelog
 
+- **gauntlet 0.8.2 and doc-gauntlet 0.7.1** (23 November 2026). Who may ask for a second review. The one second
+  review a pull request or a document can have is asked for by the person who owns the work: the engineer on work an
+  engineer owns, otherwise the person who asked for the work. They ask the session doing the work, in their own
+  words; a session, lane or reviewer never asks on its own. Both skills say so, and so do the two messages
+  doc-gauntlet's runner prints when it refuses a second round or an unknown label. No runner behaviour changes.
 - **ruling-page 0.3.4** (23 November 2026). A card can carry `design: true` (in the open-questions template, a branch,
   which then carries its own `frames`, drawn under its question). A design card or branch with no usable picture is
   refused: it is drawn as a notice with no answer controls, left out of the tally, the rail and the strip, named on
