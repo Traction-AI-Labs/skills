@@ -544,11 +544,11 @@ const T = [
     return (seen[id] = true);
   }
   /* Pictures only from data:image URIs or paths beside this file, so the page stays self-contained. */
-  /* A data address needs a payload after its comma. A relative path has no colon, backslash, control character or
+  /* A data address needs a payload after its comma: at least one character that is not whitespace. A relative path has no colon, backslash, control character or
      leading slash or space, so the URL parser cannot turn it into a scheme or a //host address, and it does not
      start with # or ?, which name this same page. */
   function usableFrames(list) {
-    return Array.isArray(list) ? list.filter(function (f) { return f && typeof f.src === "string" && (/^data:image\/[^,]*,[\s\S]/i.test(f.src) || /^[^\x00-\x20\\\/:#?][^\x00-\x1f\\:]*$/.test(f.src)); }) : [];
+    return Array.isArray(list) ? list.filter(function (f) { return f && typeof f.src === "string" && (/^data:image\/[^,]*,\s*\S/i.test(f.src) || /^[^\x00-\x20\\\/:#?][^\x00-\x1f\\:]*$/.test(f.src)); }) : [];
   }
   /* A design card (design: true; in the open-questions page, a branch) with no usable picture is not a card: it is
      drawn as a refusal in its own place, has no answer controls, is left out of every count and the tally, is named
@@ -561,6 +561,7 @@ const T = [
     var seenParts = Object.create(null);
     var c = { d: d, id: String(d.id), label: String(d.short || d.id), dom: "card-" + sid(d.id), title: String(d.title || ""), parts: [] };
     c.group = d.group || lastGroup; lastGroup = c.group;
+    if (THREADS && d.design === true) console.error("Ruling page: the thread \"" + c.id + "\" carries design: true, which belongs on a branch; the flag is ignored here and the thread is drawn as usual.");
     if (!THREADS && d.design === true && !usableFrames(d.frames).length) { c.refused = true; refuseLog("card", c.id); return c; }
     if (THREADS) {
       c.thread = { asked: d.asked, when: d.when, answer: d.answer, owed: d.owed };
@@ -909,10 +910,18 @@ const T = [
   /* The host gets {ruling_id, card_id, choice_id, text} for each card changed (card_id "" for the page's own notes);
      typing is sent after a short pause, and anything still waiting is sent when the page is left. */
   var pending = Object.create(null), postT;
+  /* Only the answers of the parts this card draws now leave the page; what is stored for a part that is not drawn stays stored. */
+  function drawnAnswers(id) {
+    var c = CARDS.filter(function (x) { return x.id === id; })[0], out = {}, s = S.cards[id], mine = Object.create(null);
+    if (!c || !s) return out;
+    c.parts.forEach(function (p) { mine[p.key] = true; });
+    Object.keys(s.a).forEach(function (k) { if (mine[k] === true) out[k] = s.a[k]; });
+    return out;
+  }
   function flushPosts() {
     clearTimeout(postT); var ids = Object.keys(pending); pending = Object.create(null);
     ids.forEach(function (id) {
-      try { window.parent.postMessage({ ruling_id: String(BRIDGE.id || ""), card_id: id, choice_id: id ? JSON.stringify(S.cards[id].a) : "", text: buildText() }, BRIDGE.origin); } catch (e) {}
+      try { window.parent.postMessage({ ruling_id: String(BRIDGE.id || ""), card_id: id, choice_id: id ? JSON.stringify(drawnAnswers(id)) : "", text: buildText() }, BRIDGE.origin); } catch (e) {}
     });
   }
   function post(id, typing) {

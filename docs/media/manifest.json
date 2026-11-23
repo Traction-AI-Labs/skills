@@ -87,10 +87,10 @@
   },
   "ruling-page": {
     "checked_at_version": "0.3.4",
-    "reason": "The picture is rendered from docs/examples/ruling-page/data.js, which has no design card and no frames; the template change only affects design cards, so the card as drawn is unchanged.",
+    "reason": "The picture is rendered from docs/examples/ruling-page/data.js, which has no design card and no frames; the template changes only affect saved answers posted to a host page, design cards and a thread's design flag, so the card as drawn is unchanged.",
     "inputs": {
       "docs/examples/ruling-page/data.js": "a9d5e87632b2b98290c466ba5ae0eaf941b608e130bd8c2183e9d67efbd209e4",
-      "plugins/ruling-page/skills/ruling-page/references/template.html": "6c5e862d6a5c891212add609ad5ad5f6aff98bbb2fcb2dfdf72bc58713589003",
+      "plugins/ruling-page/skills/ruling-page/references/template.html": "ae3b0cb4e6ea9b4aa6551e3f03ba0c16b89cc856b1d055f93a50ea51c12b21d5",
       "scripts/media/render.sh": "b8a8a2f58883072098f7c6616f5885afe5f8dd980f8f55c5fc24675cbe495333",
       "scripts/media/fill.py": "375e19a31456c54374c4e1d5eb2ce3f2632aaef851b0b8f7ccdfa106c0f16157",
       "scripts/media/freeze.js": "b64fe84179b0a389c88a7ac5d473b7792ad964b849e6227123275603f0d6f88c"
