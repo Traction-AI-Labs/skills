@@ -1,5 +1,7 @@
 # Changelog
 
+- **persona-teardown 0.2.1** (23 November 2026). In Claude Code each persona agent runs with `model: "sonnet"`; the
+  skill names a larger model only when the brief says why a walk needs it.
 - **gauntlet 0.8.2 and doc-gauntlet 0.7.1** (23 November 2026). Who may ask for a second review. The one second
   review a pull request or a document can have is asked for by the person who owns the work: the engineer on work an
   engineer owns, otherwise the person who asked for the work. They ask the session doing the work, in their own

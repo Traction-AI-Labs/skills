@@ -43,7 +43,7 @@ Start with ruling-page and reading-page: neither needs a key or an account. ruli
 - [**call-prep**](#call-prep) 0.3.1: Writes what to say on a call, word for word. Nothing to install.
 - [**gauntlet**](#gauntlet) 0.8.2: Reviews a committed code change with two models at once. Needs two signed-in reviewer CLIs (Claude Code and Codex by default). Sends the diff, and whatever the reviewers can read in the worktree, to those two model companies through your own logins.
 - [**doc-gauntlet**](#doc-gauntlet) 0.7.1: Reviews a plan or spec before you build from it. Needs two signed-in reviewer CLIs (Claude Code and Codex by default). Sends the document, and whatever the reviewers can read in the worktree, to those two model companies through your own logins.
-- [**persona-teardown**](#persona-teardown) 0.2.0: Walks your prototype as three to five cold personas in a real browser. Needs agent-browser. The screens it walks go to the model company of your own session.
+- [**persona-teardown**](#persona-teardown) 0.2.1: Walks your prototype as three to five cold personas in a real browser. Needs agent-browser. The screens it walks go to the model company of your own session.
 - [**humanize-writing**](#humanize-writing) 0.2.0: Rewrites a draft so it reads like a person wrote it, adding nothing. Nothing to install.
 - [**go-deeper**](#go-deeper) 0.1.0: Rewrites a task to ask for what a top professional in the field would do. Nothing to install.
 <!-- plugins:list:end -->
@@ -274,7 +274,7 @@ wrong-claim  WRONG-CLAIM       orders    "No orders yet" shows for a customer wi
 **Runs in:** Claude Code, Codex  
 **Needs:** `agent-browser` installed. It starts one subagent per persona, so the screens it walks go to the model company of the session you run it in.
 
-Version 0.2.0 · [Plugin README](plugins/persona-teardown/README.md) · [Changelog](CHANGELOG.md)
+Version 0.2.1 · [Plugin README](plugins/persona-teardown/README.md) · [Changelog](CHANGELOG.md)
 <!-- cards:reviews:end -->
 
 ## Writing
@@ -415,9 +415,9 @@ Clone the repo. From `plugins/gauntlet` or `plugins/doc-gauntlet`, follow that d
 ## Latest changes
 
 <!-- changes:latest:start -->
+- **persona-teardown 0.2.1** (23 November 2026)
 - **gauntlet 0.8.2 and doc-gauntlet 0.7.1** (23 November 2026)
 - **ruling-page 0.3.4** (23 November 2026)
-- **gauntlet 0.8.1** (23 November 2026)
 
 Full history: [CHANGELOG.md](CHANGELOG.md)
 <!-- changes:latest:end -->
