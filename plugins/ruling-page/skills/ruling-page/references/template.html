@@ -1141,9 +1141,9 @@ const D = [
     if (PSTATE === "live") {
       add(THREADS ? plural(CARDS.length, "question", "questions") + " to read and answer." : plural(CARDS.length, "decision", "decisions") + " to answer.");
     } else if (PSTATE === "replaced") {
-      var ra = stateLink(stateNeed("replaced_by"), ST.replaced_by_title, "replaced_by"), ron = stateNeed("replaced_on");
+      var ra = stateLink(stateNeed("replaced_by"), ST.replaced_by_title, "replaced_by"), replacedOn = stateNeed("replaced_on");
       if (ra) { add("Replaced by "); add(ra); } else add("Replaced");
-      add(ron ? " on " + ron + "." : ".");
+      add(replacedOn ? " on " + replacedOn + "." : ".");
     } else {
       var aon = stateNeed("answered_on");
       add(aon ? "Answered on " + aon + "." : "Answered.");
